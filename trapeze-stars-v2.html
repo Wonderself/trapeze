@@ -339,7 +339,7 @@ function initWorld(){
   P.rot=0;P.rotSpd=0;P.bar=null;P.bAngle=0;P.bAngV=0;P.inv=0;P.trail=[];P.giantSwing=false;
   jBuf=0;grabBuf=0;dangerFlash=0;
   elevPlats=[];audience=[];combo=0;jBufTimer=0;grabBufTimer=0;
-  lcStars=0;lcTimer=0;goalX=99999;levelDone=false;
+  lcStars=0;lcTimer=0;goalX=p.distTarget;levelDone=false;
   P.djump=true;P.coyote=0;P.catcher=null;
   // Wide starting platform — player is always visible from the start
   plats.push({x:0,y:GY,w:900,h:14,type:'gnd'});
@@ -793,6 +793,7 @@ function drawBar(sx,b,near,grabbed){
 
 /* ─── DRAW WORLD ─── */
 function drawWorld(){
+  drawBG();
   for(const g of gapZones)drawGap(g);
   for(const pl of plats){const sx=pl.x-scrollX;if(sx>W+10||sx+pl.w<-10)continue;const ppx=P.x-scrollX;const onAbove=ppx>sx-20&&ppx<sx+pl.w+20&&P.y<pl.y&&P.y>pl.y-120;if(onAbove&&pl.type==='gnd'){const dist=Math.max(0,(pl.y-P.y)/120);CX.fillStyle='rgba(255,215,0,'+(1-dist)*0.25+')';CX.fillRect(sx,pl.y-2,pl.w,4);}pl.type==='gnd'?drawPlatform(sx,pl):drawElevPlatform(sx,pl);}
   for(const t of tramps){const sx=t.x-scrollX;if(sx>W+80||sx+t.w<-80)continue;drawTrampoline(sx,t.y,t.w,t.sp);}
@@ -1189,6 +1190,10 @@ function update(){
     if(jBufTimer>0)jBufTimer--;else jBuf=false;
     if(grabBufTimer>0)grabBufTimer--;else grabBuf=false;
 
+    // Animation frame + double-jump reset on land
+    P.af++;
+    if(P.onGnd)P.djump=true;
+
     // Coyote time
     if(P.onGnd)P.coyote=10;else if(P.coyote>0)P.coyote--;
 
@@ -1247,11 +1252,22 @@ function update(){
           if(Math.hypot(P.x+P.w/2-sp.x,P.y+P.h/2-sp.y)<(sp.r||18)+8){loseLife();break;}
         }
         if(P.y>H+60)loseLife();
+        // Clown collision
+        for(const cl of clowns){
+          if(!cl.dead&&Math.hypot(P.x+P.w/2-cl.x,P.y+P.h/2-cl.y)<38)loseLife();
+        }
 
         // Hoop pass
         for(const h of hoops){
           if(!h.passed&&Math.hypot(P.x+P.w/2-h.x,P.y+P.h/2-h.y)<(h.r||38)){
             passHoop(h);
+          }
+        }
+
+        // Star items
+        for(const s of stItems){
+          if(!s.done&&Math.hypot(P.x+P.w/2-s.x,P.y+P.h/2-s.y)<22){
+            s.done=true;addScore(50,s.x-scrollX,s.y);sfxStar();spawnStarPts(s.x,s.y,'#FFD700');
           }
         }
 
@@ -1309,12 +1325,27 @@ function update(){
 
     /* --- CATCHERS --- */
     for(const c of catchers){
-      c.phase=(c.phase||0)+0.03;
-      c.x=c.ox+Math.sin(c.phase)*c.amp;
+      c.angle+=c.angV;
+      if(Math.abs(c.angle)>0.9)c.angV*=-1;
+      c.af=(c.af||0)+1;
     }
 
-    /* --- AUDIENCE --- */
-    for(const a of audience){a.phase=(a.phase||0)+0.04;}
+    /* --- OLA / OVATION timers --- */
+    if(olaActive){olaFrame++;if(olaFrame>120)olaActive=false;}
+    if(clapActive){clapTimer--;if(clapTimer<=0)clapActive=false;}
+    if(ovationActive){ovationTimer--;if(ovationTimer<=0)ovationActive=false;}
+
+    /* --- CLOWNS update (move + animate) --- */
+    clownTimer--;
+    if(clownTimer<=0){
+      clownTimer=getLevelParams(currentWorld,currentLevel).clownInterval;
+      clowns.push({x:scrollX+W+80,y:GY,vx:-(1.4+Math.random()),af:0,dead:false});
+    }
+    for(const cl of clowns){cl.x+=cl.vx;cl.af++;if(cl.x<scrollX-120)cl.dead=true;}
+    for(let i=clowns.length-1;i>=0;i--){if(clowns[i].dead)clowns.splice(i,1);}
+
+    /* --- SPIKES bounce --- */
+    for(const sp of spikes){sp.y+=sp.vy*sp.dir;if(sp.y<sp.minY||sp.y>sp.maxY)sp.dir*=-1;}
 
     /* --- WORLD GEN on advance --- */
     while(scrollX+W*1.8>genX)genChunk();
