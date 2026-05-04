@@ -20,23 +20,16 @@ canvas{display:block;width:100%;aspect-ratio:800/450;border-radius:10px;box-shad
 #btnQuit{position:absolute;top:8px;left:8px;height:30px;padding:0 10px;border:none;border-radius:7px;background:rgba(0,0,0,0.42);border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.7);font-size:12px;font-family:'Heebo',Arial,sans-serif;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:20;white-space:nowrap;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transition:background .12s,color .12s;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
 #btnQuit:hover,#btnQuit:active{background:rgba(255,60,60,0.32);color:#fff;border-color:rgba(255,100,100,0.4);}
 #ctrl{position:absolute;inset:0;pointer-events:none;display:none}
-@media(hover:none),(pointer:coarse){#ctrl{display:block}}
-#pend{position:absolute;bottom:5%;left:3%;display:flex;align-items:center;gap:3%;pointer-events:auto;opacity:0;transform:scale(0.7);transition:opacity .2s,transform .2s;}
-#ctrl.swinging #pend{opacity:1;transform:scale(1);}
-#apad{position:absolute;bottom:3%;left:0;right:0;display:flex;flex-direction:row;align-items:flex-end;justify-content:space-between;padding:0 4%;pointer-events:none;}
-.cb{border:none;outline:none;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none;font-family:'Heebo',Arial,sans-serif;transition:background .07s,transform .07s,box-shadow .08s;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);width:clamp(72px,19vw,86px);height:clamp(72px,19vw,86px);font-size:clamp(28px,7.8vw,36px);background:rgba(10,2,40,0.72);border:2px solid rgba(255,255,255,0.28);color:rgba(255,255,255,0.95);box-shadow:0 3px 18px rgba(0,0,0,0.65),inset 0 1px 0 rgba(255,255,255,0.12);}
-.cb:active,.cb.on{transform:scale(0.88);background:rgba(255,255,255,0.25)}
-#bL,#bR{width:clamp(56px,14vw,68px);height:clamp(56px,14vw,68px);font-size:clamp(22px,6vw,28px);background:rgba(25,8,55,0.62);border-color:rgba(160,110,255,0.45);color:rgba(220,200,255,0.95);}
-#bL:active,#bL.on,#bR:active,#bR.on{background:rgba(150,90,255,0.35)}
-#bUp{background:rgba(110,15,200,0.55);border-color:rgba(200,100,255,0.75);color:#e8b4ff;box-shadow:0 0 18px rgba(180,60,255,0.4),0 3px 14px rgba(0,0,0,0.6);}
-#bUp:active,#bUp.on{background:rgba(180,70,255,0.75);box-shadow:0 0 30px rgba(200,80,255,0.7);}
-#bDown{background:rgba(10,120,50,0.28);border-color:rgba(60,220,110,0.45);color:rgba(120,255,160,0.9);}
-#bDown:active,#bDown.on{background:rgba(40,200,80,0.45);}
-#bJ{background:radial-gradient(circle at 38% 32%,rgba(255,235,80,0.65),rgba(255,120,0,0.45));border-color:rgba(255,210,0,0.9);color:#FFD700;box-shadow:0 0 32px rgba(255,200,0,0.65),0 4px 18px rgba(0,0,0,0.65),inset 0 1px 0 rgba(255,255,200,0.25);width:clamp(76px,20vw,90px);height:clamp(76px,20vw,90px);font-size:clamp(30px,8vw,38px);}
-#bJ:active,#bJ.on{transform:scale(0.88);box-shadow:0 0 42px rgba(255,220,0,0.8);}
-.bjl{font-size:clamp(6px,1.6vw,8px);color:rgba(255,215,0,0.7);line-height:1;margin-top:1px;white-space:nowrap;letter-spacing:.3px}
-.legready #bJ{animation:gpulse .45s ease-in-out infinite alternate;box-shadow:0 0 42px rgba(255,220,0,0.95),0 0 80px rgba(255,180,0,0.55);}
-@keyframes gpulse{from{transform:scale(1)}to{transform:scale(1.12)}}
+@media(hover:none),(pointer:coarse){#ctrl{display:flex;align-items:flex-end;justify-content:space-between;padding:0 3% 3%}}
+#move{display:flex;gap:10px;align-items:flex-end;pointer-events:auto;}
+#acts{display:flex;gap:10px;align-items:flex-end;pointer-events:auto;}
+.cb{border:none;outline:none;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none;font-family:'Heebo',Arial,sans-serif;transition:background .06s,transform .06s;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);width:clamp(68px,17vw,82px);height:clamp(68px,17vw,82px);font-size:clamp(26px,7vw,34px);background:rgba(10,2,40,0.72);border:2px solid rgba(255,255,255,0.28);color:#fff;box-shadow:0 3px 18px rgba(0,0,0,0.65);}
+.cb:active,.cb.pressed{transform:scale(0.86);background:rgba(255,255,255,0.22);}
+#bL,#bR{background:rgba(25,8,55,0.65);border-color:rgba(160,110,255,0.5);}
+#bGrab{background:rgba(10,120,50,0.35);border-color:rgba(60,220,110,0.5);font-size:clamp(14px,4vw,18px);}
+#bJ{background:radial-gradient(circle at 38% 32%,rgba(255,235,80,0.65),rgba(255,120,0,0.5));border-color:rgba(255,210,0,0.9);color:#FFD700;box-shadow:0 0 28px rgba(255,200,0,0.6),0 3px 14px rgba(0,0,0,0.6);width:clamp(76px,20vw,90px);height:clamp(76px,20vw,90px);font-size:clamp(30px,8vw,38px);}
+@keyframes gpulse{from{transform:scale(1)}to{transform:scale(1.1)}}
+.legready #bJ{animation:gpulse .45s ease-in-out infinite alternate;}
 </style>
 </head>
 <body>
@@ -45,16 +38,13 @@ canvas{display:block;width:100%;aspect-ratio:800/450;border-radius:10px;box-shad
   <button id="btnFs" title="Plein écran / מסך מלא" aria-label="Plein écran">⛶</button>
   <button id="btnQuit" aria-label="Menu / Skip">← Menu</button>
   <div id="ctrl">
-    <div id="pend">
+    <div id="move">
       <button class="cb" id="bL" aria-label="Gauche">◀</button>
       <button class="cb" id="bR" aria-label="Droite">▶</button>
     </div>
-    <div id="apad">
-      <div style="display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:auto;">
-        <button class="cb" id="bUp" aria-label="Pirouette">🌀<span class="bjl">ספין</span></button>
-        <button class="cb" id="bDown" aria-label="Salto">🔄<span class="bjl">סלטו</span></button>
-      </div>
-      <button class="cb" id="bJ" aria-label="Sauter">⚡<span class="bjl">קפצ/אחזה</span></button>
+    <div id="acts">
+      <button class="cb" id="bGrab" aria-label="Saisir barre" style="font-size:clamp(12px,3.5vw,16px)">🔄<br>SAISIR</button>
+      <button class="cb" id="bJ" aria-label="Sauter / Lâcher">⚡</button>
     </div>
   </div>
 </div>
@@ -313,7 +303,8 @@ function sqUpdate(){const k=0.28,d=0.68;SQ.vx+=(1-SQ.x)*k;SQ.vy+=(1-SQ.y)*k;SQ.v
 let plats=[],bars=[],hoops=[],stItems=[],tramps=[],clowns=[],spikes=[],gapZones=[],catchers=[];
 let parts=[],ftexts=[],genX=W+50,clownTimer=250;
 let elevPlats=[],audience=[];
-let combo=0,jBufTimer=0,grabBufTimer=0;
+let combo=0,jBufTimer=0,grabBufTimer=0,hintTimer=300;
+let mLeft=false,mRight=false;
 let lcStars=0,lcJudgeScores=['9.5','9.8','9.7'],lcTimer=0;
 let tapN=0,menuSel=0,level=0;
 let goalX=99999,levelDone=false;
@@ -339,7 +330,7 @@ function initWorld(){
   P.rot=0;P.rotSpd=0;P.bar=null;P.bAngle=0;P.bAngV=0;P.inv=0;P.trail=[];P.giantSwing=false;
   jBuf=0;grabBuf=0;dangerFlash=0;
   elevPlats=[];audience=[];combo=0;jBufTimer=0;grabBufTimer=0;
-  lcStars=0;lcTimer=0;goalX=p.distTarget;levelDone=false;
+  lcStars=0;lcTimer=0;goalX=p.distTarget;levelDone=false;hintTimer=300;mLeft=false;mRight=false;
   P.djump=true;P.coyote=0;P.catcher=null;
   // Wide starting platform — player is always visible from the start
   plats.push({x:0,y:GY,w:900,h:14,type:'gnd'});
@@ -1081,6 +1072,17 @@ function drawHUD(){
     CX.fillText('x'+combo+' COMBO',W/2,cy);
     CX.globalAlpha=1;
   }
+  // Controls hint (first 5s)
+  if(hintTimer>0){
+    hintTimer--;
+    const ha=Math.min(1,hintTimer/60)*0.72;
+    CX.globalAlpha=ha;
+    CX.fillStyle='rgba(0,0,0,0.45)';CX.fillRect(0,H-28,W,28);
+    CX.fillStyle='#CCDDFF';CX.font='12px Heebo,Arial';CX.textAlign='center';
+    const htxt=isMobile?'◀▶ déplacer  •  ⚡ sauter/lâcher  •  🔄 saisir barre':'← → déplacer  •  Espace sauter/lâcher  •  F saisir barre';
+    CX.fillText(htxt,W/2,H-10);
+    CX.globalAlpha=1;
+  }
   // Danger warning (bottom)
   if(dangerFlash>0){
     const dp=Math.sin(dangerFlash*0.28)*0.8;
@@ -1219,10 +1221,12 @@ function update(){
       if(P.state!=='caught'){
         // Horizontal (continuous from held keys)
         const spd=P.onGnd?5.5:4.2;
-        if(K['ArrowRight']||K['KeyD'])P.vx=Math.min(P.vx+0.9,spd);
-        else if(K['ArrowLeft']||K['KeyA'])P.vx=Math.max(P.vx-0.9,-spd);
+        const goR=K['ArrowRight']||K['KeyD']||mRight;
+        const goL=K['ArrowLeft']||K['KeyA']||mLeft;
+        if(goR)P.vx=Math.min(P.vx+0.9,spd);
+        else if(goL)P.vx=Math.max(P.vx-0.9,-spd);
         // Friction
-        if(P.onGnd){if(!K['ArrowRight']&&!K['KeyD']&&!K['ArrowLeft']&&!K['KeyA'])P.vx*=0.72;}
+        if(P.onGnd&&!goR&&!goL)P.vx*=0.72;
         else{P.vx*=0.985;}
         // Gravity + move
         P.vy+=GRV;if(P.vy>MXF)P.vy=MXF;
@@ -1573,14 +1577,19 @@ CV.addEventListener('touchend',e=>{
 /* ─── MOBILE BUTTONS ─── */
 function mbtn(id,onDown,onUp){
   const el=document.getElementById(id);if(!el)return;
-  el.addEventListener('touchstart',e=>{e.preventDefault();if(gs==='playing')onDown();},{passive:false});
-  el.addEventListener('touchend',e=>{e.preventDefault();if(onUp)onUp();},{passive:false});
+  const dn=e=>{e.preventDefault();unlockAudio();onDown();el.classList.add('pressed');};
+  const up=e=>{e.preventDefault();if(onUp)onUp();el.classList.remove('pressed');};
+  el.addEventListener('touchstart',dn,{passive:false});
+  el.addEventListener('touchend',up,{passive:false});
+  el.addEventListener('touchcancel',up,{passive:false});
 }
-mbtn('bL',()=>{P.vx-=3.5;});
-mbtn('bR',()=>{P.vx+=3.5;});
-mbtn('bJ',()=>{handleSpace();});
-mbtn('bDown',()=>{grabBuf=1;grabBufTimer=6;});
-mbtn('bUp',()=>{P.vy=JP;P.state='jump';sfxSpin();});
+// Continuous move: set mLeft/mRight flags (read in update loop)
+mbtn('bL',()=>{mLeft=true;},()=>{mLeft=false;});
+mbtn('bR',()=>{mRight=true;},()=>{mRight=false;});
+// Jump/release barre
+mbtn('bJ',()=>{if(gs==='playing'||gs==='levelcomplete')handleSpace();else if(gs==='menu'){P.char=menuSel===0?'marc':'claire';startGame();}});
+// Saisir / legsault
+mbtn('bGrab',()=>{if(gs==='playing'){grabBuf=1;grabBufTimer=6;}});
 const btnQuit=document.getElementById('btnQuit');
 if(btnQuit)btnQuit.addEventListener('click',()=>{gs='menu';stopMusic();initMenu();});
 
