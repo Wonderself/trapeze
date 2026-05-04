@@ -188,7 +188,7 @@ let cer={active:false,frame:0,j1x:-90,j2x:W+90,j3x:-130,trophyRaised:false,olaOK
 function getLevelParams(world,level){
   const dda=1-ddaEasing*0.2;
   return{
-    speed:[2.2,2.9,3.6][level-1]*(1+world*0.06)*dda,
+    speed:[2.5,3.3,4.1][level-1]*(1+world*0.06)*dda,
     gapMin:[80,110,140][level-1],gapMax:[120,160,200][level-1],
     spikeChance:[0.3,0.5,0.68][level-1]*dda,
     clownInterval:[320,250,185][level-1],
@@ -1140,7 +1140,7 @@ function releaseBar(){
 function updatePendulum(){
   if(P.state!=='swing'||!P.bar)return;
   const acc=-(GRV/ROPE)*Math.sin(P.bAngle);
-  P.bAngV+=acc;P.bAngV*=0.9985;
+  P.bAngV+=acc;P.bAngV*=0.997;
   P.bAngle+=P.bAngV;
   const bcx=P.bar.x+P.bar.w/2;
   P.x=bcx+Math.sin(P.bAngle)*ROPE-P.w/2;
@@ -1563,14 +1563,8 @@ CV.addEventListener('touchend',e=>{
     else if(dt<400){P.char=menuSel===0?'marc':'claire';startGame();}
     return;
   }
-  if(gs==='playing'){
-    if(Math.abs(dx)>35&&dt<500){
-      // Horizontal swipe
-      P.vx=dx>0?6:-6;
-    } else if(dy>40&&dt<400){
-      // Swipe down: grab/legsault
-      grabBuf=1;grabBufTimer=6;
-    }
+  if(gs==='playing'&&dy>50&&dt<400){
+    grabBuf=1;grabBufTimer=6;
   }
 },{passive:false});
 
