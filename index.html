@@ -161,7 +161,7 @@ function sfxLand(){sfxBounce();}
 function sfxSpinDestroy(){tone(200,0.05,'sawtooth',0.4);setTimeout(()=>tone(600,0.2,'square',0.3,100),40);setTimeout(()=>tone(1200,0.25,'sine',0.2),150);}
 
 /* ─── CONSTANTS ─── */
-const GY=400,GRV=0.36,JP=-16.0,DJP=-14.0,JP_TR=-22,MXF=14,ROPE=112,CROPE=32;
+const GY=400,GRV=0.52,JP=-16.5,DJP=-14.0,JP_TR=-22,MXF=17,ROPE=112,CROPE=32;
 
 /* ─── WORLD THEMES ─── */
 const THEMES={
@@ -198,7 +198,7 @@ let cer={active:false,frame:0,j1x:-90,j2x:W+90,j3x:-130,trophyRaised:false,olaOK
 function getLevelParams(world,level){
   const dda=1-ddaEasing*0.2;
   return{
-    speed:[1.8,2.3,2.8][level-1]*(1+world*0.06)*dda,
+    speed:[2.2,2.9,3.6][level-1]*(1+world*0.06)*dda,
     gapMin:[80,110,140][level-1],gapMax:[120,160,200][level-1],
     spikeChance:[0.3,0.5,0.68][level-1]*dda,
     clownInterval:[320,250,185][level-1],
@@ -1119,15 +1119,15 @@ function doLegsault(){
 function grabBar(b){
   P.state='swing';P.bar=b;
   P.bAngle=Math.atan2(P.x+P.w/2-(b.x+b.w/2),-(P.y+P.h/2-b.y));
-  P.bAngV=P.vx*0.028+P.vy*0.005;
+  P.bAngV=P.vx*0.042+P.vy*0.008;
   P.vx=0;P.vy=0;P.onGnd=false;P.coyote=0;
   sfxGrab();sqImpulse(0.85,1.18);
 }
 function releaseBar(){
   if(!P.bar)return;
   const b=P.bar;const bcx=b.x+b.w/2;
-  P.vx=P.bAngV*ROPE*Math.cos(P.bAngle)+Math.sin(P.bAngle)*2;
-  P.vy=-Math.abs(P.bAngV)*ROPE*0.55;
+  P.vx=P.bAngV*ROPE*Math.cos(P.bAngle)*1.15+Math.sin(P.bAngle)*3;
+  P.vy=-Math.abs(P.bAngV)*ROPE*0.65;
   P.x=bcx+Math.sin(P.bAngle)*ROPE-P.w/2;
   P.y=b.y+Math.cos(P.bAngle)*ROPE-P.h;
   P.bar=null;P.state='jump';
@@ -1217,12 +1217,16 @@ function update(){
     } else {
       /* --- AIRBORNE / RUN / IDLE --- */
       if(P.state!=='caught'){
-        // Gravity
-        P.vy+=GRV;
-        if(P.vy>MXF)P.vy=MXF;
-        P.x+=P.vx;P.y+=P.vy;
+        // Horizontal (continuous from held keys)
+        const spd=P.onGnd?5.5:4.2;
+        if(K['ArrowRight']||K['KeyD'])P.vx=Math.min(P.vx+0.9,spd);
+        else if(K['ArrowLeft']||K['KeyA'])P.vx=Math.max(P.vx-0.9,-spd);
         // Friction
-        if(P.onGnd){P.vx*=0.78;}else{P.vx*=0.992;}
+        if(P.onGnd){if(!K['ArrowRight']&&!K['KeyD']&&!K['ArrowLeft']&&!K['KeyA'])P.vx*=0.72;}
+        else{P.vx*=0.985;}
+        // Gravity + move
+        P.vy+=GRV;if(P.vy>MXF)P.vy=MXF;
+        P.x+=P.vx;P.y+=P.vy;
 
         // Horizontal clamp at scroll edge
         if(P.x<scrollX-P.w)P.x=scrollX-P.w;
@@ -1518,8 +1522,6 @@ document.addEventListener('keydown',e=>{
     return;
   }
   if(e.key===' '||e.key==='ArrowUp'||e.key==='w'){handleSpace();}
-  if(e.key==='ArrowRight'||e.key==='d'){P.vx+=3.5;}
-  if(e.key==='ArrowLeft'||e.key==='a'){P.vx-=3.5;}
   if(e.key==='f'||e.key==='z'||e.key==='Shift'){grabBuf=1;grabBufTimer=6;}
   if(e.key==='Escape'){gs='menu';stopMusic();initMenu();}
 });
