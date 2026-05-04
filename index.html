@@ -970,7 +970,7 @@ function drawCeremony(){
 function updateCeremony(){
   updateParts();
   lcTimer--;
-  if(lcTimer<=0||jBuf||grabBuf){gs='finale';startFinale();jBuf=false;grabBuf=false;}
+  if(lcTimer<=0||jBuf||grabBuf){gs='finale';startFinale();jBuf=0;grabBuf=0;}
 }
 
 /* ─── DRAW FINALE ─── */
@@ -1110,7 +1110,7 @@ function findNearCatcher(){
 /* ─── INPUT: JUMP / GRAB ─── */
 function handleSpace(){
   if(gs!=='playing')return;
-  jBuf=true;jBufTimer=6;
+  jBuf=1;jBufTimer=6;
 }
 function doLegsault(){
   P.state='pirouette';P.rot=0;P.vy=-15;P.vx*=1.1;
@@ -1154,7 +1154,7 @@ function doLand(py){
 }
 function loseLife(){
   if(P.inv>0)return;
-  lives--;P.inv=90;P.vy=-10;P.vx=0;P.state='jump';
+  lives--;P.inv=90;P.vy=-10;P.vx=0;P.state='jump';mLeft=false;mRight=false;
   doFlash(12,'#FF0000');doShake(10);sfxHit();
   if(lives<=0){gs='gameover';}
 }
@@ -1189,8 +1189,8 @@ function update(){
   if(gs==='playing'){
     sqUpdate();
     // Input buffer countdown
-    if(jBufTimer>0)jBufTimer--;else jBuf=false;
-    if(grabBufTimer>0)grabBufTimer--;else grabBuf=false;
+    if(jBufTimer>0)jBufTimer--;else jBuf=0;
+    if(grabBufTimer>0)grabBufTimer--;else grabBuf=0;
 
     // Animation frame + double-jump reset on land
     P.af++;
@@ -1213,7 +1213,7 @@ function update(){
     if(P.state==='swing'){
       updatePendulum();
       // Release: jump buffered or space pressed during swing
-      if(jBuf){jBuf=false;jBufTimer=0;releaseBar();}
+      if(jBuf){jBuf=0;jBufTimer=0;releaseBar();}
       // grabBuf during swing releases and performs legsault
       if(grabBuf){grabBuf=0;grabBufTimer=0;releaseBar();doLegsault();}
     } else {
@@ -1285,13 +1285,12 @@ function update(){
             const bx=b.x+b.w/2,by=b.y;
             const px3=P.x+P.w/2,py3=P.y+P.h/2;
             const dist=Math.hypot(px3-bx,py3-by);
-            if(dist<45&&P.vy<0){
-              // Magnetic snap
+            if(dist<45&&P.vy<6){
               grabBar(b);break;
             }
             // Manual grab buffer
             if(grabBuf&&dist<72){
-              grabBuf=false;grabBufTimer=0;
+              grabBuf=0;grabBufTimer=0;
               grabBar(b);break;
             }
           }
@@ -1299,12 +1298,12 @@ function update(){
 
         // Jump with coyote time + input buffer
         if(jBuf&&(P.onGnd||P.coyote>0)){
-          jBuf=false;jBufTimer=0;P.coyote=0;
+          jBuf=0;jBufTimer=0;P.coyote=0;
           P.vy=JP;P.onGnd=false;P.state='jump';
           sfxJump();sqImpulse(0.82,1.22);
           // Double jump
         } else if(jBuf&&!P.onGnd&&P.djump){
-          jBuf=false;jBufTimer=0;P.djump=false;
+          jBuf=0;jBufTimer=0;P.djump=false;
           P.vy=JP*0.88;P.state='djump';
           sfxSpin();sqImpulse(0.88,1.18);
           spawnStarPts(P.x+P.w/2,P.y+P.h,'#7ecbff',5);
@@ -1315,7 +1314,7 @@ function update(){
           // check no nearby bar
           let nearBar=false;
           for(const b of bars){if(Math.hypot(P.x+P.w/2-(b.x+b.w/2),P.y+P.h/2-b.y)<72){nearBar=true;break;}}
-          if(!nearBar){grabBuf=false;grabBufTimer=0;doLegsault();}
+          if(!nearBar){grabBuf=0;grabBufTimer=0;doLegsault();}
         }
       }
 
@@ -1383,6 +1382,7 @@ function update(){
 
 /* ─── MENU ─── */
 function initMenu(){
+  mLeft=false;mRight=false;
   stopMusic();
   // Gentle ambient for menu
   if(aud){
@@ -1569,7 +1569,7 @@ CV.addEventListener('touchend',e=>{
       P.vx=dx>0?6:-6;
     } else if(dy>40&&dt<400){
       // Swipe down: grab/legsault
-      grabBuf=true;grabBufTimer=6;
+      grabBuf=1;grabBufTimer=6;
     }
   }
 },{passive:false});
