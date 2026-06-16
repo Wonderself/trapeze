@@ -1581,7 +1581,11 @@ function mbtn(id,onDown,onUp){
 mbtn('bL',()=>{mLeft=true;},()=>{mLeft=false;});
 mbtn('bR',()=>{mRight=true;},()=>{mRight=false;});
 // Jump/release barre
-mbtn('bJ',()=>{if(gs==='playing'||gs==='levelcomplete')handleSpace();else if(gs==='menu'){P.char=menuSel===0?'marc':'claire';startGame();}});
+mbtn('bJ',()=>{
+  if(gs==='playing'){handleSpace();}
+  else if(gs==='menu'){P.char=menuSel===0?'marc':'claire';startGame();}
+  else{jBuf=1;tapN++;}
+});
 // Saisir / legsault
 mbtn('bGrab',()=>{if(gs==='playing'){grabBuf=1;grabBufTimer=6;}});
 const btnQuit=document.getElementById('btnQuit');
