@@ -15,7 +15,7 @@ Dernière mise à jour : 2026-07-12 — Modèle utilisé : claude-fable-5 (audit
 ## 🗓️ TABLEAU DES SESSIONS
 | # | Session | Objectif (1 ligne) | Modèle conseillé | Coût tokens | Durée est. | Statut |
 |---|---------|--------------------|------------------|-------------|------------|--------|
-| 1 | Jouabilité & fondations | Jeu fluide sur tout écran, musique infinie, 1 seul fichier, UI anglaise | Sonnet | 🔴 | ~60-90 min | ⬜ À faire |
+| 1 | Jouabilité & fondations | Jeu fluide sur tout écran, musique infinie, 1 seul fichier, UI anglaise | Sonnet | 🔴 | ~60-90 min | ✅ Fait (2026-07-13) |
 | 2 | Beauté & cadeau | Écran titre dédicace Marc & Claire, game feel ++, PWA installable | Sonnet | 🔴 | ~60-90 min | ⬜ À faire |
 
 Légende coût : 🟢 léger · 🟡 moyen · 🔴 lourd (à faire en début de fenêtre de quota)
@@ -81,3 +81,4 @@ Légende coût : 🟢 léger · 🟡 moyen · 🔴 lourd (à faire en début de 
 
 ## ✅ HISTORIQUE
 - [2026-07-12] Audit complet terminé (Fable 5) — 4 bugs critiques identifiés, décisions validées (mobile d'abord, fichier unique, anglais, 2 sessions), plan en 2 sessions rédigé.
+- [2026-07-13] Session 1 terminée (Sonnet) — jeu à vitesse fixe 60 Hz (indépendante de l'écran), musique en boucle infinie, `trapeze-stars-v2.html` supprimé, UI 100% anglais, pause automatique en arrière-plan, bloom désactivé automatiquement si FPS bas. Bonus : un crash bug critique trouvé et corrigé (variable `flashN` inexistante plantait l'écran Game Over — le jeu se figeait après 3 morts). Testé en navigateur headless : jeu jouable, aucune erreur console, écran Game Over ne plante plus, pause/reprise fonctionnent. Prochaine étape : Session 2 (beauté & cadeau).
