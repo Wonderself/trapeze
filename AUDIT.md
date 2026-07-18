@@ -2,8 +2,8 @@
 Dernière mise à jour : 2026-07-18 — Direction active : **Trapeze Stars 3D** (`game3d/`, Three.js + Vite).
 
 <!-- ═══ NEXT (lu par CLAUDE.md pour l'auto-avancement) ═══
-PROCHAINE SESSION : Session 3D-2 — Beauté & identité  (statut ⬜ À faire)
-ACTION : exécuter la Session 3D-2 telle que décrite plus bas, tester (node game3d/test/smoke3d.mjs + captures),
+PROCHAINE SESSION : Session 3D-3 — Diversité & mondes  (statut ⬜ À faire)
+ACTION : exécuter la Session 3D-3 telle que décrite plus bas, tester (node game3d/test/smoke3d.mjs + captures),
 rebuild → copier game3d/dist/ vers docs/, mettre à jour ce fichier, commit + push sur main.
 ════════════════════════════════════════════════════════ -->
 
@@ -13,20 +13,20 @@ rebuild → copier game3d/dist/ vers docs/, mettre à jour ce fichier, commit + 
 
 ## 🚦 OÙ ON EN EST
 - Jeu **canvas 2D** (racine, `index.html`) : ✅ terminé et conservé (Sessions 1 & 2 — jouabilité + cadeau).
-- Jeu **3D** (`game3d/`) : 🟡 **base jouable** livrée — arène de cirque, pendule → lâcher → arc assisté → rattrapage, combos, étoiles, 3 vies, PWA, build → `docs/` (GitHub Pages).
+- Jeu **3D** (`game3d/`) : 🟢 **jouable + beau** — arène sous chapiteau, pendule → lâcher noté → arc → rattrapage, combos, tricks, étoiles/anneaux, 3 vies, menu podium 3D, PWA, build → `docs/` (GitHub Pages).
 - Objectif validé par Emmanuel (2026-07-18) : rendre le 3D **génial et addictif** — jouabilité d'abord, puis beauté, diversité, rétention. Verrous monofichier/no-build levés.
-- Ce qui manque au 3D aujourd'hui (diagnostic honnête) :
-  1. **Zéro skill réel** : l'arc assisté garantit le catch dès que `omega > 0.25` → aucune tension, aucune raison de viser le timing parfait.
-  2. **Zéro variété** : 16 barres identiques espacées de 5.6, une seule action (lâcher), pas d'obstacles, pas de tricks, partie ≈ 60 s puis plus rien à faire.
-  3. **Feel plat** : pas de slow-mo, pas de trail, quasi pas de particules, caméra sans accent, pas d'audio du tout.
-  4. **Beauté perfectible** : pas de chapiteau (fond = noir étoilé), matériaux simples, persos peu différenciés, menu = pastilles 2D plates.
-  5. **Zéro rétention** : pas de high score sauvegardé, pas de médailles, pas de mode infini.
+- Ce qui manque au 3D aujourd'hui (diagnostic honnête, mis à jour) :
+  1. ~~Zéro skill réel~~ ✅ réglé en 3D-1 (timing gradé PERFECT/GOOD/OK, tricks, pompage).
+  2. **Variété encore limitée** : un seul décor (cirque), une seule mécanique de fond. Manque : plusieurs mondes + une mécanique par monde (→ 3D-3).
+  3. ~~Feel plat~~ ✅ réglé en 3D-1 (slow-mo, trail, confettis, caméra vivante) — reste l'**audio** (→ 3D-4).
+  4. ~~Beauté perfectible~~ ✅ réglé en 3D-2 (chapiteau rayé complet, mât/piste, persos Marc/Claire différenciés + animés, menu podium 3D tournant, rideau, rim light, sol réfléchissant léger).
+  5. **Zéro rétention** : pas de high score sauvegardé, pas de médailles, pas de mode infini (→ 3D-4).
 
 ## 🗓️ TABLEAU DES SESSIONS (roadmap 3D)
 | # | Session | Objectif (1 ligne) | Coût | Durée est. | Statut |
 |---|---------|--------------------|------|------------|--------|
 | 3D-1 | Jouabilité & game feel | Le timing devient un vrai skill (Perfect/Good/OK), tricks aériens, slow-mo, caméra vivante, particules, trail | 🔴 | ~60-90 min | ✅ Fait (2026-07-18) |
-| 3D-2 | Beauté & identité | Chapiteau complet, matériaux riches, Marc/Claire différenciés et animés, menu 3D podium | 🔴 | ~60-90 min | ⬜ À faire |
+| 3D-2 | Beauté & identité | Chapiteau complet, matériaux riches, Marc/Claire différenciés et animés, menu 3D podium | 🔴 | ~60-90 min | ✅ Fait (2026-07-18) |
 | 3D-3 | Diversité & mondes | 4 mondes (Cirque/Jungle/Plage/Espace) + 1 mécanique nouvelle par monde, transitions | 🔴 | ~60-90 min | ⬜ À faire |
 | 3D-4 | Addiction & rétention | Audio complet, high score + médailles + best combo persistés, mode infini avec montée en difficulté | 🟡 | ~45-60 min | ⬜ À faire |
 
@@ -74,14 +74,14 @@ Légende coût : 🟢 léger · 🟡 moyen · 🔴 lourd (à faire en début de 
 **Critères** : reload → high score conservé ; mode infini atteint en headless ; 0 erreur JS.
 
 ## 🔍 RÉFÉRENCE TECHNIQUE (game3d/ — pour ne pas relire le code)
-- **Stack** : Three.js 0.160 + Vite 5, modules dans `game3d/src/` : `main.js` (état `G`, physique pendule `stepBar`, `release()`, arc assisté kinématique `flyFrom/flyTo/flyT`, caméra, boucle, UI DOM, `window.__game` pour tests) ; `scene.js` (renderer, ACES, bloom UnrealBloomPass 0.7/0.85/0.82) ; `world.js` (piste, foule InstancedMesh, spots animés + cônes additifs, fanions, starfield, `update(t)`) ; `player.js` (héros low-poly, `poseHero`).
+- **Stack** : Three.js 0.160 + Vite 5, modules dans `game3d/src/` : `main.js` (état `G`, physique pendule `stepBar`, `release()`, arc assisté kinématique `flyFrom/flyTo/flyT`, caméra, boucle, UI DOM, **menu podium 3D** `menuGroup`/`turntable`/`menuHeroes`/`curtain`, `window.__game` pour tests) ; `scene.js` (renderer, ACES, bloom UnrealBloomPass 0.7/0.85/0.82, **rim light froide + fill chaud**) ; `world.js` (**chapiteau** : parois/toit rayés via `stripeTexture` CanvasTexture, mât+pennant, entrée lumineuse, **piste disque brillant**, sol réfléchissant léger metalness 0.45 ; piste runway, foule InstancedMesh, **fanions InstancedMesh**, spots animés + cônes additifs, starfield visible par l'ouverture du toit, `update(t)`) ; `player.js` (héros low-poly **différenciés** Marc cape/mèche · Claire tutu/couettes, visage sourire+joues, bras en pivots d'épaule, `poseHero` états swing/fly/**salute**/idle).
 - **Constantes clés** (`main.js` haut de fichier) : `PY0=6.2` (pivot, varié ±1.2 par barre), `L=3.3`, `AMP_MIN/MAX=0.85/1.25` (pompage), `NBARS=16` (espacement 4.5–7.5, seed LCG déterministe), `MISS_Y=-7`, `COMBO_TIME=6`.
 - **Contrôles (depuis 3D-1)** : *maintenir* = s'accrocher & pomper, *relâcher* = lâcher la barre, *tap en vol* = vrille. `releaseBar()` note le timing (`diff = |θ−0.45·amp|/amp`) : PERFECT <0.12 (arc 0.6 s, portée 5.0, gain ×2, slow-mo 0.35× au catch), GOOD <0.35 (0.75 s, 4.2), OK sinon (0.95 s, 3.0) ; portée ×(0.85+pompage×0.3) ; cible hors de portée → arc court puis chute (« TOO FAR! »). Arrière/faible → fumble.
 - **États** : `G.mode` menu/playing/win/over ; `G.state` swing/fly/fumble. Le choix Marc/Claire est appliqué en jeu (`rebuildHero`).
-- **Harnais** : `window.__game` = `start(char)`, `down()`, `up()`, `action()` (tap), `state()` → {mode, state, active, score, lives, combo, grade, flips, flipBonus, theta, omega, amp, timeScale, hero}. `?lowfx` dans l'URL = rendu sans bloom (fallback GPU lents + accélère le headless).
+- **Harnais** : `window.__game` = `start(char)`, `down()`, `up()`, `action()` (tap), `pick(char)` (sélection menu), `state()` → {mode, state, active, score, lives, combo, grade, flips, flipBonus, theta, omega, amp, timeScale, hero}, `menu()` → {podium, heroes, curtainOpen, char}. `?lowfx` dans l'URL = rendu sans bloom (fallback GPU lents + accélère le headless).
 - **UI** : DOM overlay (`#hud #menu #over #combo #tapBtn #flash`), police Fredoka.
 - **Build/deploy** : `cd game3d && npm install && npm run build` → copier `dist/` → `/docs` (+ `.nojekyll`). GitHub Pages sert `main:/docs` (à activer côté GitHub par Emmanuel : Settings → Pages → main /docs → l'URL sera `https://wonderself.github.io/trapeze/`).
-- **Test headless** : `node game3d/test/smoke3d.mjs` (Chromium swiftshader flags déjà dans le script ; Playwright global : `/home/claude/.npm-global/lib/node_modules/playwright`). Vérifie WebGL, progression via `__game`, erreurs console, captures dans `/home/claude/deliver/`.
+- **Test headless** : `node game3d/test/smoke3d.mjs` (Chromium swiftshader flags déjà dans le script). **Agnostique env.** : résout Playwright (`PLAYWRIGHT_PATH` ou candidats globaux), `dist/` relatif au script, captures dans `DELIVER_DIR` (défaut `/home/claude/deliver`, fallback `game3d/test/out/`). Vérifie WebGL, **menu 3D (podium+rideau+persos)**, progression via `__game`, erreurs console. Critères 3D-1 (a)-(f) + 3D-2 (g) menu → EXIT 0.
 - **Jeu 2D** (racine) : intact, PWA propre, ne plus y toucher sauf demande.
 
 ## ✅ HISTORIQUE
@@ -91,4 +91,5 @@ Légende coût : 🟢 léger · 🟡 moyen · 🔴 lourd (à faire en début de 
 - [2026-07-18] Session 2 (2D) ✅ — écran-titre cadeau, game feel, polish, PWA, « Made with ❤ for Marc & Claire ». Testé headless, 0 erreur.
 - [2026-07-18] 🚀 **Trapeze Stars 3D** (Opus) — verrous levés par Emmanuel ; base Three.js+Vite jouable : arène, pendule→arc assisté→catch, combos, étoiles, PWA, build→`docs/`. Testé headless WebGL (progression vérifiée, 0 erreur JS).
 - [2026-07-18] Roadmap 3D rédigée (Fable 5) — 4 sessions planifiées (jouabilité/feel → beauté → mondes → rétention), diagnostic des manques, critères testables, prompts prêts.
+- [2026-07-18] Session 3D-2 ✅ (Opus) — **beauté & identité** : chapiteau complet (parois + toit rayés rouge/crème via CanvasTexture, mât + pennant, entrée lumineuse, piste disque brillant à liseré doré, sol légèrement réfléchissant), fanions passés en InstancedMesh (budget drawcalls), rim light froide + fill chaud dans `scene.js`. Marc & Claire vraiment différenciés (Marc cape rouge + mèche + bleu ; Claire tutu + couettes/nœuds + rose), visages expressifs (sourire, joues, éclat des yeux), bras en pivots d'épaule → bras tendus « en étoile » en vol + **salut** au catch PERFECT. **Menu podium 3D** : les 2 persos sur un podium doré tournant sous projecteur (rim light), le sélectionné se lève et salue ; **rideau de velours** qui s'ouvre au 1er affichage ; DOM du menu refondu (pastilles 2D supprimées, chips de nom, centre dégagé pour le podium). `smoke3d.mjs` rendu agnostique (Playwright/chemins) + critère (g) menu 3D + captures. Test headless EXIT 0 (a–g verts, 0 erreur JS hors font sandbox). Build déployé dans `docs/`. Prochaine étape : **Session 3D-3 — Diversité & mondes**.
 - [2026-07-18] Session 3D-1 ✅ (Fable 5) — le timing est devenu le cœur du jeu : contrôle « maintenir pour pomper, relâcher pour voler », lâcher noté PERFECT/GOOD/OK (fenêtres sur la phase du pendule), portée d'arc dépendante du grade + pompage (les grands écarts exigent pompage + bon timing, sinon « TOO FAR! » et chute), vrille bonus au tap en vol (+50×combo par tour complet), slow-mo 0.35× + confettis + gain ×2 au catch PERFECT, FOV kick au lâcher, shake au fumble, dolly-in en slow-mo, trail additif (arc-en-ciel en vrille), rail varié déterministe (espacement 4.5–7.5, hauteur ±1.2, 3 anneaux bonus +75), combo qui expire en 6 s avec jauge, score « pop ». Équilibrage validé par bot : partie gagnable sans perdre de vie en pompant + visant le pic (score 4850, combo x15). Critères (a)-(f) du plan tous verts en headless (EXIT 0), `?lowfx` ajouté comme fallback GPU. Build déployé dans `docs/`. Prochaine étape : **Session 3D-2 — Beauté & identité**.

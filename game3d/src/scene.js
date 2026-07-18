@@ -36,6 +36,15 @@ export function createStage(container) {
   scene.add(key);
   scene.add(key.target);
 
+  // rim / back light — cool edge highlight to separate characters from the dark tent
+  const rim = new THREE.DirectionalLight(0x7fd0ff, 0.5);
+  rim.position.set(16, 12, -16);
+  scene.add(rim);
+  // warm fill from the ring, lifts shadowed fronts
+  const fill = new THREE.DirectionalLight(0xffb060, 0.25);
+  fill.position.set(6, -4, 14);
+  scene.add(fill);
+
   // --- post-processing (bloom) ---
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));

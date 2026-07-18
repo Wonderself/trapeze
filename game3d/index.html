@@ -33,21 +33,23 @@
 
   /* ---- overlays ---- */
   .screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;text-align:center;padding:24px;background:radial-gradient(ellipse at 50% 38%,rgba(40,10,70,.35),rgba(3,0,12,.86) 78%)}
+  /* menu: leave the centre clear so the 3D podium characters are the stars */
+  #menu{justify-content:space-between;padding:30px 24px 26px;background:radial-gradient(ellipse at 50% 52%,rgba(3,0,12,0) 26%,rgba(3,0,12,.5) 72%,rgba(3,0,12,.82) 100%)}
+  .menuTop,.menuBottom{display:flex;flex-direction:column;align-items:center;width:100%}
   .hidden{display:none!important}
   #title{font-size:clamp(38px,11vw,86px);font-weight:700;line-height:.95;background:linear-gradient(180deg,#fff2b0,#ffb43c);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 22px rgba(255,180,40,.55));letter-spacing:1px}
   #subtitle{margin-top:10px;font-size:clamp(14px,4vw,20px);color:#ffd7ef;font-weight:600;letter-spacing:1px}
   #dedication{margin-top:6px;font-size:clamp(11px,3vw,14px);color:#b79bff;font-weight:500;letter-spacing:3px;text-transform:uppercase}
-  .pickRow{display:flex;gap:18px;margin:30px 0 22px;flex-wrap:wrap;justify-content:center}
-  .pick{width:118px;padding:16px 10px 14px;border-radius:20px;background:rgba(20,8,44,.6);border:2px solid rgba(255,255,255,.14);cursor:pointer;transition:transform .12s,border-color .12s,background .12s;backdrop-filter:blur(6px)}
-  .pick:hover{transform:translateY(-4px)}
-  .pick.sel{border-color:var(--gold);background:rgba(60,30,90,.7);box-shadow:0 0 28px rgba(255,200,60,.35)}
-  .pick .av{width:70px;height:70px;margin:0 auto 8px;border-radius:50%}
-  .pick.marc .av{background:radial-gradient(circle at 40% 35%,#8fdcff,#2f7fd6)}
-  .pick.claire .av{background:radial-gradient(circle at 40% 35%,#ffb0d8,#e5559f)}
+  .pickRow{display:flex;gap:110px;margin:0 0 16px;flex-wrap:nowrap;justify-content:center}
+  .pick{padding:9px 8px 7px;min-width:104px;border-radius:16px;background:rgba(14,5,32,.42);border:2px solid rgba(255,255,255,.16);cursor:pointer;transition:transform .12s,border-color .12s,background .12s;backdrop-filter:blur(4px)}
+  .pick:hover{transform:translateY(-3px)}
+  .pick.sel{border-color:var(--gold);background:rgba(60,30,90,.6);box-shadow:0 0 24px rgba(255,200,60,.4)}
   .pick .nm{font-weight:700;font-size:16px;letter-spacing:1px}
-  .btn{margin-top:6px;padding:14px 40px;border:none;border-radius:40px;font-family:inherit;font-size:20px;font-weight:700;color:#3a1500;cursor:pointer;background:linear-gradient(180deg,#ffe08a,#ffb028);box-shadow:0 8px 26px rgba(255,170,30,.4);transition:transform .1s}
+  .pick .tag{display:block;font-size:10px;letter-spacing:2px;margin-top:1px;color:#9a8fc5;opacity:0;transition:opacity .12s}
+  .pick.sel .tag{opacity:1;color:var(--gold)}
+  .btn{margin-top:4px;padding:14px 40px;border:none;border-radius:40px;font-family:inherit;font-size:20px;font-weight:700;color:#3a1500;cursor:pointer;background:linear-gradient(180deg,#ffe08a,#ffb028);box-shadow:0 8px 26px rgba(255,170,30,.4);transition:transform .1s}
   .btn:active{transform:scale(.95)}
-  #hint{margin-top:20px;font-size:12px;color:#7d6bb0;line-height:1.7}
+  #hint{margin-top:16px;font-size:12px;color:#7d6bb0;line-height:1.7}
   #bigmsg{font-size:clamp(30px,9vw,60px);font-weight:700;color:#fff}
   #bigsub{margin-top:10px;font-size:clamp(15px,4vw,20px);color:var(--gold)}
 
@@ -72,15 +74,19 @@
 <button id="tapBtn">✊</button>
 
 <div id="menu" class="screen">
-  <div id="title">TRAPEZE<br>STARS</div>
-  <div id="subtitle">Starring&nbsp; MARC &amp; CLAIRE</div>
-  <div id="dedication">★ young champions ★</div>
-  <div class="pickRow">
-    <div class="pick marc sel" data-char="marc"><div class="av"></div><div class="nm">MARC</div></div>
-    <div class="pick claire" data-char="claire"><div class="av"></div><div class="nm">CLAIRE</div></div>
+  <div class="menuTop">
+    <div id="title">TRAPEZE<br>STARS</div>
+    <div id="subtitle">Starring&nbsp; MARC &amp; CLAIRE</div>
+    <div id="dedication">★ young champions ★</div>
   </div>
-  <button class="btn" id="playBtn">▶ PLAY</button>
-  <div id="hint"><b>Hold</b> to grip &amp; pump your swing — <b>let go</b> at the top to fly!<br>Tap in the air for a <b>FLIP</b> bonus. Desktop: hold &amp; release <b>Space</b>.</div>
+  <div class="menuBottom">
+    <div class="pickRow">
+      <div class="pick marc sel" data-char="marc"><div class="nm">MARC</div><span class="tag">▲ PICKED</span></div>
+      <div class="pick claire" data-char="claire"><div class="nm">CLAIRE</div><span class="tag">▲ PICKED</span></div>
+    </div>
+    <button class="btn" id="playBtn">▶ PLAY</button>
+    <div id="hint"><b>Hold</b> to grip &amp; pump your swing — <b>let go</b> at the top to fly!<br>Tap in the air for a <b>FLIP</b> bonus. Desktop: hold &amp; release <b>Space</b>.</div>
+  </div>
 </div>
 
 <div id="over" class="screen hidden">
