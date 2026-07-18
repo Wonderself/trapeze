@@ -5,52 +5,50 @@
 > quoi faire et le fait. Le plan vit dans **`AUDIT.md`**. Ce fichier-ci dit *comment* l'exécuter.
 
 ## 🎮 Le projet en une phrase
-« Trapeze Stars » — un jeu de cirque **monofichier** (`index.html`, HTML5 Canvas 2D, WebAudio, zéro
-dépendance, zéro build), pensé **mobile d'abord**, offert en cadeau à **Marc & Claire**. UI 100 % anglais.
+« Trapeze Stars » — jeu de trapèze offert en cadeau à **Marc & Claire** (des enfants : générosité > punition).
+Deux versions coexistent : le **canvas 2D** historique (racine, ✅ terminé, ne plus y toucher) et la direction
+active **Trapeze Stars 3D** (`game3d/`, Three.js + Vite), qu'on fait monter en gamme session par session.
 
 ## 🤖 Protocole d'auto-avancement (à exécuter à chaque session, sans attendre d'instruction)
-1. **Lis `AUDIT.md`** en entier — le diagnostic, les numéros de ligne et le plan y sont déjà. **Ne relis PAS tout `index.html`** pour re-diagnostiquer.
-2. Repère dans le **TABLEAU DES SESSIONS** la **première ligne au statut `⬜ À faire`** = la prochaine session.
-3. **Exécute-la exactement** comme décrite dans « DÉTAIL DES SESSIONS » (le bloc « Prompt de lancement » est ta feuille de route).
-4. **Teste** avant de committer (voir « Comment tester » ci-dessous). Aucune erreur console, le jeu se lance, une partie est jouable.
-5. **Mets à jour `AUDIT.md`** : statut de la session → `✅ Fait (AAAA-MM-JJ)`, ajoute une ligne dans `✅ HISTORIQUE`, et fais pointer `OÙ ON EN EST` vers la suite.
-6. **Commit + push sur `main`** (voir « Git »). Puis **arrête-toi et fais un compte-rendu concis** (diffs, pas de fichiers entiers).
-7. S'il ne reste **aucune** session `⬜`, ne code rien : rapporte que le plan est terminé et propose les prochaines idées (section « PROPOSITIONS À VALIDER » de `AUDIT.md`).
+1. **Lis `AUDIT.md`** en entier — diagnostic, roadmap, référence technique et prompts y sont. **Ne re-diagnostique pas** le code.
+2. Repère dans le **TABLEAU DES SESSIONS** la **première ligne `⬜ À faire`** = la prochaine session.
+3. **Exécute-la exactement** comme décrite dans « DÉTAIL DES SESSIONS » (le « Prompt de lancement » est ta feuille de route).
+4. **Teste** : `node game3d/test/smoke3d.mjs` (étends-le si la session ajoute des mécaniques) + captures visuelles à vérifier toi-même. Zéro erreur JS tolérée (l'`ERR_CONNECTION_RESET` de la font Google en sandbox est le seul bruit accepté).
+5. **Rebuild & deploy** : `cd game3d && npm run build`, puis remplace le contenu de `/docs` par celui de `game3d/dist/` (garde `docs/.nojekyll`).
+6. **Mets à jour `AUDIT.md`** : statut de la session → `✅ Fait (AAAA-MM-JJ)`, ligne d'historique, pointeur `NEXT` vers la suite.
+7. **Commit + push sur `main`**, puis compte-rendu concis (diffs, pas de fichiers entiers).
+8. S'il ne reste aucune session `⬜` : ne rien coder d'office, proposer la suite et attendre validation.
 
-> ⚠️ **Une session à la fois.** N'enchaîne pas plusieurs sessions dans un même run sans validation, sauf demande explicite.
+> ⚠️ **Une session à la fois.** N'enchaîne pas plusieurs sessions dans un même run sans validation explicite.
 
-## 🧭 Règles du projet (garde-fous non négociables)
-- **Un seul fichier de jeu** : tout dans `index.html`. Pas de framework, pas d'étape de build, pas de dépendance réseau.
-- **Mobile d'abord & 60 fps** : chaque effet ajouté doit être bon marché. Pas de nouveau `ctx.filter` par frame.
-- **Anglais uniquement** dans l'UI (aucun texte hébreu/français à l'écran).
-- **Physique à pas fixe** : ne touche pas aux constantes physiques ni au cadencement delta-time déjà en place.
-- **C'est un cadeau** : la dédicace « Marc & Claire » et l'effet « waouh » à l'ouverture priment sur les features gadget.
+## 🧭 Règles du projet (garde-fous)
+- **Cible mobile & 60 fps** : chaque effet doit être bon marché. Instancing pour ce qui se répète, pas de nouvelles ombres dynamiques, pas de Reflector, drawcalls < 120. Le bloom existant suffit comme post-FX.
+- **C'est un cadeau pour des enfants** : difficulté généreuse, échec jamais punitif (filet, respawn doux), lisibilité avant réalisme. La dédicace « Marc & Claire » reste centrale.
+- **Le skill = le timing** : toute nouvelle mécanique doit renforcer la boucle balancer → lâcher → voler → rattraper, pas la diluer.
+- **Anglais uniquement** dans l'UI du jeu.
+- **Ne pas casser** : `window.__game` (harnais de test), la boucle rAF à `dt` clampé, l'architecture modules de `game3d/src/`, le jeu 2D à la racine.
 - **Réponses concises** : montre des **diffs**, pas des fichiers entiers.
 
-## ▶️ Comment tester (headless, sans écran)
-Le jeu est un canvas 800×450. Test rapide de non-régression :
+## ▶️ Commandes
 ```bash
-# Sert le dossier puis charge la page dans un Chromium headless et capture les erreurs console.
-python3 -m http.server 8000 >/dev/null 2>&1 &
-npx --yes playwright@latest install chromium >/dev/null 2>&1   # si besoin (Chromium est déjà présent dans l'env cloud)
-node test/smoke.js   # crée ce script s'il n'existe pas : il ouvre http://localhost:8000, attend, lit console + canvas
+cd game3d && npm install        # une fois par environnement
+npm run dev                     # dev local
+npm run build                   # prod → game3d/dist/
+node game3d/test/smoke3d.mjs    # test headless WebGL (0 erreur JS + captures dans /home/claude/deliver/)
 ```
-Contrôles pour un test manuel : **Space/↑/W** = saut · **F/Z/Shift** = grab · **←→/A D** = déplacement ·
-mobile = boutons ◀ ▶ ⚡(saut) GRAB, tap canvas = saut, swipe bas = grab.
+Contrôles : **Space** (desktop) / **tap** (mobile) = lâcher, vrille en vol, pomper en maintenant.
 
 ## 🌿 Git
-- Branche de travail et **source de vérité unique = `main`**. Les branches `claude/*` héritées sont obsolètes.
-- Commits clairs et atomiques. Message type : `Session N: <titre>` ou `Fix: <quoi>`.
-- `commit` **et** `push` à la fin de chaque session réussie. Ne laisse jamais le repo dans un état cassé.
+- Source de vérité unique = **`main`**. Les branches `claude/*` héritées sont obsolètes.
+- Commits atomiques, message type `Session 3D-N: <titre>` ou `Fix: <quoi>`. **Commit + push à chaque session réussie.**
+- Si le push échoue en 401 : l'accès en écriture passe par le PAT d'Emmanuel (voir historique de conversation / variable `GH_TOKEN` d'environnement s'il l'a configurée). Ne jamais laisser le repo dans un état cassé.
 
 ## 🗂️ Carte du repo
 | Chemin | Rôle |
 |---|---|
-| `game3d/` | 🚀 **Direction active** : « Trapeze Stars 3D » (Three.js + Vite). Source dans `game3d/src/`. `npm i` puis `npm run dev` / `npm run build`. |
-| `docs/` | Build de prod du jeu 3D (déployé par GitHub Pages : source = branche `main`, dossier `/docs`). Régénéré via `npm run build` dans `game3d/` puis copie de `dist/` → `docs/`. |
-| `index.html` | Le jeu **canvas 2D** original (v1+v2), toujours jouable, conservé. |
-| `AUDIT.md` | **Le plan** : état, sessions, diagnostic, historique, direction 3D. |
+| `game3d/` | 🚀 **Direction active** : Trapeze Stars 3D. Source `game3d/src/` (`main.js` jeu/état, `scene.js` rendu/bloom, `world.js` décor, `player.js` héros). |
+| `docs/` | Build de prod servi par GitHub Pages (`main:/docs`). Régénéré à chaque session (étape 5 du protocole). |
+| `index.html` (+ `manifest.json`, `sw.js`, `icon-*.png`) | Jeu canvas 2D original, ✅ terminé, conservé tel quel. |
+| `AUDIT.md` | **Le plan** : état, roadmap 3D, détail des sessions, référence technique, historique. |
 | `CLAUDE.md` | Ce fichier : le protocole d'auto-avancement. |
-| `manifest.json` / `sw.js` / `icon-*.png` | PWA du jeu 2D. |
-
-> ⚙️ **Jeu 3D — commandes** : `cd game3d && npm install`, puis `npm run dev` (dev) ou `npm run build` (prod → `game3d/dist`, à copier dans `/docs` pour Pages). Test headless : `node game3d/test/smoke3d.mjs`.
+| `game3d/test/smoke3d.mjs` | Test headless WebGL (progression via `window.__game`, captures). |
