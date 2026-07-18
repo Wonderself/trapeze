@@ -99,8 +99,8 @@ export function createWorld(scene, length) {
     group.add(sp);
     // visible beam
     const beam = new THREE.Mesh(
-      new THREE.ConeGeometry(3.2, 26, 24, 1, true),
-      new THREE.MeshBasicMaterial({ color: def.col, transparent: true, opacity: 0.06, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending })
+      new THREE.ConeGeometry(2.5, 26, 24, 1, true),
+      new THREE.MeshBasicMaterial({ color: def.col, transparent: true, opacity: 0.03, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending })
     );
     beam.position.copy(sp.position);
     group.add(beam);

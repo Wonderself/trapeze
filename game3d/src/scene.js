@@ -56,5 +56,8 @@ export function createStage(container) {
   }
   window.addEventListener('resize', resize);
 
-  return { renderer, scene, camera, composer, key, render: () => composer.render() };
+  // ?lowfx -> skip post-processing (slow GPUs / software rendering fallback)
+  const lowfx = new URLSearchParams(location.search).has('lowfx');
+  const render = lowfx ? () => renderer.render(scene, camera) : () => composer.render();
+  return { renderer, scene, camera, composer, key, render };
 }

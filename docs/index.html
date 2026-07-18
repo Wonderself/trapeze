@@ -19,10 +19,17 @@
 
   /* ---- HUD ---- */
   #hud{position:fixed;top:0;left:0;right:0;padding:14px 18px;display:none;justify-content:space-between;align-items:flex-start;pointer-events:none;z-index:5;text-shadow:0 2px 10px rgba(0,0,0,.7)}
-  #score{font-size:30px;font-weight:700;color:var(--gold);letter-spacing:.5px}
+  #score{font-size:30px;font-weight:700;color:var(--gold);letter-spacing:.5px;transition:transform .16s cubic-bezier(.2,2,.4,1)}
+  #score.pop{transform:scale(1.28)}
   #score small{display:block;font-size:12px;color:#cbb2ff;font-weight:500;letter-spacing:2px}
   #lives{font-size:24px;letter-spacing:2px}
   #combo{position:fixed;top:70px;left:50%;transform:translateX(-50%);font-size:22px;font-weight:700;color:#fff;opacity:0;transition:opacity .2s;z-index:5;pointer-events:none;text-shadow:0 2px 12px rgba(255,120,220,.8)}
+  #grade{position:fixed;top:32%;left:50%;transform:translate(-50%,-50%);font-size:clamp(30px,8vw,58px);font-weight:700;opacity:0;transition:opacity .15s;z-index:6;pointer-events:none;letter-spacing:2px;text-shadow:0 4px 24px rgba(0,0,0,.6)}
+  #grade.zoom{animation:gradeZoom .5s cubic-bezier(.2,2.2,.4,1)}
+  @keyframes gradeZoom{0%{transform:translate(-50%,-50%) scale(.4)}60%{transform:translate(-50%,-50%) scale(1.15)}100%{transform:translate(-50%,-50%) scale(1)}}
+  #comboHold{position:fixed;top:14px;left:50%;transform:translateX(-50%);text-align:center;z-index:5;pointer-events:none;opacity:0;transition:opacity .25s;font-size:16px;font-weight:700;color:#ffb2dd;text-shadow:0 2px 8px rgba(0,0,0,.7)}
+  #comboBar{width:110px;height:4px;margin:4px auto 0;border-radius:3px;background:rgba(255,255,255,.15);overflow:hidden}
+  #comboFill{height:100%;width:100%;border-radius:3px;background:linear-gradient(90deg,#ff6db0,#ffcf3f)}
 
   /* ---- overlays ---- */
   .screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;text-align:center;padding:24px;background:radial-gradient(ellipse at 50% 38%,rgba(40,10,70,.35),rgba(3,0,12,.86) 78%)}
@@ -50,7 +57,7 @@
   @media (hover:none),(pointer:coarse){ #tapBtn.on{display:flex} }
   #flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:8}
 </style>
-  <script type="module" crossorigin src="./assets/index-BH0UhJIe.js"></script>
+  <script type="module" crossorigin src="./assets/index-CPKLQNIC.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -60,8 +67,10 @@
   <div id="lives">❤❤❤</div>
 </div>
 <div id="combo"></div>
+<div id="grade"></div>
+<div id="comboHold"><span>COMBO x2</span><div id="comboBar"><div id="comboFill"></div></div></div>
 <div id="flash"></div>
-<button id="tapBtn">RELEASE</button>
+<button id="tapBtn">✊</button>
 
 <div id="menu" class="screen">
   <div id="title">TRAPEZE<br>STARS</div>
@@ -72,7 +81,7 @@
     <div class="pick claire" data-char="claire"><div class="av"></div><div class="nm">CLAIRE</div></div>
   </div>
   <button class="btn" id="playBtn">▶ PLAY</button>
-  <div id="hint">Swing, then <b>release</b> at the right moment to fly to the next bar.<br>Desktop: <b>Space</b> to release/grab · Tap the screen on mobile.</div>
+  <div id="hint"><b>Hold</b> to grip &amp; pump your swing — <b>let go</b> at the top to fly!<br>Tap in the air for a <b>FLIP</b> bonus. Desktop: hold &amp; release <b>Space</b>.</div>
 </div>
 
 <div id="over" class="screen hidden">

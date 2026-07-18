@@ -2,8 +2,8 @@
 Dernière mise à jour : 2026-07-18 — Direction active : **Trapeze Stars 3D** (`game3d/`, Three.js + Vite).
 
 <!-- ═══ NEXT (lu par CLAUDE.md pour l'auto-avancement) ═══
-PROCHAINE SESSION : Session 3D-1 — Jouabilité & game feel  (statut ⬜ À faire)
-ACTION : exécuter la Session 3D-1 telle que décrite plus bas, tester (node game3d/test/smoke3d.mjs + captures),
+PROCHAINE SESSION : Session 3D-2 — Beauté & identité  (statut ⬜ À faire)
+ACTION : exécuter la Session 3D-2 telle que décrite plus bas, tester (node game3d/test/smoke3d.mjs + captures),
 rebuild → copier game3d/dist/ vers docs/, mettre à jour ce fichier, commit + push sur main.
 ════════════════════════════════════════════════════════ -->
 
@@ -25,7 +25,7 @@ rebuild → copier game3d/dist/ vers docs/, mettre à jour ce fichier, commit + 
 ## 🗓️ TABLEAU DES SESSIONS (roadmap 3D)
 | # | Session | Objectif (1 ligne) | Coût | Durée est. | Statut |
 |---|---------|--------------------|------|------------|--------|
-| 3D-1 | Jouabilité & game feel | Le timing devient un vrai skill (Perfect/Good/OK), tricks aériens, slow-mo, caméra vivante, particules, trail | 🔴 | ~60-90 min | ⬜ À faire |
+| 3D-1 | Jouabilité & game feel | Le timing devient un vrai skill (Perfect/Good/OK), tricks aériens, slow-mo, caméra vivante, particules, trail | 🔴 | ~60-90 min | ✅ Fait (2026-07-18) |
 | 3D-2 | Beauté & identité | Chapiteau complet, matériaux riches, Marc/Claire différenciés et animés, menu 3D podium | 🔴 | ~60-90 min | ⬜ À faire |
 | 3D-3 | Diversité & mondes | 4 mondes (Cirque/Jungle/Plage/Espace) + 1 mécanique nouvelle par monde, transitions | 🔴 | ~60-90 min | ⬜ À faire |
 | 3D-4 | Addiction & rétention | Audio complet, high score + médailles + best combo persistés, mode infini avec montée en difficulté | 🟡 | ~45-60 min | ⬜ À faire |
@@ -75,8 +75,10 @@ Légende coût : 🟢 léger · 🟡 moyen · 🔴 lourd (à faire en début de 
 
 ## 🔍 RÉFÉRENCE TECHNIQUE (game3d/ — pour ne pas relire le code)
 - **Stack** : Three.js 0.160 + Vite 5, modules dans `game3d/src/` : `main.js` (état `G`, physique pendule `stepBar`, `release()`, arc assisté kinématique `flyFrom/flyTo/flyT`, caméra, boucle, UI DOM, `window.__game` pour tests) ; `scene.js` (renderer, ACES, bloom UnrealBloomPass 0.7/0.85/0.82) ; `world.js` (piste, foule InstancedMesh, spots animés + cônes additifs, fanions, starfield, `update(t)`) ; `player.js` (héros low-poly, `poseHero`).
-- **Constantes clés** (`main.js` haut de fichier) : `PY=6.2` (pivot), `L=3.3` (corde), `AMP=1.05`, `BAR_DX=5.6`, `NBARS=16`, `CATCH_R=2.4`, `MISS_Y=-7`, vol `flyDur=0.72` + parabole `sin(a·π)·2.4`.
+- **Constantes clés** (`main.js` haut de fichier) : `PY0=6.2` (pivot, varié ±1.2 par barre), `L=3.3`, `AMP_MIN/MAX=0.85/1.25` (pompage), `NBARS=16` (espacement 4.5–7.5, seed LCG déterministe), `MISS_Y=-7`, `COMBO_TIME=6`.
+- **Contrôles (depuis 3D-1)** : *maintenir* = s'accrocher & pomper, *relâcher* = lâcher la barre, *tap en vol* = vrille. `releaseBar()` note le timing (`diff = |θ−0.45·amp|/amp`) : PERFECT <0.12 (arc 0.6 s, portée 5.0, gain ×2, slow-mo 0.35× au catch), GOOD <0.35 (0.75 s, 4.2), OK sinon (0.95 s, 3.0) ; portée ×(0.85+pompage×0.3) ; cible hors de portée → arc court puis chute (« TOO FAR! »). Arrière/faible → fumble.
 - **États** : `G.mode` menu/playing/win/over ; `G.state` swing/fly/fumble. Le choix Marc/Claire est appliqué en jeu (`rebuildHero`).
+- **Harnais** : `window.__game` = `start(char)`, `down()`, `up()`, `action()` (tap), `state()` → {mode, state, active, score, lives, combo, grade, flips, flipBonus, theta, omega, amp, timeScale, hero}. `?lowfx` dans l'URL = rendu sans bloom (fallback GPU lents + accélère le headless).
 - **UI** : DOM overlay (`#hud #menu #over #combo #tapBtn #flash`), police Fredoka.
 - **Build/deploy** : `cd game3d && npm install && npm run build` → copier `dist/` → `/docs` (+ `.nojekyll`). GitHub Pages sert `main:/docs` (à activer côté GitHub par Emmanuel : Settings → Pages → main /docs → l'URL sera `https://wonderself.github.io/trapeze/`).
 - **Test headless** : `node game3d/test/smoke3d.mjs` (Chromium swiftshader flags déjà dans le script ; Playwright global : `/home/claude/.npm-global/lib/node_modules/playwright`). Vérifie WebGL, progression via `__game`, erreurs console, captures dans `/home/claude/deliver/`.
@@ -88,4 +90,5 @@ Légende coût : 🟢 léger · 🟡 moyen · 🔴 lourd (à faire en début de 
 - [2026-07-18] Repo « Cowork-ready » (Opus) — consolidation sur `main`, `CLAUDE.md` autopilote, `AUDIT.md` optimisé.
 - [2026-07-18] Session 2 (2D) ✅ — écran-titre cadeau, game feel, polish, PWA, « Made with ❤ for Marc & Claire ». Testé headless, 0 erreur.
 - [2026-07-18] 🚀 **Trapeze Stars 3D** (Opus) — verrous levés par Emmanuel ; base Three.js+Vite jouable : arène, pendule→arc assisté→catch, combos, étoiles, PWA, build→`docs/`. Testé headless WebGL (progression vérifiée, 0 erreur JS).
-- [2026-07-18] Roadmap 3D rédigée (Fable 5) — 4 sessions planifiées (jouabilité/feel → beauté → mondes → rétention), diagnostic des manques, critères testables, prompts prêts. Prochaine étape : **Session 3D-1**.
+- [2026-07-18] Roadmap 3D rédigée (Fable 5) — 4 sessions planifiées (jouabilité/feel → beauté → mondes → rétention), diagnostic des manques, critères testables, prompts prêts.
+- [2026-07-18] Session 3D-1 ✅ (Fable 5) — le timing est devenu le cœur du jeu : contrôle « maintenir pour pomper, relâcher pour voler », lâcher noté PERFECT/GOOD/OK (fenêtres sur la phase du pendule), portée d'arc dépendante du grade + pompage (les grands écarts exigent pompage + bon timing, sinon « TOO FAR! » et chute), vrille bonus au tap en vol (+50×combo par tour complet), slow-mo 0.35× + confettis + gain ×2 au catch PERFECT, FOV kick au lâcher, shake au fumble, dolly-in en slow-mo, trail additif (arc-en-ciel en vrille), rail varié déterministe (espacement 4.5–7.5, hauteur ±1.2, 3 anneaux bonus +75), combo qui expire en 6 s avec jauge, score « pop ». Équilibrage validé par bot : partie gagnable sans perdre de vie en pompant + visant le pic (score 4850, combo x15). Critères (a)-(f) du plan tous verts en headless (EXIT 0), `?lowfx` ajouté comme fallback GPU. Build déployé dans `docs/`. Prochaine étape : **Session 3D-2 — Beauté & identité**.
