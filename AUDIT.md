@@ -2,18 +2,20 @@
 Dernière mise à jour : 2026-07-18 — Repo consolidé sur `main` (source de vérité unique).
 
 <!-- ═══ NEXT (lu par CLAUDE.md pour l'auto-avancement) ═══
-PROCHAINE SESSION : Session 2 — Beauté & cadeau  (statut ⬜ À faire)
-ACTION : exécuter la Session 2 telle que décrite plus bas, tester, mettre à jour ce fichier, commit + push sur main.
+PROCHAINE SESSION : aucune — les 2 sessions du plan sont ✅ terminées.
+ACTION : ne rien coder d'office. Proposer les idées de la section « PROPOSITIONS À VALIDER » (P7, ou de nouvelles P8+) et attendre validation.
 ════════════════════════════════════════════════════════ -->
 
 > 🤖 **Auto-avancement** : ce repo est piloté par `CLAUDE.md`. À l'ouverture, Claude lit ce fichier,
 > exécute la **première session `⬜ À faire`** du tableau ci-dessous, teste, met à jour l'historique, puis commit+push.
 
 ## 🚦 OÙ ON EN EST
-- État global : 🟢 jouable et propre — reste le volet « cadeau »
-- Score santé : 8/10
-- Session 1 (jouabilité) **terminée** : vitesse fixe 60 Hz indépendante de l'écran, musique infinie, fichier unique `index.html`, UI 100 % anglais, pause auto en arrière-plan, bloom auto-désactivé si FPS bas. Il reste la **Session 2 — Beauté & cadeau** (écran-titre dédicace Marc & Claire, game feel, PWA) pour en faire un vrai cadeau qui fait « waouh ».
-- ⚠️ Le cœur du jeu est riche (trapèze, 4 mondes, musique générative, persos Marc & Claire) — ne pas casser l'existant, seulement l'embellir.
+- État global : 🟢 **cadeau prêt** — les 2 sessions du plan sont faites
+- Score santé : 9/10
+- Session 1 (jouabilité) **terminée** : vitesse fixe 60 Hz, musique infinie, fichier unique, UI anglais, pause auto, bloom adaptatif.
+- Session 2 (beauté & cadeau) **terminée** : écran-titre cinématique + dédicace « Starring MARC & CLAIRE — young champions », game feel (hit-stop, traînée, `navigator.vibrate`, transitions de monde), polish (anneaux/barres lumineux, parallaxe, HUD arrondi), **PWA installable** (manifest + service worker cache-first + icônes 192/512), « Made with ❤ for Marc & Claire » dans la finale.
+- ⚠️ Le cœur du jeu est riche (trapèze, 4 mondes, musique générative, persos Marc & Claire) — ne pas casser l'existant.
+- 💡 Piste esthétique repérée (hors périmètre S2, non-régression) : en grappe dense, les étoiles à collecter (`stItems`, rendu inchangé depuis l'origine) se lisent comme des bandes jaunes ; candidate à une future P8 « rendu des étoiles à collecter ».
 
 ## 🎯 DÉCISIONS VALIDÉES (réponses du 2026-07-12)
 - Cible principale : **téléphones** (Marc & Claire jouent sur mobile).
@@ -25,7 +27,7 @@ ACTION : exécuter la Session 2 telle que décrite plus bas, tester, mettre à j
 | # | Session | Objectif (1 ligne) | Modèle conseillé | Coût tokens | Durée est. | Statut |
 |---|---------|--------------------|------------------|-------------|------------|--------|
 | 1 | Jouabilité & fondations | Jeu fluide sur tout écran, musique infinie, 1 seul fichier, UI anglaise | Sonnet | 🔴 | ~60-90 min | ✅ Fait (2026-07-13) |
-| 2 | Beauté & cadeau | Écran titre dédicace Marc & Claire, game feel ++, PWA installable | Sonnet | 🔴 | ~60-90 min | ⬜ À faire |
+| 2 | Beauté & cadeau | Écran titre dédicace Marc & Claire, game feel ++, PWA installable | Sonnet | 🔴 | ~60-90 min | ✅ Fait (2026-07-18) |
 
 Légende coût : 🟢 léger · 🟡 moyen · 🔴 lourd (à faire en début de fenêtre de quota)
 
@@ -92,3 +94,5 @@ Légende coût : 🟢 léger · 🟡 moyen · 🔴 lourd (à faire en début de 
 ## ✅ HISTORIQUE
 - [2026-07-12] Audit complet terminé (Fable 5) — 4 bugs critiques identifiés, décisions validées (mobile d'abord, fichier unique, anglais, 2 sessions), plan en 2 sessions rédigé.
 - [2026-07-13] Session 1 terminée (Sonnet) — jeu à vitesse fixe 60 Hz (indépendante de l'écran), musique en boucle infinie, `trapeze-stars-v2.html` supprimé, UI 100% anglais, pause automatique en arrière-plan, bloom désactivé automatiquement si FPS bas. Bonus : un crash bug critique trouvé et corrigé (variable `flashN` inexistante plantait l'écran Game Over — le jeu se figeait après 3 morts). Testé en navigateur headless : jeu jouable, aucune erreur console, écran Game Over ne plante plus, pause/reprise fonctionnent. Prochaine étape : Session 2 (beauté & cadeau).
+- [2026-07-18] Repo rendu « Cowork-ready » (Opus) — consolidation sur `main` (source de vérité unique), ajout de `CLAUDE.md` (protocole d'auto-avancement : lire AUDIT.md → exécuter la prochaine session → tester → mettre à jour → commit+push), `AUDIT.md` optimisé (pointeur NEXT machine-lisible).
+- [2026-07-18] Session 2 terminée (Opus, via agent d'implémentation) — (1) écran-titre cinématique : rideau, projecteurs, titre lumineux, dédicace « Starring MARC & CLAIRE — young champions » avec portraits agrandis, sélection perso illuminée, anim d'intro skippable ; (2) game feel : hit-stop 3-4 frames (dans `tick()`, préserve le pas fixe), traînée (retravaillée : ruban discret en l'air/figure, plus de blob à l'arrêt), `navigator.vibrate` guardé sur saut/grab/hit, transition de monde (bannière « World N — … ») ; (3) polish : anneaux/barres à lueur pulsante, parallaxe supplémentaire, HUD arrondi semi-transparent ; (4) PWA : `manifest.json`, `sw.js` cache-first versionné (guardé `if('serviceWorker' in navigator)`), icônes `icon-192/512.png`, bandeau « Add to Home Screen » ; (5) « Made with ❤ for Marc & Claire » dans `drawFinale()`. Test headless Playwright (`test/smoke.mjs`) : 0 erreur JS/console (seul un `ERR_CONNECTION_RESET` sur la font Google en sandbox, sans impact), manifest valide, service worker enregistré, captures écran-titre + gameplay OK. Le plan est terminé.
