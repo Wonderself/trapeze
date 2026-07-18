@@ -176,13 +176,78 @@ const G = {
   t: 0, spin: 0,
   pumpAmp: 1.0, holding: false, armed: false,
   grade: '', lastFlips: 0, lastFlipBonus: 0,
-  trick: false, flipRot: 0,
+  trick: false, flipRot: 0, salute: 0,
   flyFrom: new THREE.Vector3(), flyTo: new THREE.Vector3(), flyT: 0, flyDur: 0.72, arcH: 2.4, flyNext: -1, flyMode: 'catch',
   vel: new THREE.Vector3(),
   timeScale: 1, slowmo: 0, fovKick: 0, shake: 0,
 };
 
-function rebuildHero() { scene.remove(hero); hero = createHero(G.char); scene.add(hero); }
+/* ══════════════ MENU PODIUM (3D character select) ══════════════ */
+const PODX = -7, PODTOP = -7.65;
+const menuGroup = new THREE.Group();
+scene.add(menuGroup);
+const turntable = new THREE.Group();
+turntable.position.set(PODX, 0, 0);
+menuGroup.add(turntable);
+const podBase = new THREE.Mesh(
+  new THREE.CylinderGeometry(3.1, 3.5, 0.7, 40),
+  new THREE.MeshStandardMaterial({ color: 0x6a1026, roughness: 0.4, metalness: 0.5, emissive: 0x1a0208, emissiveIntensity: 0.4 })
+);
+podBase.position.y = PODTOP - 0.35; podBase.receiveShadow = true;
+turntable.add(podBase);
+const podRim = new THREE.Mesh(
+  new THREE.TorusGeometry(3.28, 0.15, 8, 48),
+  new THREE.MeshStandardMaterial({ color: 0xffcf3f, emissive: 0xffab00, emissiveIntensity: 1.1, roughness: 0.4 })
+);
+podRim.rotation.x = Math.PI / 2; podRim.position.y = PODTOP; turntable.add(podRim);
+const menuHeroes = {};
+for (const [nm, lx] of [['marc', -1.4], ['claire', 1.4]]) {
+  const h = createHero(nm);
+  h.position.set(lx, PODTOP + 0.7, 0.1);
+  turntable.add(h);
+  menuHeroes[nm] = h;
+}
+const menuSpot = new THREE.SpotLight(0xffffff, 110, 24, Math.PI / 6.5, 0.4, 1.2);
+menuSpot.position.set(PODX, 7, 7);
+const menuSpotTgt = new THREE.Object3D(); menuSpotTgt.position.set(PODX, PODTOP, 0); scene.add(menuSpotTgt);
+menuSpot.target = menuSpotTgt; scene.add(menuSpot);
+
+/* ══════════════ CURTAIN (opens once on first menu) ══════════════ */
+const curtain = new THREE.Group();
+scene.add(curtain);
+const velvet = new THREE.MeshStandardMaterial({ color: 0x8f0f22, roughness: 0.7, emissive: 0x2a0208, emissiveIntensity: 0.45, side: THREE.DoubleSide });
+const drapes = [];
+for (const side of [-1, 1]) {
+  const d = new THREE.Mesh(new THREE.BoxGeometry(3.8, 8.4, 0.3), velvet);
+  const x0 = PODX + side * 1.9;
+  d.position.set(x0, -3.4, 4.2);
+  curtain.add(d);
+  drapes.push({ mesh: d, side, x0 });
+}
+const valance = new THREE.Mesh(
+  new THREE.BoxGeometry(8.4, 1.5, 0.5),
+  new THREE.MeshStandardMaterial({ color: 0xffcf3f, emissive: 0xffab00, emissiveIntensity: 0.9, roughness: 0.4 })
+);
+valance.position.set(PODX, 1.1, 4.3);
+curtain.add(valance);
+let curtainOpen = 0, curtainOpening = false, menuShown = false, menuSpin = 0;
+
+function updateMenuSelection() {
+  for (const nm in menuHeroes) {
+    const sel = nm === G.char;
+    menuHeroes[nm].position.y = PODTOP + 0.7 + (sel ? 0.4 : 0);
+  }
+}
+function enterMenu() {
+  G.mode = 'menu';
+  hero.visible = false;
+  menuGroup.visible = true; curtain.visible = true; menuSpot.visible = true;
+  if (!menuShown) { menuShown = true; curtainOpen = 0; curtainOpening = true; }
+  ui.over.classList.add('hidden'); ui.menu.classList.remove('hidden');
+  updateMenuSelection();
+}
+
+function rebuildHero() { scene.remove(hero); hero = createHero(G.char); hero.visible = G.mode !== 'menu'; scene.add(hero); }
 function placeHeroOnBar(b) { const p = hangPos(b); hero.position.copy(p); hero.rotation.z = -b.theta; }
 function vibrate(ms) { if (navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) {} } }
 
@@ -206,24 +271,27 @@ function flash(v) { flashV = Math.max(flashV, v); }
 
 const tapBtn = $('tapBtn');
 $('playBtn').addEventListener('click', startGame);
-$('againBtn').addEventListener('click', () => { ui.over.classList.add('hidden'); ui.menu.classList.remove('hidden'); G.mode = 'menu'; });
+$('againBtn').addEventListener('click', () => enterMenu());
 document.querySelectorAll('.pick').forEach((el) => el.addEventListener('click', () => {
   document.querySelectorAll('.pick').forEach((p) => p.classList.remove('sel'));
   el.classList.add('sel');
   G.char = el.dataset.char;
   rebuildHero();
+  updateMenuSelection();
 }));
 
 function startGame() {
   G.mode = 'playing'; G.state = 'swing'; G.active = 0;
   G.score = 0; lastScore = -1; G.combo = 0; G.comboT = 0; G.lives = 3;
   G.spin = 0; G.pumpAmp = 1.0; G.holding = false; G.armed = false;
-  G.grade = ''; G.lastFlips = 0; G.lastFlipBonus = 0; G.trick = false; G.flipRot = 0;
+  G.grade = ''; G.lastFlips = 0; G.lastFlipBonus = 0; G.trick = false; G.flipRot = 0; G.salute = 0;
   G.timeScale = 1; G.slowmo = 0; G.fovKick = 0; G.shake = 0;
   bars[0].theta = -1.0; bars[0].omega = 0;
   for (const s of stars) { s.got = false; s.m.visible = true; }
   for (const r of rings) { r.got = false; r.m.visible = true; }
   rebuildHero();
+  hero.visible = true;
+  menuGroup.visible = false; curtain.visible = false; menuSpot.visible = false;
   ui.menu.classList.add('hidden'); ui.over.classList.add('hidden');
   ui.hud.style.display = 'flex';
   tapBtn.classList.add('on');
@@ -310,7 +378,7 @@ function doCatch(ci) {
   showCombo((G.combo > 1 ? `x${G.combo}  ` : '') + `+${gain + flipBonus}`);
   if (flips > 0) setTimeout(() => showGrade(`FLIP +${flipBonus}`, '#ff6db0'), 120);
   burst(hero.position, G.grade === 'perfect' ? 40 : 22, false, G.grade === 'perfect' ? 7 : 5);
-  if (G.grade === 'perfect') { G.slowmo = 0.4; }
+  if (G.grade === 'perfect') { G.slowmo = 0.4; G.salute = 0.7; }
   flash(0.25); vibrate(16); refreshHUD();
   if (ci >= NBARS - 1) endGame(true);
 }
@@ -421,9 +489,22 @@ function updateCamera(dt) {
   G.fovKick = Math.max(0, G.fovKick - dt * 2.2);
 }
 function menuCamera() {
-  camera.position.lerp(new THREE.Vector3(-6 + Math.sin(G.t * 0.3) * 3, 4, 13), 0.02);
-  camera.lookAt(4, 3, 0);
-  if (camera.fov !== 58) { camera.fov = 58; camera.updateProjectionMatrix(); }
+  camera.position.lerp(new THREE.Vector3(PODX + Math.sin(G.t * 0.25) * 2.0, -3.4, 8.8), 0.04);
+  camera.lookAt(PODX, -5.7, 0);
+  if (camera.fov !== 55) { camera.fov = 55; camera.updateProjectionMatrix(); }
+}
+function updateMenu(dt) {
+  menuSpin += dt;
+  turntable.rotation.y = menuSpin * 0.5;
+  poseHero(menuHeroes[G.char], G.t, 'salute', 0);
+  const other = G.char === 'marc' ? 'claire' : 'marc';
+  poseHero(menuHeroes[other], G.t, 'idle', 0);
+  if (curtainOpening) {
+    curtainOpen = Math.min(1, curtainOpen + dt * 0.8);
+    if (curtainOpen >= 1) curtainOpening = false;
+    const e = 1 - Math.pow(1 - curtainOpen, 3);
+    for (const d of drapes) d.mesh.position.x = d.x0 + d.side * e * 4.4;
+  }
 }
 
 /* ══════════════ TEST HARNESS ══════════════ */
@@ -438,7 +519,16 @@ window.__game = {
     theta: bars[G.active] ? bars[G.active].theta : 0, omega: bars[G.active] ? bars[G.active].omega : 0,
     amp: G.pumpAmp, timeScale: G.timeScale, hero: hero.position.toArray(),
   }),
+  pick: (c) => { if (menuHeroes[c]) { G.char = c; rebuildHero(); updateMenuSelection(); } },
+  menu: () => ({
+    podium: menuGroup.visible,
+    heroes: (menuGroup.visible && menuHeroes.marc.visible && menuHeroes.claire.visible) ? 2 : 0,
+    curtainOpen: +curtainOpen.toFixed(2),
+    char: G.char,
+  }),
 };
+
+enterMenu();
 
 /* ══════════════ MAIN LOOP ══════════════ */
 let last = performance.now();
@@ -457,10 +547,14 @@ function frame(now) {
 
   if (G.mode === 'playing') {
     physics(sdt);
-    poseHero(hero, G.t, G.state === 'swing' ? 'swing' : 'fly', G.spin);
+    let ps = 'swing';
+    if (G.state === 'fly') ps = 'fly';
+    else if (G.salute > 0) { ps = 'salute'; G.salute -= dt; }
+    poseHero(hero, G.t, ps, G.spin);
     updateCamera(dt);
   } else {
     for (let i = 0; i < NBARS; i++) stepBar(bars[i], dt, false);
+    if (G.mode === 'menu') updateMenu(dt);
     menuCamera();
   }
   updateConfetti(dt);
