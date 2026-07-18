@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#05010f" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<link rel="manifest" href="./manifest.json" />
+<link rel="apple-touch-icon" href="./icon-192.png" />
+<title>Trapeze Stars 3D ✨</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{ --gold:#ffcf3f; --pink:#ff6db0; --blue:#54c8ff; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:#05010f;font-family:'Fredoka',system-ui,Arial,sans-serif;color:#fff;user-select:none;-webkit-user-select:none;overscroll-behavior:none;touch-action:none}
+  #app{position:fixed;inset:0}
+  canvas{display:block;width:100%;height:100%}
+
+  /* ---- HUD ---- */
+  #hud{position:fixed;top:0;left:0;right:0;padding:14px 18px;display:none;justify-content:space-between;align-items:flex-start;pointer-events:none;z-index:5;text-shadow:0 2px 10px rgba(0,0,0,.7)}
+  #score{font-size:30px;font-weight:700;color:var(--gold);letter-spacing:.5px}
+  #score small{display:block;font-size:12px;color:#cbb2ff;font-weight:500;letter-spacing:2px}
+  #lives{font-size:24px;letter-spacing:2px}
+  #combo{position:fixed;top:70px;left:50%;transform:translateX(-50%);font-size:22px;font-weight:700;color:#fff;opacity:0;transition:opacity .2s;z-index:5;pointer-events:none;text-shadow:0 2px 12px rgba(255,120,220,.8)}
+
+  /* ---- overlays ---- */
+  .screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;text-align:center;padding:24px;background:radial-gradient(ellipse at 50% 38%,rgba(40,10,70,.35),rgba(3,0,12,.86) 78%)}
+  .hidden{display:none!important}
+  #title{font-size:clamp(38px,11vw,86px);font-weight:700;line-height:.95;background:linear-gradient(180deg,#fff2b0,#ffb43c);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 22px rgba(255,180,40,.55));letter-spacing:1px}
+  #subtitle{margin-top:10px;font-size:clamp(14px,4vw,20px);color:#ffd7ef;font-weight:600;letter-spacing:1px}
+  #dedication{margin-top:6px;font-size:clamp(11px,3vw,14px);color:#b79bff;font-weight:500;letter-spacing:3px;text-transform:uppercase}
+  .pickRow{display:flex;gap:18px;margin:30px 0 22px;flex-wrap:wrap;justify-content:center}
+  .pick{width:118px;padding:16px 10px 14px;border-radius:20px;background:rgba(20,8,44,.6);border:2px solid rgba(255,255,255,.14);cursor:pointer;transition:transform .12s,border-color .12s,background .12s;backdrop-filter:blur(6px)}
+  .pick:hover{transform:translateY(-4px)}
+  .pick.sel{border-color:var(--gold);background:rgba(60,30,90,.7);box-shadow:0 0 28px rgba(255,200,60,.35)}
+  .pick .av{width:70px;height:70px;margin:0 auto 8px;border-radius:50%}
+  .pick.marc .av{background:radial-gradient(circle at 40% 35%,#8fdcff,#2f7fd6)}
+  .pick.claire .av{background:radial-gradient(circle at 40% 35%,#ffb0d8,#e5559f)}
+  .pick .nm{font-weight:700;font-size:16px;letter-spacing:1px}
+  .btn{margin-top:6px;padding:14px 40px;border:none;border-radius:40px;font-family:inherit;font-size:20px;font-weight:700;color:#3a1500;cursor:pointer;background:linear-gradient(180deg,#ffe08a,#ffb028);box-shadow:0 8px 26px rgba(255,170,30,.4);transition:transform .1s}
+  .btn:active{transform:scale(.95)}
+  #hint{margin-top:20px;font-size:12px;color:#7d6bb0;line-height:1.7}
+  #bigmsg{font-size:clamp(30px,9vw,60px);font-weight:700;color:#fff}
+  #bigsub{margin-top:10px;font-size:clamp(15px,4vw,20px);color:var(--gold)}
+
+  /* ---- mobile action button ---- */
+  #tapBtn{position:fixed;right:22px;bottom:26px;width:96px;height:96px;border-radius:50%;border:3px solid rgba(255,215,60,.85);background:radial-gradient(circle at 38% 32%,rgba(255,235,120,.55),rgba(255,140,0,.5));color:#fff;font-size:15px;font-weight:700;display:none;align-items:center;justify-content:center;z-index:6;box-shadow:0 0 34px rgba(255,180,20,.6);touch-action:manipulation}
+  #tapBtn:active{transform:scale(.9)}
+  @media (hover:none),(pointer:coarse){ #tapBtn.on{display:flex} }
+  #flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:8}
+</style>
+  <script type="module" crossorigin src="./assets/index-BH0UhJIe.js"></script>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="hud">
+  <div id="score">0<small>SCORE</small></div>
+  <div id="lives">❤❤❤</div>
+</div>
+<div id="combo"></div>
+<div id="flash"></div>
+<button id="tapBtn">RELEASE</button>
+
+<div id="menu" class="screen">
+  <div id="title">TRAPEZE<br>STARS</div>
+  <div id="subtitle">Starring&nbsp; MARC &amp; CLAIRE</div>
+  <div id="dedication">★ young champions ★</div>
+  <div class="pickRow">
+    <div class="pick marc sel" data-char="marc"><div class="av"></div><div class="nm">MARC</div></div>
+    <div class="pick claire" data-char="claire"><div class="av"></div><div class="nm">CLAIRE</div></div>
+  </div>
+  <button class="btn" id="playBtn">▶ PLAY</button>
+  <div id="hint">Swing, then <b>release</b> at the right moment to fly to the next bar.<br>Desktop: <b>Space</b> to release/grab · Tap the screen on mobile.</div>
+</div>
+
+<div id="over" class="screen hidden">
+  <div id="bigmsg">Nice flying!</div>
+  <div id="bigsub">Score 0</div>
+  <button class="btn" id="againBtn" style="margin-top:26px">↻ Play again</button>
+  <div id="hint">Made with ❤ for Marc &amp; Claire</div>
+</div>
+
+</body>
+</html>

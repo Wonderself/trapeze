@@ -44,9 +44,13 @@ mobile = boutons ◀ ▶ ⚡(saut) GRAB, tap canvas = saut, swipe bas = grab.
 - `commit` **et** `push` à la fin de chaque session réussie. Ne laisse jamais le repo dans un état cassé.
 
 ## 🗂️ Carte du repo
-| Fichier | Rôle |
+| Chemin | Rôle |
 |---|---|
-| `index.html` | **Le jeu entier** (~1650 lignes). Seul fichier à faire évoluer. |
-| `AUDIT.md` | **Le plan** : état, sessions, diagnostic, prompts de lancement, historique. |
+| `game3d/` | 🚀 **Direction active** : « Trapeze Stars 3D » (Three.js + Vite). Source dans `game3d/src/`. `npm i` puis `npm run dev` / `npm run build`. |
+| `docs/` | Build de prod du jeu 3D (déployé par GitHub Pages : source = branche `main`, dossier `/docs`). Régénéré via `npm run build` dans `game3d/` puis copie de `dist/` → `docs/`. |
+| `index.html` | Le jeu **canvas 2D** original (v1+v2), toujours jouable, conservé. |
+| `AUDIT.md` | **Le plan** : état, sessions, diagnostic, historique, direction 3D. |
 | `CLAUDE.md` | Ce fichier : le protocole d'auto-avancement. |
-| `manifest.json` / `sw.js` / icône | PWA (créés en Session 2, si validée). |
+| `manifest.json` / `sw.js` / `icon-*.png` | PWA du jeu 2D. |
+
+> ⚙️ **Jeu 3D — commandes** : `cd game3d && npm install`, puis `npm run dev` (dev) ou `npm run build` (prod → `game3d/dist`, à copier dans `/docs` pour Pages). Test headless : `node game3d/test/smoke3d.mjs`.
