@@ -39,8 +39,9 @@ try {
 
   await page.goto('http://localhost:8130/index.html', { waitUntil: 'load' });
   // curtain opens on the game clock (dt-clamped), so under slow headless GPUs it needs
-  // more real time than on a 60fps device — give it room before checking/capturing.
-  await page.waitForTimeout(3400);
+  // more real time than on a 60fps device — poll until it's open instead of guessing.
+  await page.waitForFunction(() => window.__game && window.__game.menu().curtainOpen >= 0.9, null, { timeout: 20000 }).catch(() => {});
+  await page.waitForTimeout(400);
   await page.screenshot({ path: `${OUT}/3d3-menu.png` }); // podium + open curtain
 
   results.webgl = await page.evaluate(() => {
