@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { createStage } from './scene.js';
 import { createWorld } from './world.js';
 import { createHero, poseHero } from './player.js';
+import { initAudio, updateAudio, setWorld as setAudioWorld, setMuted, audioState, sfx } from './audio.js';
 
 /* ══════════════ TUNING ══════════════ */
 const PY0 = 6.2;          // base pivot height
@@ -19,6 +20,32 @@ const NET_Y = -3.6;                       // safety-net height (one save per wor
 const MISS_Y = -7;
 const COMBO_TIME = 6;     // s before combo expires
 const HANG = 1.55;        // hands-to-origin offset of the hero
+const MEDAL_T = [800, 1800, 3500, 6000];              // per-world score → Bronze/Silver/Gold/Diamond
+const MEDAL_ICON = ['·', '🥉', '🥈', '🥇', '💎'];
+const WORLD_ICON = ['🎪', '🌴', '🏖', '🚀'];
+const medalTier = (s) => { let t = 0; for (let i = 0; i < 4; i++) if (s >= MEDAL_T[i]) t = i + 1; return t; };
+
+/* ── persistence (localStorage ts3d_*) ── */
+function loadRec() {
+  try {
+    return {
+      high: +localStorage.getItem('ts3d_high') || 0,
+      combo: +localStorage.getItem('ts3d_combo') || 0,
+      medals: JSON.parse(localStorage.getItem('ts3d_medals') || '[0,0,0,0]'),
+      mute: localStorage.getItem('ts3d_mute') === '1',
+    };
+  } catch (e) { return { high: 0, combo: 0, medals: [0, 0, 0, 0], mute: false }; }
+}
+let REC = loadRec();
+function saveRec() {
+  try {
+    localStorage.setItem('ts3d_high', String(REC.high));
+    localStorage.setItem('ts3d_combo', String(REC.combo));
+    localStorage.setItem('ts3d_medals', JSON.stringify(REC.medals));
+    localStorage.setItem('ts3d_mute', REC.mute ? '1' : '0');
+  } catch (e) {}
+}
+setMuted(REC.mute);
 
 /* deterministic layout rng (stable for tests) */
 let _s = 20260718;
@@ -264,6 +291,8 @@ const G = {
   grade: '', lastFlips: 0, lastFlipBonus: 0,
   trick: false, flipRot: 0, salute: 0,
   world: 0, wind: 0, windOff: 0, netBounce: false, netSaves: 0,
+  lap: 0, diffN: 0, wScore: [0, 0, 0, 0], runMedals: [0, 0, 0, 0],
+  starsGot: 0, flipsTot: 0, maxCombo: 0,
   flyFrom: new THREE.Vector3(), flyTo: new THREE.Vector3(), flyT: 0, flyDur: 0.72, arcH: 2.4, flyNext: -1, flyMode: 'catch',
   vel: new THREE.Vector3(),
   timeScale: 1, slowmo: 0, fovKick: 0, shake: 0,
@@ -325,6 +354,14 @@ function updateMenuSelection() {
     menuHeroes[nm].position.y = PODTOP + 0.7 + (sel ? 0.4 : 0);
   }
 }
+function refreshBest() {
+  if (REC.high <= 0) { ui.best.classList.add('hidden'); return; }
+  const medals = REC.medals.map((t, w) => WORLD_ICON[w] + MEDAL_ICON[t]).join('  ');
+  ui.best.innerHTML = 'BEST ' + REC.high.toLocaleString('en') + ' ⭐ · COMBO x' + REC.combo +
+    '<span class="medals">' + medals + '</span>';
+  ui.best.classList.remove('hidden');
+}
+function refreshMute() { ui.muteBtn.textContent = REC.mute ? '🔇' : '🔊'; }
 function enterMenu() {
   G.mode = 'menu';
   hero.visible = false;
@@ -332,6 +369,7 @@ function enterMenu() {
   if (!menuShown) { menuShown = true; curtainOpen = 0; curtainOpening = true; }
   ui.over.classList.add('hidden'); ui.menu.classList.remove('hidden');
   updateMenuSelection();
+  refreshBest();
 }
 
 function rebuildHero() { scene.remove(hero); hero = createHero(G.char); hero.visible = G.mode !== 'menu'; scene.add(hero); }
@@ -340,7 +378,7 @@ function vibrate(ms) { if (navigator.vibrate) { try { navigator.vibrate(ms); } c
 
 /* ══════════════ UI ══════════════ */
 const $ = (id) => document.getElementById(id);
-const ui = { menu: $('menu'), over: $('over'), hud: $('hud'), score: $('score'), lives: $('lives'), combo: $('combo'), grade: $('grade'), comboHold: $('comboHold'), comboFill: $('comboFill'), big: $('bigmsg'), bigsub: $('bigsub'), flash: $('flash'), banner: $('banner'), bannerTxt: $('bannerTxt'), worldTag: $('worldTag'), wind: $('windTag') };
+const ui = { menu: $('menu'), over: $('over'), hud: $('hud'), score: $('score'), lives: $('lives'), combo: $('combo'), grade: $('grade'), comboHold: $('comboHold'), comboFill: $('comboFill'), big: $('bigmsg'), bigsub: $('bigsub'), flash: $('flash'), banner: $('banner'), bannerTxt: $('bannerTxt'), worldTag: $('worldTag'), wind: $('windTag'), best: $('best'), newBest: $('newBest'), overStats: $('overStats'), overMedals: $('overMedals'), muteBtn: $('muteBtn') };
 let lastScore = -1;
 function refreshHUD() {
   if (G.score !== lastScore) {
@@ -357,8 +395,15 @@ let flashV = 0;
 function flash(v) { flashV = Math.max(flashV, v); }
 
 const tapBtn = $('tapBtn');
-$('playBtn').addEventListener('click', startGame);
-$('againBtn').addEventListener('click', () => enterMenu());
+$('playBtn').addEventListener('click', () => { initAudio(); sfx.click(); startGame(); });
+$('againBtn').addEventListener('click', () => { sfx.click(); enterMenu(); });
+$('replayBtn').addEventListener('click', () => { initAudio(); sfx.click(); startGame(); });  // instant replay — no menu detour
+ui.muteBtn.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
+ui.muteBtn.addEventListener('click', (e) => {
+  e.stopPropagation(); initAudio();
+  REC.mute = !REC.mute; setMuted(REC.mute); saveRec(); refreshMute(); if (!REC.mute) sfx.click();
+});
+refreshMute();
 document.querySelectorAll('.pick').forEach((el) => el.addEventListener('click', () => {
   document.querySelectorAll('.pick').forEach((p) => p.classList.remove('sel'));
   el.classList.add('sel');
@@ -368,12 +413,15 @@ document.querySelectorAll('.pick').forEach((el) => el.addEventListener('click', 
 }));
 
 function startGame() {
+  initAudio();
   G.mode = 'playing'; G.state = 'swing'; G.active = 0;
   G.score = 0; lastScore = -1; G.combo = 0; G.comboT = 0; G.lives = 3;
   G.spin = 0; G.pumpAmp = 1.0; G.holding = false; G.armed = false;
   G.grade = ''; G.lastFlips = 0; G.lastFlipBonus = 0; G.trick = false; G.flipRot = 0; G.salute = 0;
   G.timeScale = 1; G.slowmo = 0; G.fovKick = 0; G.shake = 0;
   G.world = 0; G.wind = 0; G.windOff = 0; G.netBounce = false; G.netSaves = 0;
+  G.lap = 0; G.diffN = 0; G.wScore = [0, 0, 0, 0]; G.runMedals = [0, 0, 0, 0];
+  G.starsGot = 0; G.flipsTot = 0; G.maxCombo = 0;
   ui.worldTag.textContent = WORLD_NAMES[0].toUpperCase();
   ui.wind.style.opacity = '0';
   for (const n of nets) { n.used = false; n.flashT = 0; }
@@ -388,23 +436,44 @@ function startGame() {
   tapBtn.classList.add('on');
   refreshHUD();
 }
-function endGame(win) {
-  G.mode = win ? 'win' : 'over';
+function awardMedals() {
+  for (let w = 0; w < NWORLDS; w++) {
+    const t = medalTier(G.wScore[w]);
+    if (t > G.runMedals[w]) G.runMedals[w] = t;
+    if (t > REC.medals[w]) REC.medals[w] = t;
+  }
+}
+function endGame() {
+  G.mode = 'over';
   ui.hud.style.display = 'none';
   ui.comboHold.style.opacity = '0';
   ui.wind.style.opacity = '0';
   tapBtn.classList.remove('on');
   trail.visible = false;
-  ui.big.textContent = win ? '🎉 World tour complete!' : 'Nice flying!';
-  ui.bigsub.textContent = 'Score ' + G.score + (win ? ' — all 4 worlds, champions!' : ' — reached the ' + WORLD_NAMES[G.world] + ' world');
+  awardMedals();
+  const newHigh = G.score > REC.high;
+  if (newHigh) REC.high = G.score;
+  if (G.maxCombo > REC.combo) REC.combo = G.maxCombo;
+  saveRec();
+  ui.big.textContent = G.lap > 0 ? '🎉 What a run!' : 'Nice flying!';
+  ui.bigsub.textContent = 'Score ' + G.score.toLocaleString('en') + ' · Best ' + REC.high.toLocaleString('en');
+  ui.newBest.classList.toggle('hidden', !newHigh);
+  ui.overStats.innerHTML =
+    '<div><b>' + G.starsGot + '</b>⭐ stars</div>' +
+    '<div><b>' + G.flipsTot + '</b>🌀 flips</div>' +
+    '<div><b>x' + G.maxCombo + '</b>🔥 best combo</div>' +
+    '<div><b>' + (G.lap > 0 ? G.lap + (G.lap > 1 ? ' laps' : ' lap') : WORLD_NAMES[G.world]) + '</b>🌍 ' + (G.lap > 0 ? 'endless!' : 'reached') + '</div>';
+  ui.overMedals.textContent = G.runMedals.map((t, w) => WORLD_ICON[w] + MEDAL_ICON[t]).join('  ');
   ui.over.classList.remove('hidden');
+  if (newHigh) sfx.applause(); else sfx.fanfare();
 }
 
 /* ══════════════ INPUT — hold to grip & pump, let go to fly, tap mid-air to flip ══════════════ */
 function handleDown() {
+  initAudio();
   if (G.mode !== 'playing') return;
   if (G.state === 'swing') { G.holding = true; G.armed = true; }
-  else if (G.state === 'fly' && !G.trick) { G.trick = true; }
+  else if (G.state === 'fly' && !G.trick) { G.trick = true; sfx.flip(); }
 }
 function handleUp() {
   if (G.mode !== 'playing') { G.holding = false; return; }
@@ -428,15 +497,18 @@ function releaseBar() {
     G.vel.set(Math.cos(b.theta) * v * 0.5 + 1.0, Math.sin(b.theta) * v * 0.5, 0);
     G.state = 'fumble'; G.spin = 0; G.grade = 'fumble';
     trail.visible = true; trailReset(hero.position);
-    showGrade('WHOOPS!', '#ff7d7d'); vibrate(20);
+    showGrade('WHOOPS!', '#ff7d7d'); vibrate(20); sfx.fumble();
     return;
   }
   const amp = G.pumpAmp;
   const ideal = 0.45 * amp;
   const diff = Math.abs(b.theta - ideal) / amp;
+  // endless mode: each world entered past the first tour shrinks the timing windows −5% (floored)
+  const shrink = Math.pow(0.95, G.diffN);
+  const PW = Math.max(0.065, 0.12 * shrink), GW = Math.max(0.20, 0.35 * shrink);
   let flyDur, arcH, reach;
-  if (diff < 0.12) { G.grade = 'perfect'; flyDur = 0.6; arcH = 2.8; reach = 5.0; showGrade('PERFECT!', '#ffcf3f'); }
-  else if (diff < 0.35) { G.grade = 'good'; flyDur = 0.75; arcH = 2.4; reach = 4.2; showGrade('GOOD!', '#d8ffef'); }
+  if (diff < PW) { G.grade = 'perfect'; flyDur = 0.6; arcH = 2.8; reach = 5.0; showGrade('PERFECT!', '#ffcf3f'); }
+  else if (diff < GW) { G.grade = 'good'; flyDur = 0.75; arcH = 2.4; reach = 4.2; showGrade('GOOD!', '#d8ffef'); }
   else { G.grade = 'ok'; flyDur = 0.95; arcH = 1.5; reach = 3.0; showGrade('OK', '#9a8fc5'); }
   reach *= 0.85 + (amp - AMP_MIN) / (AMP_MAX - AMP_MIN) * 0.3;  // pumping extends reach
   if (b.w === SPACE_W) { flyDur *= 1.25; reach *= 1.12; }        // Space: low gravity, floatier arcs
@@ -454,15 +526,38 @@ function releaseBar() {
   G.fovKick = 1;
   trail.visible = true; trailReset(from);
   flash(G.grade === 'perfect' ? 0.28 : 0.15); vibrate(12);
+  sfx.whoosh();
 }
 
 /* ══════════════ CATCH ══════════════ */
 function enterWorld(w) {
   G.world = w;
+  if (G.lap > 0) G.diffN++;   // endless: every world crossed raises the pace
   ui.bannerTxt.textContent = 'World ' + (w + 1) + ' — ' + WORLD_NAMES[w];
   ui.banner.classList.remove('show'); void ui.banner.offsetWidth; ui.banner.classList.add('show');
-  ui.worldTag.textContent = WORLD_NAMES[w].toUpperCase();
+  ui.worldTag.textContent = WORLD_NAMES[w].toUpperCase() + (G.lap > 0 ? ' · LAP ' + (G.lap + 1) : '');
   flash(0.3); vibrate(18);
+  setAudioWorld(w); sfx.fanfare(); sfx.applause();
+}
+
+/* endless mode: finishing the 4-world tour loops back to bar 0, faster */
+function lapComplete() {
+  G.lap++; G.diffN++;
+  awardMedals(); G.wScore = [0, 0, 0, 0];
+  for (const s of stars) { s.got = false; s.m.visible = true; }
+  for (const r of rings) { r.got = false; r.m.visible = true; }
+  for (const n of nets) { n.used = false; n.flashT = 0; }
+  G.state = 'swing'; G.active = 0; G.armed = false; G.holding = false;
+  G.windOff = 0; G.netBounce = false; G.world = 0; G.comboT = COMBO_TIME;
+  const b = bars[0]; b.theta = -0.8; b.omega = 1.4;
+  placeHeroOnBar(b); hero.rotation.z = 0; trail.visible = false;
+  camera.position.set(hero.position.x - 7.5, Math.max(hero.position.y + 4, 3), 12);
+  camTarget.set(hero.position.x + 2.5, hero.position.y - 0.5, 0);
+  ui.worldTag.textContent = 'CIRCUS · LAP ' + (G.lap + 1);
+  ui.bannerTxt.textContent = G.lap === 1 ? '🎉 TOUR COMPLETE — ENDLESS MODE!' : 'LAP ' + (G.lap + 1) + ' — FASTER!';
+  ui.banner.classList.remove('show'); void ui.banner.offsetWidth; ui.banner.classList.add('show');
+  burst(hero.position, 60, true, 8); flash(0.35); vibrate(25);
+  setAudioWorld(0); sfx.applause(); sfx.fanfare();
 }
 
 function doCatch(ci) {
@@ -474,25 +569,28 @@ function doCatch(ci) {
   hero.rotation.z = 0; G.spin = 0; G.armed = false;
   trail.visible = false;
   G.combo++; G.comboT = COMBO_TIME;
+  if (G.combo > G.maxCombo) G.maxCombo = G.combo;
   let gain = (100 + (G.combo - 1) * 25) * (G.grade === 'perfect' ? 2 : 1);
   let flipBonus = flips > 0 ? 50 * flips * Math.max(1, G.combo) : 0;
   G.lastFlips = flips; G.lastFlipBonus = flipBonus;
+  G.flipsTot += flips;
   G.score += gain + flipBonus;
+  G.wScore[bars[ci].w] += gain + flipBonus;
   showCombo((G.combo > 1 ? `x${G.combo}  ` : '') + `+${gain + flipBonus}`);
   if (flips > 0) setTimeout(() => showGrade(`FLIP +${flipBonus}`, '#ff6db0'), 120);
   burst(hero.position, G.grade === 'perfect' ? 40 : 22, false, G.grade === 'perfect' ? 7 : 5);
-  if (G.grade === 'perfect') { G.slowmo = 0.4; G.salute = 0.7; }
+  if (G.grade === 'perfect') { G.slowmo = 0.4; G.salute = 0.7; sfx.perfect(); } else sfx.catch(G.combo);
   flash(0.25); vibrate(16); refreshHUD();
+  if (ci >= NBARS - 1) { lapComplete(); return; }
   if (bars[ci].w !== fromW) enterWorld(bars[ci].w);
-  if (ci >= NBARS - 1) endGame(true);
 }
 
 function loseLife() {
   G.lives--; G.combo = 0; G.comboT = 0; G.netBounce = false; G.windOff = 0;
-  G.shake = 0.15; flash(0.5); vibrate(30);
+  G.shake = 0.15; flash(0.5); vibrate(30); sfx.fumble();
   trail.visible = false;
   refreshHUD();
-  if (G.lives <= 0) { endGame(false); return; }
+  if (G.lives <= 0) { endGame(); return; }
   G.state = 'swing'; G.armed = false;
   const b = bars[G.active];
   b.theta = -G.pumpAmp * 0.6; b.omega = 0;
@@ -521,7 +619,8 @@ function physics(dt) {
   // pump toward held/rest amplitude
   G.pumpAmp += ((G.holding && G.state === 'swing' ? AMP_MAX : AMP_MIN) - G.pumpAmp) * Math.min(1, dt * 1.7);
 
-  for (let i = 0; i < NBARS; i++) stepBar(bars[i], dt, i === G.active && G.state === 'swing');
+  const spd = Math.min(1.4, 1 + 0.05 * G.diffN);   // endless: +5% swing speed per world crossed (capped)
+  for (let i = 0; i < NBARS; i++) stepBar(bars[i], dt * (i === G.active ? spd : 1), i === G.active && G.state === 'swing');
 
   if (G.state === 'swing') {
     placeHeroOnBar(bars[G.active]);
@@ -547,7 +646,7 @@ function physics(dt) {
       if (r.got) continue;
       if (hero.position.distanceTo(r.m.position) < 1.0) {
         r.got = true; r.m.visible = false;
-        G.score += 75; showCombo('+75 ◎'); burst(r.m.position, 26, true, 6); refreshHUD(); vibrate(10);
+        G.score += 75; G.wScore[G.world] += 75; showCombo('+75 ◎'); burst(r.m.position, 26, true, 6); refreshHUD(); vibrate(10); sfx.ring();
       }
     }
     if (a >= 1) {
@@ -568,7 +667,7 @@ function physics(dt) {
       net.used = true; net.flashT = 1; G.netBounce = true; G.netSaves++;
       G.vel.y = 9.5; G.vel.x = THREE.MathUtils.clamp(bars[G.active].x - hero.position.x, -3, 3) * 0.6;
       showGrade('SAVED BY THE NET!', '#8affc1');
-      burst(hero.position, 26, false, 6); flash(0.2); vibrate(20);
+      burst(hero.position, 26, false, 6); flash(0.2); vibrate(20); sfx.net();
     } else if (G.netBounce && G.vel.y <= 0) {  // bounce apex → back on the bar
       G.netBounce = false; G.state = 'swing'; G.armed = false; trail.visible = false;
       const b = bars[G.active]; b.theta = -G.pumpAmp * 0.6; b.omega = 0;
@@ -592,7 +691,7 @@ function physics(dt) {
     s.m.rotation.y += dt * 2; s.m.rotation.x += dt * 1.3;
     if (hero.position.distanceTo(s.m.position) < 1.25) {
       s.got = true; s.m.visible = false;
-      G.score += 25; showCombo('+25 ⭐'); burst(s.m.position, 12, true, 4); refreshHUD(); vibrate(8);
+      G.score += 25; G.wScore[G.world] += 25; G.starsGot++; showCombo('+25 ⭐'); burst(s.m.position, 12, true, 4); refreshHUD(); vibrate(8); sfx.star();
     }
   }
   // rings idle pulse (+ Space rings bob vertically)
@@ -654,7 +753,13 @@ window.__game = {
     amp: G.pumpAmp, timeScale: G.timeScale, hero: hero.position.toArray(),
     world: G.world, worldName: WORLD_NAMES[G.world], netSaves: G.netSaves,
     wind: +G.wind.toFixed(2), windOff: +G.windOff.toFixed(2),
+    lap: G.lap, diffN: G.diffN, starsGot: G.starsGot, flipsTot: G.flipsTot, maxCombo: G.maxCombo,
   }),
+  records: () => ({ high: REC.high, bestCombo: REC.combo, medals: [...REC.medals], mute: REC.mute }),
+  over: () => { if (G.mode === 'playing') endGame(); },
+  wipe: () => { try { ['ts3d_high', 'ts3d_combo', 'ts3d_medals', 'ts3d_mute'].forEach((k) => localStorage.removeItem(k)); } catch (e) {} REC = loadRec(); refreshBest(); },
+  audio: () => audioState(),
+  mute: (m) => { REC.mute = !!m; setMuted(REC.mute); saveRec(); refreshMute(); },
   warp: (i) => {  // test helper: jump to bar i (camera snaps along)
     if (G.mode !== 'playing') return;
     i = Math.max(0, Math.min(NBARS - 1, i));
@@ -666,6 +771,7 @@ window.__game = {
     camera.position.set(hero.position.x - 7.5, Math.max(hero.position.y + 4, 3), 12);
     camTarget.set(hero.position.x + 2.5, hero.position.y - 0.5, 0);
     ui.worldTag.textContent = WORLD_NAMES[G.world].toUpperCase();
+    setAudioWorld(G.world);
   },
   pick: (c) => { if (menuHeroes[c]) { G.char = c; rebuildHero(); updateMenuSelection(); } },
   menu: () => ({
@@ -718,6 +824,7 @@ function frame(now) {
   }
   updateConfetti(dt);
   updateWind(dt);
+  updateAudio(G.mode);
 
   // highlight next catchable bar
   for (let i = 0; i < NBARS; i++) {

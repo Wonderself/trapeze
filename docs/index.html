@@ -53,6 +53,20 @@
   #bigmsg{font-size:clamp(30px,9vw,60px);font-weight:700;color:#fff}
   #bigsub{margin-top:10px;font-size:clamp(15px,4vw,20px);color:var(--gold)}
 
+  /* ---- records & end-screen stats (3D-4) ---- */
+  #best{margin-top:14px;padding:8px 20px;border-radius:30px;background:rgba(14,5,32,.5);border:1px solid rgba(255,207,63,.35);font-size:clamp(12px,3.4vw,15px);color:#ffe9a8;font-weight:600;letter-spacing:1px;backdrop-filter:blur(4px)}
+  #best .medals{display:block;margin-top:3px;font-size:clamp(11px,3vw,14px);letter-spacing:2px;color:#cbb2ff}
+  #newBest{margin-top:8px;font-size:clamp(15px,4.5vw,22px);font-weight:700;color:#8affc1;letter-spacing:2px;text-shadow:0 0 18px rgba(120,255,190,.8);animation:bestPulse .7s ease-in-out infinite alternate}
+  @keyframes bestPulse{from{transform:scale(1)}to{transform:scale(1.08)}}
+  #overStats{display:grid;grid-template-columns:repeat(2,minmax(120px,150px));gap:8px 14px;margin-top:18px}
+  #overStats div{padding:8px 6px;border-radius:12px;background:rgba(14,5,32,.5);border:1px solid rgba(255,255,255,.12);font-size:13px;color:#e8dcff}
+  #overStats b{display:block;font-size:19px;color:#fff}
+  #overMedals{margin-top:12px;font-size:clamp(13px,3.6vw,17px);letter-spacing:3px;color:#ffe9a8}
+  .btnRow{display:flex;gap:12px;margin-top:24px}
+  .btn.ghost{background:rgba(14,5,32,.55);color:#e8dcff;border:2px solid rgba(255,255,255,.25);box-shadow:none;font-size:16px;padding:12px 26px}
+  #muteBtn{position:fixed;left:16px;bottom:18px;z-index:12;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(14,5,32,.55);color:#fff;font-size:19px;cursor:pointer;backdrop-filter:blur(4px)}
+  #muteBtn:active{transform:scale(.9)}
+
   /* ---- mobile action button ---- */
   #tapBtn{position:fixed;right:22px;bottom:26px;width:96px;height:96px;border-radius:50%;border:3px solid rgba(255,215,60,.85);background:radial-gradient(circle at 38% 32%,rgba(255,235,120,.55),rgba(255,140,0,.5));color:#fff;font-size:15px;font-weight:700;display:none;align-items:center;justify-content:center;z-index:6;box-shadow:0 0 34px rgba(255,180,20,.6);touch-action:manipulation}
   #tapBtn:active{transform:scale(.9)}
@@ -67,7 +81,7 @@
   @keyframes bannerIn{0%{opacity:0;transform:scale(.7)}15%{opacity:1;transform:scale(1.06)}25%{transform:scale(1)}75%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
   #banner div{display:inline-block;padding:10px 34px;border-radius:40px;background:rgba(10,4,26,.55);border:2px solid var(--gold);font-size:clamp(20px,5vw,34px);font-weight:700;color:#ffe9a8;letter-spacing:2px;backdrop-filter:blur(3px)}
 </style>
-  <script type="module" crossorigin src="./assets/index-rceQieKz.js"></script>
+  <script type="module" crossorigin src="./assets/index-4owC9jJ1.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -89,6 +103,7 @@
     <div id="title">TRAPEZE<br>STARS</div>
     <div id="subtitle">Starring&nbsp; MARC &amp; CLAIRE</div>
     <div id="dedication">★ young champions ★</div>
+    <div id="best" class="hidden"></div>
   </div>
   <div class="menuBottom">
     <div class="pickRow">
@@ -103,9 +118,17 @@
 <div id="over" class="screen hidden">
   <div id="bigmsg">Nice flying!</div>
   <div id="bigsub">Score 0</div>
-  <button class="btn" id="againBtn" style="margin-top:26px">↻ Play again</button>
+  <div id="newBest" class="hidden">★ NEW BEST! ★</div>
+  <div id="overStats"></div>
+  <div id="overMedals"></div>
+  <div class="btnRow">
+    <button class="btn" id="replayBtn">↻ REPLAY</button>
+    <button class="btn ghost" id="againBtn">MENU</button>
+  </div>
   <div id="hint">Made with ❤ for Marc &amp; Claire</div>
 </div>
+
+<button id="muteBtn" aria-label="Sound on/off">🔊</button>
 
 </body>
 </html>

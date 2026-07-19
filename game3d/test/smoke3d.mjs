@@ -31,7 +31,7 @@ const results = {};
 let code = 0;
 try {
   const browser = await chromium.launch({
-    args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl']
+    args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--autoplay-policy=no-user-gesture-required']
   });
   const page = await browser.newPage({ viewport: { width: 960, height: 560 } });
   page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
@@ -41,8 +41,9 @@ try {
   // curtain opens on the game clock (dt-clamped), so under slow headless GPUs it needs
   // more real time than on a 60fps device — poll until it's open instead of guessing.
   await page.waitForFunction(() => window.__game && window.__game.menu().curtainOpen >= 0.9, null, { timeout: 20000 }).catch(() => {});
+  await page.evaluate(() => window.__game.wipe());   // clean records for a deterministic run
   await page.waitForTimeout(400);
-  await page.screenshot({ path: `${OUT}/3d3-menu.png` }); // podium + open curtain
+  await page.screenshot({ path: `${OUT}/3d4-menu.png` }); // podium + open curtain
 
   results.webgl = await page.evaluate(() => {
     const c = document.querySelector('canvas');
@@ -78,7 +79,7 @@ try {
   // ---- (c) flip during that flight ----
   await page.evaluate(() => window.__game.down()); // trick
   await page.waitForTimeout(420);
-  await page.screenshot({ path: `${OUT}/3d3-fly.png` }); // trail + tent visible in flight
+  await page.screenshot({ path: `${OUT}/3d4-fly.png` }); // trail + tent visible in flight
   results.c_flip = await page.evaluate(() => new Promise((res) => {
     const t0 = performance.now();
     const chk = () => {
@@ -136,22 +137,25 @@ try {
       return { world: s.world, name: s.worldName };
     });
     results['i_' + name].expected = expW;
-    await page.screenshot({ path: `${OUT}/3d3-world-${name}.png` });
+    await page.screenshot({ path: `${OUT}/3d4-world-${name}.png` });
   }
 
-  // ---- (d) full traversal: fresh lowfx run, pump + near-ideal release, flip vs Beach wind ----
+  // ---- (j) audio harness alive: context created by the programmatic start, no JS errors ----
+  results.j_audio = await page.evaluate(() => window.__game.audio());
+
+  // ---- (d) endless reached: fresh lowfx run, full 4-world tour then loop into lap 2 ----
   await page.setViewportSize({ width: 480, height: 270 });
   await page.goto('http://localhost:8130/index.html?lowfx', { waitUntil: 'load' });
   await page.waitForTimeout(800);
-  await page.evaluate(() => window.__game.start('marc'));
+  await page.evaluate(() => { window.__game.wipe(); window.__game.start('marc'); });
   await page.waitForTimeout(300);
-  results.d_win = await page.evaluate(() => new Promise((res) => {
+  results.d_endless = await page.evaluate(() => new Promise((res) => {
     const t0 = performance.now();
     let phase = 'grip', flipped = false, maxWorld = 0;
     const loop = () => {
       const s = window.__game.state();
       maxWorld = Math.max(maxWorld, s.world);
-      if (s.mode === 'win') return res({ ok: true, score: s.score, combo: s.combo, lives: s.lives, maxWorld, netSaves: s.netSaves });
+      if (s.lap >= 1) return res({ ok: true, score: s.score, maxCombo: s.maxCombo, lives: s.lives, maxWorld, netSaves: s.netSaves, lap: s.lap, diffN: s.diffN, stars: s.starsGot });
       if (s.mode === 'over') return res({ ok: false, why: 'gameover', active: s.active, score: s.score, maxWorld });
       if (performance.now() - t0 > 420000) return res({ ok: false, why: 'timeout', active: s.active, maxWorld });
       if (s.state === 'swing') {
@@ -166,7 +170,31 @@ try {
       requestAnimationFrame(loop);
     }; loop();
   }));
-  await page.screenshot({ path: `${OUT}/3d3-end.png` });
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: `${OUT}/3d4-lap2.png` });   // endless banner / lap 2 under way
+
+  // ---- (e) enriched end screen + records written ----
+  results.e_end = await page.evaluate(() => {
+    window.__game.over();
+    const r = window.__game.records();
+    return {
+      overVisible: !document.getElementById('over').classList.contains('hidden'),
+      stats: document.getElementById('overStats').children.length,
+      medalsShown: document.getElementById('overMedals').textContent.length > 0,
+      newBest: !document.getElementById('newBest').classList.contains('hidden'),
+      high: r.high, bestCombo: r.bestCombo, medals: r.medals,
+      score: window.__game.state().score,
+    };
+  });
+  await page.screenshot({ path: `${OUT}/3d4-end.png` });
+
+  // ---- (f) persistence: records survive a full page reload ----
+  await page.goto('http://localhost:8130/index.html?lowfx', { waitUntil: 'load' });
+  await page.waitForTimeout(900);
+  results.f_persist = await page.evaluate(() => ({
+    ...window.__game.records(),
+    bestShown: !document.getElementById('best').classList.contains('hidden'),
+  }));
 
   console.log('RESULTS', JSON.stringify(results, null, 1));
   console.log('captures in', OUT);
@@ -187,8 +215,14 @@ try {
   else if (!(n1.lives === 3 && n1.netSaves === 1)) code = 10;      // net must save the first fall
   else if (!(n2.lives === 2 && n2.netSaves === 1)) code = 11;      // and only once per world
   else if (!worldsOk) code = 12;                                    // 4 worlds present & tracked
-  else if (!results.d_win || !results.d_win.ok) code = 8;
-  else if (results.d_win.maxWorld !== 3) code = 13;                 // traversal crossed all worlds
+  else if (!results.d_endless || !results.d_endless.ok) code = 8;
+  else if (results.d_endless.maxWorld !== 3 || results.d_endless.lap < 1 || results.d_endless.diffN < 1) code = 13;  // full tour then endless engaged
+  else if (!(results.e_end && results.e_end.overVisible && results.e_end.stats >= 4 && results.e_end.medalsShown
+             && results.e_end.newBest && results.e_end.high === results.e_end.score && results.e_end.high > 0
+             && results.e_end.bestCombo > 0 && results.e_end.medals.some((m) => m > 0))) code = 14;  // enriched end screen + records
+  else if (!(results.f_persist && results.f_persist.high === results.e_end.high
+             && results.f_persist.bestCombo === results.e_end.bestCombo && results.f_persist.bestShown)) code = 15;  // records survive reload
+  else if (!(results.j_audio && results.j_audio.ready)) code = 16;  // WebAudio context created
   else if (realErrors.length) code = 2;
   await browser.close();
 } catch (e) {

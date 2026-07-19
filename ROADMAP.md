@@ -10,6 +10,7 @@ Règle d'or du projet : **tout doit rester gratuit, hors-ligne et sans dépendan
 - [x] Session 3D-1 : le timing est le skill — lâcher noté PERFECT/GOOD/OK, pompage, vrilles bonus, slow-mo, caméra vivante, trail, combo
 - [x] Session 3D-2 : beauté & identité — chapiteau complet, menu podium 3D tournant, rideau, bloom, rim light
 - [x] Session 3D-3 : diversité & mondes — 4 mondes (Cirque/Jungle/Plage/Espace), 1 mécanique par monde (barres dérivantes / rafales de vent / gravité réduite + anneaux mobiles), filet bonus 1×/monde, transitions fog/lumière + bannière
+- [x] Session 3D-4 : addiction & rétention — musique générative + SFX par monde (100 % WebAudio), high score/best combo/médailles par monde persistés (`ts3d_*`), mode infini (+5 % vitesse, fenêtres −5 % par monde), écran de fin enrichi + REPLAY instantané, bouton 🔊/🔇
 - [x] Identité personnages (2026-07-19) : **Marc petit, blond, natte animée** (vole en vrille, traîne en swing) ; **Claire plus grande, blond clair, cheveux longs + étoile d'or** — tailles compensées au point de prise (les mains restent sur la barre)
 - [x] PWA (manifest + service worker), test smoke headless WebGL avec captures
 
@@ -23,9 +24,8 @@ Règle d'or du projet : **tout doit rester gratuit, hors-ligne et sans dépendan
 
 ## 🎯 Prochaines étapes (dans l'ordre — une session par conversation, modèle conseillé entre parenthèses)
 
-1. **Session 3D-4 — Addiction & rétention** (`AUDIT.md`, **Fable 5**) : audio complet, high score + médailles + best combo persistés, mode infini.
-2. **Session 3D-5 — Manette & podium local** (`AUDIT.md`, **Opus 4.8**) : Gamepad API + top 10 local avec initiales (localStorage — pas de serveur).
-3. **Session 3D-6 — Accessibilité & partage** (`AUDIT.md`, **Sonnet 5**) : reduced-motion, réduction des flashs, contraste HUD, photo finish + Web Share.
+1. **Session 3D-5 — Manette & podium local** (`AUDIT.md`, **Opus 4.8**) : Gamepad API + top 10 local avec initiales (localStorage — pas de serveur).
+2. **Session 3D-6 — Accessibilité & partage** (`AUDIT.md`, **Sonnet 5**) : reduced-motion, réduction des flashs, contraste HUD, photo finish + Web Share.
 
 ## 💡 Idées au-delà (toujours gratuit, natif)
 
