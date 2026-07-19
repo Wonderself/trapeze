@@ -1,5 +1,5 @@
 # 📊 AUDIT — Trapeze Stars (trapeze)
-Dernière mise à jour : 2026-07-18 — Direction active : **Trapeze Stars 3D** (`game3d/`, Three.js + Vite).
+Dernière mise à jour : 2026-07-19 — Direction active : **Trapeze Stars 3D** (`game3d/`, Three.js + Vite).
 
 <!-- ═══ NEXT (lu par CLAUDE.md pour l'auto-avancement) ═══
 PROCHAINE SESSION : Session 3D-3 — Diversité & mondes  (statut ⬜ À faire)
@@ -85,6 +85,7 @@ Légende coût : 🟢 léger · 🟡 moyen · 🔴 lourd (à faire en début de 
 - **Jeu 2D** (racine) : intact, PWA propre, ne plus y toucher sauf demande.
 
 ## ✅ HISTORIQUE
+- [2026-07-19] Identité personnages (hors-session, demande d'Emmanuel) — canon fixé dans `CHARACTERS.md` : **Marc le petit** (jeune, blond, cheveux longs, **natte animée** dans le dos) et **Claire la grande** (blond clair, cheveux longs, étoile d'or). Appliqué en **2D** (natte 5 segments réactive à l'état, chevelures refaites, échelles 1.22/1.38, spotlight suiveur, Wake Lock) et en **3D** (`player.js` : deux blonds différenciés, natte en pivot animée dans `poseHero`, tailles 0.92/1.06 compensées au point de prise `GRIP_Y`). Docs musclées : README, GAME_DESIGN, CHARACTERS, ROADMAP. Smoke test a–g verts, build redéployé dans `docs/`.
 - [2026-07-12] Audit 2D complet (Fable 5) — 4 bugs critiques identifiés, plan 2 sessions.
 - [2026-07-13] Session 1 (2D) ✅ — delta-time 60 Hz, musique infinie, fichier unique, UI anglais, pause auto, fix crash Game Over.
 - [2026-07-18] Repo « Cowork-ready » (Opus) — consolidation sur `main`, `CLAUDE.md` autopilote, `AUDIT.md` optimisé.

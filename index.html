@@ -149,7 +149,7 @@ function sfxHoop(){tone(880,0.06,'sine',0.3);setTimeout(()=>tone(1100,0.08,'sine
 function sfxBounce(){tone(100,0.04,'sine',0.4);setTimeout(()=>tone(560,0.3,'sine',0.2,180),32);}
 function sfxHit(){tone(140,0.4,'sawtooth',0.28,70);}
 function sfxStar(){tone(1300,0.09,'sine',0.15,2200);}
-function sfxMedal(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,0.2,'sine',0.25),i*105));}
+function sfxMedal(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,0.2,'sine',0.25),i*105));vib([30,40,30]);}
 function sfxLegsault(){tone(80,0.15,'sine',0.45);setTimeout(()=>tone(400,0.5,'sine',0.18,80),50);setTimeout(()=>{tone(300,0.12,'sine',0.22);tone(450,0.12,'sine',0.18);},500);setTimeout(()=>tone(200,0.4,'sawtooth',0.2),800);}
 function sfxCeremony(){[400,500,600,800,1000].forEach((f,i)=>setTimeout(()=>tone(f,0.3,'sine',0.3),i*120));}
 function sfxSpin(){sfxDj();}
@@ -189,6 +189,9 @@ let hitStop=0;                                  // frames of frozen simulation (
 let introT=0,introPlayed=false;const INTRO_END=225;   // title-screen opening (plays once/load)
 let worldFadeT=0,worldName='';const WORLD_FADE=140;   // cinematic world transition banner
 function vib(ms){if(navigator.vibrate){try{navigator.vibrate(ms);}catch(e){}}}
+let _wakeLock=null;
+async function reqWakeLock(){try{if('wakeLock'in navigator){_wakeLock=await navigator.wakeLock.request('screen');}}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&gs==='playing')reqWakeLock();});
 function skipIntro(){introT=INTRO_END;introPlayed=true;}
 function introActive(){return introT<INTRO_END;}
 
@@ -452,21 +455,59 @@ CX.beginPath();CX.moveTo(13.5,-19.5);CX.lineTo(13.5+rAx*al,-19.5+rAy*al);CX.stro
 const handG=CX.createRadialGradient(-15+lAx*al,-18+lAy*al,0,-15+lAx*al,-18+lAy*al,6);handG.addColorStop(0,'#d8c0a0');handG.addColorStop(1,'#a07858');CX.fillStyle=handG;
 CX.beginPath();CX.ellipse(-15+lAx*al,-18+lAy*al,5.5,4,0,0,Math.PI*2);CX.fill();
 CX.beginPath();CX.ellipse(15+rAx*al,-18+rAy*al,5.5,4,0,0,Math.PI*2);CX.fill();
+// Natte (braid) — hangs behind the back, swings with motion
+{
+const hangB=(state==='swing'||state==='hang'||state==='trophy');
+const flyB=(state==='salto'||state==='djump'||state==='pirouette');
+const runB=(state==='run'||state==='idle');
+CX.lineCap='round';
+let prevX=-8,prevY=-44;
+for(let i=0;i<5;i++){
+  const t=(i+1)/5;
+  const sway=Math.sin(af*0.09-i*0.7)*(1.2+i*0.9)+(runB?Math.sin(af*0.2-i*0.5)*1.5:0);
+  const segX=-8-7*t+sway-(hangB?t*2:0);
+  const segY=-42+t*(flyB?16:27)+(flyB?-t*t*8:0);
+  const segR=4.4-i*0.6;
+  CX.strokeStyle='#8a6210';CX.lineWidth=segR*2+2;
+  CX.beginPath();CX.moveTo(prevX,prevY);CX.lineTo(segX,segY);CX.stroke();
+  CX.strokeStyle=i%2===0?'#f0cc50':'#e0b838';CX.lineWidth=segR*2;
+  CX.beginPath();CX.moveTo(prevX,prevY);CX.lineTo(segX,segY);CX.stroke();
+  CX.fillStyle=i%2===0?'#ffe888':'#ecc244';
+  CX.beginPath();CX.arc(segX,segY,segR,0,Math.PI*2);CX.fill();
+  CX.strokeStyle='rgba(140,95,15,0.5)';CX.lineWidth=1;
+  CX.beginPath();CX.arc(segX,segY,segR*0.55,i%2===0?0.4:2.6,i%2===0?2.4:5.2);CX.stroke();
+  prevX=segX;prevY=segY;
+  if(i===4){
+    CX.fillStyle='#e83050';CX.beginPath();CX.arc(segX,segY+1.5,2.2,0,Math.PI*2);CX.fill();
+    CX.strokeStyle='#ecc244';CX.lineWidth=1.4;
+    CX.beginPath();CX.moveTo(segX-1,segY+3);CX.lineTo(segX-2+sway*0.3,segY+8);CX.stroke();
+    CX.beginPath();CX.moveTo(segX+1,segY+3);CX.lineTo(segX+2+sway*0.3,segY+7);CX.stroke();
+  }
+}
+CX.lineCap='round';
+}
 // Neck
 CX.fillStyle=gSK();CX.beginPath();CX.roundRect(-4,-27,8,6,2);CX.fill();
 // Head (with skin shader + spec)
 const headRG=CX.createRadialGradient(-4,-39,1,-2,-34,14);headRG.addColorStop(0,'#fde8c8');headRG.addColorStop(0.4,'#f5c39a');headRG.addColorStop(1,'#c48055');
 CX.fillStyle=headRG;CX.beginPath();CX.arc(0,-34,13,0,Math.PI*2);CX.fill();
 CX.beginPath();CX.roundRect(-11,-39,22,13,4);CX.fill();
-// Hair
-CX.fillStyle=gHR();CX.beginPath();CX.arc(0,-41,11,Math.PI,0);CX.fill();
-CX.beginPath();CX.ellipse(-11,-38,5.5,6,0,0,Math.PI*2);CX.fill();
-CX.beginPath();CX.ellipse(11,-38,5,5.5,0,0,Math.PI*2);CX.fill();
-CX.beginPath();CX.moveTo(-3,-47);CX.bezierCurveTo(4,-51,13,-48,14,-42);CX.bezierCurveTo(11,-39,7,-40,5,-43);CX.bezierCurveTo(8,-45,5,-48,-3,-47);CX.closePath();CX.fill();
-// Face
-CX.strokeStyle='#c09028';CX.lineWidth=3;CX.beginPath();CX.moveTo(-8,-39);CX.lineTo(-2,-37.5);CX.stroke();CX.beginPath();CX.moveTo(8,-39);CX.lineTo(2,-37.5);CX.stroke();
-CX.fillStyle='#1a3060';CX.beginPath();CX.arc(-4.5,-35,3,0,Math.PI*2);CX.fill();CX.beginPath();CX.arc(4.5,-35,3,0,Math.PI*2);CX.fill();
-CX.fillStyle='#fff';CX.beginPath();CX.arc(-3.3,-36.3,1.2,0,Math.PI*2);CX.fill();CX.beginPath();CX.arc(5.7,-36.3,1.2,0,Math.PI*2);CX.fill();
+// Hair — long bright blond, framing the face, gathered into the braid behind
+CX.fillStyle=gHR();CX.beginPath();CX.arc(0,-41,11.5,Math.PI,0);CX.fill();
+const hwM=Math.sin(af*0.07)*1.6;
+CX.beginPath();CX.moveTo(-10,-46);CX.bezierCurveTo(-15,-38+hwM,-14.5,-28,-12,-20);CX.bezierCurveTo(-14.5,-20,-16,-30,-14,-44);CX.closePath();CX.fill();
+CX.beginPath();CX.ellipse(-11,-36,4.5,8,0.12,0,Math.PI*2);CX.fill();
+CX.beginPath();CX.moveTo(9,-46);CX.bezierCurveTo(14.5,-38-hwM,14,-29,11.5,-22);CX.bezierCurveTo(14,-22,15.5,-31,13.5,-44);CX.closePath();CX.fill();
+CX.beginPath();CX.ellipse(10.5,-36,4.2,7.5,-0.12,0,Math.PI*2);CX.fill();
+CX.beginPath();CX.moveTo(-3,-48);CX.bezierCurveTo(4,-52,13,-49,14,-43);CX.bezierCurveTo(11,-40,7,-41,5,-44);CX.bezierCurveTo(8,-46,5,-49,-3,-48);CX.closePath();CX.fill();
+CX.strokeStyle='rgba(255,244,180,0.6)';CX.lineWidth=1.3;
+CX.beginPath();CX.moveTo(-9,-47);CX.quadraticCurveTo(-12.5,-36,-11.5,-24);CX.stroke();
+CX.beginPath();CX.moveTo(8,-47);CX.quadraticCurveTo(12,-37,11,-26);CX.stroke();
+// Face — young: big eyes, light brows, rosy cheeks
+CX.strokeStyle='#c09028';CX.lineWidth=2.4;CX.beginPath();CX.moveTo(-7.5,-40);CX.quadraticCurveTo(-4.5,-41.5,-2,-40);CX.stroke();CX.beginPath();CX.moveTo(7.5,-40);CX.quadraticCurveTo(4.5,-41.5,2,-40);CX.stroke();
+CX.fillStyle='#1a3060';CX.beginPath();CX.arc(-4.5,-35,3.3,0,Math.PI*2);CX.fill();CX.beginPath();CX.arc(4.5,-35,3.3,0,Math.PI*2);CX.fill();
+CX.fillStyle='#fff';CX.beginPath();CX.arc(-3.3,-36.4,1.4,0,Math.PI*2);CX.fill();CX.beginPath();CX.arc(5.7,-36.4,1.4,0,Math.PI*2);CX.fill();
+CX.fillStyle='rgba(255,120,110,0.3)';CX.beginPath();CX.arc(-7.5,-30.5,3.2,0,Math.PI*2);CX.fill();CX.beginPath();CX.arc(7.5,-30.5,3.2,0,Math.PI*2);CX.fill();
 CX.strokeStyle='#a05028';CX.lineWidth=1.9;CX.beginPath();CX.arc(0,-31,5.5,0.18,Math.PI-0.18);CX.stroke();
 // Head specular
 const hspec=CX.createRadialGradient(-4,-42,0,-4,-42,9);hspec.addColorStop(0,'rgba(255,255,255,0.55)');hspec.addColorStop(1,'transparent');CX.fillStyle=hspec;CX.beginPath();CX.arc(-4,-42,9,0,Math.PI*2);CX.fill();
@@ -483,7 +524,7 @@ CX.save();CX.translate(x,y);CX.rotate(rot||0);
 const breath=(state==='idle'||state==='run')?Math.sin(af*0.04)*1.5:0;
 const gBD=()=>{const g=CX.createLinearGradient(-11,-24,11,4);g.addColorStop(0,'#ff7cb8');g.addColorStop(0.45,'#e8387a');g.addColorStop(1,'#8a0840');return g;};
 const gSK=()=>{const g=CX.createRadialGradient(-3,-36,1,-3,-36,12);g.addColorStop(0,'#ffd9b0');g.addColorStop(0.55,'#f5c39a');g.addColorStop(1,'#cc8055');return g;};
-const gHR=()=>{const g=CX.createRadialGradient(-2,-43,0,-2,-43,11);g.addColorStop(0,'#dda860');g.addColorStop(0.5,'#c09050');g.addColorStop(1,'#7a5020');return g;};
+const gHR=()=>{const g=CX.createRadialGradient(-2,-43,0,-2,-43,11);g.addColorStop(0,'#fff0b0');g.addColorStop(0.5,'#f2cc58');g.addColorStop(1,'#bd8a1a');return g;};
 let lAx,lAy,rAx,rAy;const al=17;
 if(state==='swing'||state==='hang'||state==='trophy'){lAx=-0.1;lAy=-1;rAx=0.1;rAy=-1;}
 else if(state==='pirouette'){lAx=-1;lAy=-0.1;rAx=1;rAy=-0.1;}
@@ -536,8 +577,12 @@ CX.fillStyle=gHR();CX.beginPath();CX.arc(0,-41,10.5,Math.PI,0);CX.fill();
 CX.beginPath();CX.ellipse(-11,-38,5.5,7.5,0.18,0,Math.PI*2);CX.fill();
 CX.beginPath();CX.ellipse(11,-38,5,7,-0.18,0,Math.PI*2);CX.fill();
 const hw=Math.sin(af*0.06)*2.2;
-CX.beginPath();CX.moveTo(-9,-44);CX.bezierCurveTo(-17,-32+hw,-16,-13,-8,2);CX.bezierCurveTo(-11,2,-14,-10,-13,-31);CX.closePath();CX.fill();
-CX.beginPath();CX.moveTo(8,-44);CX.bezierCurveTo(16,-34-hw,15,-20,10,-8);CX.bezierCurveTo(7,-6,6,-12,8,-25);CX.closePath();CX.fill();
+CX.beginPath();CX.moveTo(-9,-44);CX.bezierCurveTo(-18,-32+hw,-17,-8,-9,10);CX.bezierCurveTo(-13,10,-15.5,-8,-13.5,-31);CX.closePath();CX.fill();
+CX.beginPath();CX.moveTo(8,-44);CX.bezierCurveTo(17,-33-hw,16,-12,11,4);CX.bezierCurveTo(8,6,7,-8,8.5,-26);CX.closePath();CX.fill();
+CX.beginPath();CX.moveTo(-6,-46);CX.bezierCurveTo(-13,-30-hw,-11,-10,-4,6);CX.bezierCurveTo(-8,7,-11.5,-12,-10,-34);CX.closePath();CX.fill();
+CX.strokeStyle='rgba(255,246,200,0.65)';CX.lineWidth=1.4;
+CX.beginPath();CX.moveTo(-10,-42);CX.quadraticCurveTo(-15.5,-20+hw,-10,6);CX.stroke();
+CX.beginPath();CX.moveTo(9,-42);CX.quadraticCurveTo(14.5,-22-hw,10.5,1);CX.stroke();
 star5(-11,-44,5,2,'#FFD700');
 // Face
 CX.strokeStyle='#8a6030';CX.lineWidth=1.5;CX.beginPath();CX.moveTo(-7.5,-38.5);CX.quadraticCurveTo(-4.5,-40.5,-2,-38.5);CX.stroke();CX.beginPath();CX.moveTo(7.5,-38.5);CX.quadraticCurveTo(4.5,-40.5,2,-38.5);CX.stroke();
@@ -563,8 +608,9 @@ function drawChar(x,y,state,af,rot,charOverride){
     else if(P.vx>0.5){P.lastFacing=1;}
     facing=P.lastFacing||1;
   }
-  CX.scale(1.3*facing,1.3);
   const ch=charOverride||P.char;
+  const sc=ch==='marc'?1.22:1.38;
+  CX.scale(sc*facing,sc);
   if(ch==='marc')drawMarc(0,0,state,af,rot);else drawClaire(0,0,state,af,rot);
   CX.restore();
   _resetShadow(CX);CX.filter='none';CX.globalCompositeOperation='source-over';
@@ -837,6 +883,19 @@ function drawWorld(){
 function drawPlayer(){
   if(P.inv>0&&Math.floor(P.inv/5)%2===1)return;
   const px=P.x-scrollX,py=P.y;
+  // Spotlight cone following the performer
+  if(gs==='playing'){
+    const swx=Math.sin(frameN*0.02)*8;
+    CX.save();CX.globalCompositeOperation='lighter';
+    const cone=CX.createLinearGradient(0,0,0,py);
+    cone.addColorStop(0,'rgba(255,240,190,0.11)');cone.addColorStop(1,'rgba(255,240,190,0.025)');
+    CX.fillStyle=cone;
+    CX.beginPath();CX.moveTo(px-24+swx,-6);CX.lineTo(px+24+swx,-6);CX.lineTo(px+64,py+10);CX.lineTo(px-64,py+10);CX.closePath();CX.fill();
+    const pool=CX.createRadialGradient(px,py+5,0,px,py+5,58);
+    pool.addColorStop(0,'rgba(255,240,190,0.12)');pool.addColorStop(1,'transparent');
+    CX.fillStyle=pool;CX.beginPath();CX.ellipse(px,py+6,60,15,0,0,Math.PI*2);CX.fill();
+    CX.restore();
+  }
   // Halo during tricks
   if(['pirouette','salto','djump'].includes(P.state)||legsaultFlight>0){
     const glowCol=P.char==='marc'?'30,110,232':'232,56,122';const intensity=legsaultFlight>0?0.32:0.22;
@@ -1044,9 +1103,8 @@ function drawFinale(){
   chars.forEach((ch,i)=>{
     const px2=W/4+i*(W/2);const py2=H-80;
     const bob2=Math.sin(frameN*0.05+i*Math.PI)*4;
-    CX.save();CX.translate(px2,py2+bob2);CX.scale(1.4,1.4);
-    const ch2=ch;
-    if(ch2==='marc')drawMarc(0,0,'idle',frameN,0);else drawClaire(0,0,'idle',frameN,0);
+    CX.save();CX.translate(px2,py2+bob2);const fsc=ch==='marc'?1.3:1.48;CX.scale(fsc,fsc);
+    if(ch==='marc')drawMarc(0,0,'idle',frameN,0);else drawClaire(0,0,'idle',frameN,0);
     CX.restore();_resetShadow(CX);
   });
   // Medals row
@@ -1521,7 +1579,7 @@ function drawMenu(){
       gl.addColorStop(0,`rgba(255,215,0,${(0.28+gp*0.14)*portA})`);gl.addColorStop(1,'transparent');
       CX.fillStyle=gl;CX.fillRect(c.x-100,oy-150,200,210);
     }
-    CX.save();CX.globalAlpha=portA;CX.translate(c.x,oy);CX.scale(1.7,1.7);
+    CX.save();CX.globalAlpha=portA;CX.translate(c.x,oy);const psc=c.ch==='marc'?1.55:1.75;CX.scale(psc,psc);
     const sway=Math.sin(frameN*0.03+c.sel*1.6)*0.04;
     if(c.ch==='marc')drawMarc(0,0,'trophy',frameN,sway);else drawClaire(0,0,'trophy',frameN,sway);
     CX.restore();_resetShadow(CX);CX.globalAlpha=1;
@@ -1698,7 +1756,7 @@ window.addEventListener('keydown',e=>{if(paused){resumeFromPause();e.preventDefa
 
 /* ─── START GAME ─── */
 function startGame(){
-  unlockAudio();
+  unlockAudio();reqWakeLock();
   lives=3;score=0;level=0;combo=0;levelDone=false;
   currentWorld=0;currentLevel=1;TH='cirque';
   gs='playing';
