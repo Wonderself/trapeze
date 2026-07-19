@@ -58,16 +58,26 @@
   #tapBtn:active{transform:scale(.9)}
   @media (hover:none),(pointer:coarse){ #tapBtn.on{display:flex} }
   #flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:8}
+
+  /* ---- worlds ---- */
+  #worldTag{font-size:11px;color:#8fd0ff;letter-spacing:3px;font-weight:600;margin-top:2px}
+  #windTag{position:fixed;top:60px;right:20px;font-size:18px;font-weight:700;color:#bfe9ff;opacity:0;transition:opacity .35s;z-index:5;pointer-events:none;text-shadow:0 2px 10px rgba(0,0,0,.7)}
+  #banner{position:fixed;top:36%;left:0;right:0;text-align:center;z-index:7;pointer-events:none;opacity:0}
+  #banner.show{animation:bannerIn 2.6s ease forwards}
+  @keyframes bannerIn{0%{opacity:0;transform:scale(.7)}15%{opacity:1;transform:scale(1.06)}25%{transform:scale(1)}75%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
+  #banner div{display:inline-block;padding:10px 34px;border-radius:40px;background:rgba(10,4,26,.55);border:2px solid var(--gold);font-size:clamp(20px,5vw,34px);font-weight:700;color:#ffe9a8;letter-spacing:2px;backdrop-filter:blur(3px)}
 </style>
-  <script type="module" crossorigin src="./assets/index-DVKSmmj5.js"></script>
+  <script type="module" crossorigin src="./assets/index-rceQieKz.js"></script>
 </head>
 <body>
 <div id="app"></div>
 
 <div id="hud">
-  <div id="score">0<small>SCORE</small></div>
+  <div><div id="score">0<small>SCORE</small></div><div id="worldTag">CIRCUS</div></div>
   <div id="lives">❤❤❤</div>
 </div>
+<div id="banner"><div id="bannerTxt">World 2 — Jungle</div></div>
+<div id="windTag">💨</div>
 <div id="combo"></div>
 <div id="grade"></div>
 <div id="comboHold"><span>COMBO x2</span><div id="comboBar"><div id="comboFill"></div></div></div>

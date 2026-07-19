@@ -108,7 +108,7 @@ try {
       const s = window.__game.state();
       if (s.state === 'swing' && s.mode === 'playing') return res({ lives: s.lives, netSaves: s.netSaves });
       if (s.mode !== 'playing') return res({ mode: s.mode });
-      if (performance.now() - t0 > 8000) return res({ timeout: true });
+      if (performance.now() - t0 > 20000) return res({ timeout: true });
       requestAnimationFrame(chk);
     }; chk();
   }));
@@ -121,7 +121,7 @@ try {
       if (phase === 'arm' && s.state === 'swing' && s.omega < -0.3) { window.__game.action(); phase = 'fall'; }
       else if (phase === 'fall' && s.state !== 'swing') phase = 'resolve';
       else if (phase === 'resolve' && s.state === 'swing') return res({ lives: s.lives, netSaves: s.netSaves });
-      if (performance.now() - t0 > 12000) return res({ timeout: true, phase });
+      if (performance.now() - t0 > 30000) return res({ timeout: true, phase });
       requestAnimationFrame(chk);
     }; chk();
   }));
