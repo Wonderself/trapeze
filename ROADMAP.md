@@ -9,6 +9,7 @@ Règle d'or du projet : **tout doit rester gratuit, hors-ligne et sans dépendan
 ### Jeu 3D (`game3d/` — direction active)
 - [x] Session 3D-1 : le timing est le skill — lâcher noté PERFECT/GOOD/OK, pompage, vrilles bonus, slow-mo, caméra vivante, trail, combo
 - [x] Session 3D-2 : beauté & identité — chapiteau complet, menu podium 3D tournant, rideau, bloom, rim light
+- [x] Session 3D-3 : diversité & mondes — 4 mondes (Cirque/Jungle/Plage/Espace), 1 mécanique par monde (barres dérivantes / rafales de vent / gravité réduite + anneaux mobiles), filet bonus 1×/monde, transitions fog/lumière + bannière
 - [x] Identité personnages (2026-07-19) : **Marc petit, blond, natte animée** (vole en vrille, traîne en swing) ; **Claire plus grande, blond clair, cheveux longs + étoile d'or** — tailles compensées au point de prise (les mains restent sur la barre)
 - [x] PWA (manifest + service worker), test smoke headless WebGL avec captures
 
@@ -22,10 +23,9 @@ Règle d'or du projet : **tout doit rester gratuit, hors-ligne et sans dépendan
 
 ## 🎯 Prochaines étapes (dans l'ordre)
 
-1. **Session 3D-3 — Diversité & mondes** (`AUDIT.md`) : 4 mondes (Cirque/Jungle/Plage/Espace) + 1 mécanique nouvelle par monde, transitions.
-2. **Session 3D-4 — Addiction & rétention** (`AUDIT.md`) : audio complet, high score + médailles + best combo persistés, mode infini.
-3. **Gamepad API** (2D + 3D) : support manette — natif, gratuit.
-4. **Podium local des 10 meilleurs scores** avec initiales (localStorage — pas de serveur).
+1. **Session 3D-4 — Addiction & rétention** (`AUDIT.md`) : audio complet, high score + médailles + best combo persistés, mode infini.
+2. **Gamepad API** (2D + 3D) : support manette — natif, gratuit.
+3. **Podium local des 10 meilleurs scores** avec initiales (localStorage — pas de serveur).
 
 ## 💡 Idées au-delà (toujours gratuit, natif)
 

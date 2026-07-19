@@ -10,7 +10,12 @@ const GP = 19;            // pendulum gravity
 const GF = 15;            // fall gravity
 const AMP_MIN = 0.85, AMP_MAX = 1.25;   // pumpable swing amplitude
 const SOLO_AMP = 0.42;    // idle swing of un-held bars
-const NBARS = 16;
+const BARS_PER_WORLD = 12;
+const NWORLDS = 4;                        // Circus → Jungle → Beach → Space
+const NBARS = BARS_PER_WORLD * NWORLDS;
+const WORLD_NAMES = ['Circus', 'Jungle', 'Beach', 'Space'];
+const JUNGLE_W = 1, BEACH_W = 2, SPACE_W = 3;
+const NET_Y = -3.6;                       // safety-net height (one save per world)
 const MISS_Y = -7;
 const COMBO_TIME = 6;     // s before combo expires
 const HANG = 1.55;        // hands-to-origin offset of the hero
@@ -19,35 +24,57 @@ const HANG = 1.55;        // hands-to-origin offset of the hero
 let _s = 20260718;
 const rnd = () => { _s = (_s * 1103515245 + 12345) & 0x7fffffff; return _s / 0x7fffffff; };
 
-/* ══════════════ LAYOUT (varied rail) ══════════════ */
+/* ══════════════ LAYOUT (varied rail across 4 worlds) ══════════════ */
 const barDefs = [];
 {
+  // per-world gap ranges — Jungle tighter (its bars drift on X), Beach medium (wind)
+  const SPAN = [[4.5, 7.5], [4.2, 5.6], [4.5, 6.5], [4.5, 7.5]];
   let x = 0;
   for (let i = 0; i < NBARS; i++) {
-    if (i > 0) x += 4.5 + rnd() * (i < 4 ? 1.0 : 3.0);   // gentle start, then 4.5–7.5
-    const py = PY0 + (i === 0 ? 0 : (rnd() * 2.4 - 1.2)); // pivot height ±1.2
-    barDefs.push({ x, py });
+    const w = Math.floor(i / BARS_PER_WORLD);
+    const first = i % BARS_PER_WORLD === 0;
+    if (i > 0) {
+      const [lo, hi] = SPAN[w];
+      x += i < 4 ? 4.5 + rnd() * 1.0 : lo + rnd() * (hi - lo);  // gentle start
+    }
+    const py = PY0 + (i === 0 || first ? 0 : rnd() * 2.4 - 1.2); // world-entry bar is easy
+    const def = { x, py, w };
+    if (w === JUNGLE_W && !first) {  // Jungle mechanic: bars slowly drift on X
+      def.mv = 0.6 + rnd() * 0.4; def.mvSpd = 0.45 + rnd() * 0.3; def.mvPh = rnd() * 6.28;
+    }
+    barDefs.push(def);
   }
 }
 const LEVEL_LEN = barDefs[NBARS - 1].x;
+const worldSegs = [];
+for (let w = 0; w < NWORLDS; w++) {
+  const x0 = w === 0 ? -16 : (barDefs[w * BARS_PER_WORLD - 1].x + barDefs[w * BARS_PER_WORLD].x) / 2;
+  const x1 = w === NWORLDS - 1 ? LEVEL_LEN + 14 : (barDefs[(w + 1) * BARS_PER_WORLD - 1].x + barDefs[(w + 1) * BARS_PER_WORLD].x) / 2;
+  worldSegs.push({ x0, x1 });
+}
 
 const app = document.getElementById('app');
 const stage = createStage(app);
 const { scene, camera } = stage;
-const world = createWorld(scene, LEVEL_LEN);
+const world = createWorld(scene, worldSegs);
 
 /* ══════════════ TRAPEZE RIG ══════════════ */
 const barGroup = new THREE.Group();
 scene.add(barGroup);
 const bars = [];
-const ropeMat = new THREE.MeshStandardMaterial({ color: 0xb98cff, emissive: 0x5a2ea0, emissiveIntensity: 0.4, roughness: 0.5 });
+const ropeMats = [
+  new THREE.MeshStandardMaterial({ color: 0xb98cff, emissive: 0x5a2ea0, emissiveIntensity: 0.4, roughness: 0.5 }),  // circus
+  new THREE.MeshStandardMaterial({ color: 0x55b043, emissive: 0x1e4a12, emissiveIntensity: 0.5, roughness: 0.8 }),  // jungle vine
+  new THREE.MeshStandardMaterial({ color: 0xd8b06a, emissive: 0x6a4a1a, emissiveIntensity: 0.35, roughness: 0.85 }), // beach rope
+  new THREE.MeshStandardMaterial({ color: 0x66eaff, emissive: 0x00a8d8, emissiveIntensity: 1.0, roughness: 0.35 }), // space neon
+];
 const barMat = new THREE.MeshStandardMaterial({ color: 0xffcf3f, emissive: 0xff8a00, emissiveIntensity: 0.8, roughness: 0.4, metalness: 0.2 });
 const barReadyMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x8affc1, emissiveIntensity: 1.6, roughness: 0.3 });
 
 for (let i = 0; i < NBARS; i++) {
-  const { x, py } = barDefs[i];
+  const { x, py, w, mv, mvSpd, mvPh } = barDefs[i];
   const g = new THREE.Group();
-  const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, L, 6), ropeMat);
+  const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, L, 6), ropeMats[w]);
   const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 1.5, 10), barMat);
   bar.rotation.x = Math.PI / 2;
   bar.castShadow = true;
@@ -56,11 +83,12 @@ for (let i = 0; i < NBARS; i++) {
   const anchor = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), new THREE.MeshStandardMaterial({ color: 0x2a1533 }));
   anchor.position.set(x, py, 0);
   barGroup.add(anchor);
-  bars.push({ x, py, theta: (i % 2 ? 1 : -1) * SOLO_AMP * rnd(), omega: 0, g, rope, bar });
+  bars.push({ x, bx: x, py, w, mv, mvSpd, mvPh, theta: (i % 2 ? 1 : -1) * SOLO_AMP * rnd(), omega: 0, g, rope, bar, anchor });
 }
 const bobPos = (b) => new THREE.Vector3(b.x + L * Math.sin(b.theta), b.py - L * Math.cos(b.theta), 0);
 const hangPos = (b) => bobPos(b).add(new THREE.Vector3(0, -HANG, 0));
 function layoutBar(b) {
+  if (b.mv) { b.x = b.bx + Math.sin(G.t * b.mvSpd + b.mvPh) * b.mv; b.anchor.position.x = b.x; }
   const p = bobPos(b);
   b.bar.position.copy(p);
   b.rope.position.set((b.x + p.x) / 2, (b.py + p.y) / 2, 0);
@@ -88,14 +116,46 @@ for (let i = 0; i < NBARS - 1; i++) {
 const rings = [];
 {
   const ringMat = new THREE.MeshStandardMaterial({ color: 0xfff2b0, emissive: 0xff6db0, emissiveIntensity: 1.5, roughness: 0.35 });
-  for (const gi of [2, 6, 10]) {
+  const slots = [];
+  for (let w = 0; w < NWORLDS; w++) for (const k of [2, 6, 9]) slots.push(w * BARS_PER_WORLD + k);
+  for (const gi of slots) {
     if (gi + 1 >= NBARS) continue;
     const A = barDefs[gi], B = barDefs[gi + 1];
     const m = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.09, 10, 40), ringMat.clone());
     m.position.set((A.x + B.x) / 2, (A.py + B.py) / 2 - L * 0.88 - HANG + 1.9, 0);
     scene.add(m);
-    rings.push({ m, got: false });
+    // Space mechanic: rings bob up and down — thread them mid-flight
+    rings.push({ m, got: false, baseX: m.position.x, baseY: m.position.y, mvY: A.w === SPACE_W });
   }
+}
+
+/* ══════════════ SAFETY NETS (one save per world — generous!) ══════════════ */
+function netTexture(repX) {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const ctx = c.getContext('2d');
+  ctx.strokeStyle = '#cfe8ff'; ctx.lineWidth = 3;
+  ctx.beginPath();
+  for (let i = 0; i <= 64; i += 16) { ctx.moveTo(i, 0); ctx.lineTo(i, 64); ctx.moveTo(0, i); ctx.lineTo(64, i); }
+  ctx.stroke();
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(repX, 5);
+  return tex;
+}
+const netGroup = new THREE.Group();
+scene.add(netGroup);
+const nets = [];
+for (let w = 0; w < NWORLDS; w++) {
+  const s = worldSegs[w];
+  const wd = s.x1 - s.x0 - 3;
+  const m = new THREE.Mesh(
+    new THREE.PlaneGeometry(wd, 7),
+    new THREE.MeshBasicMaterial({ map: netTexture(wd / 1.4), transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false })
+  );
+  m.rotation.x = -Math.PI / 2;
+  m.position.set((s.x0 + s.x1) / 2, NET_Y, 0);
+  netGroup.add(m);
+  nets.push({ m, used: false, flashT: 0 });
 }
 
 /* ══════════════ TRAIL (ribbon of additive points) ══════════════ */
@@ -165,6 +225,32 @@ function updateConfetti(dt) {
   if (any) confGeo.attributes.position.needsUpdate = true, confGeo.attributes.color.needsUpdate = true;
 }
 
+/* ══════════════ WIND STREAKS (Beach gusts made visible) ══════════════ */
+const WIND_N = 70;
+const windPos = new Float32Array(WIND_N * 3);
+const windGeo = new THREE.BufferGeometry();
+windGeo.setAttribute('position', new THREE.BufferAttribute(windPos, 3));
+const windPts = new THREE.Points(windGeo, new THREE.PointsMaterial({ color: 0xcfeaff, size: 0.16, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+scene.add(windPts);
+const windSeed = [];
+for (let i = 0; i < WIND_N; i++) windSeed.push({ ox: Math.random() * 28 - 14, y: Math.random() * 14 - 6, z: Math.random() * 12 - 6 });
+function updateWind(dt) {
+  const on = G.mode === 'playing' && Math.abs(G.wind) > 0.2;
+  const m = windPts.material;
+  m.opacity += ((on ? 0.55 : 0) - m.opacity) * Math.min(1, dt * 5);
+  windPts.visible = m.opacity > 0.02;
+  if (!windPts.visible) return;
+  for (let i = 0; i < WIND_N; i++) {
+    const s = windSeed[i];
+    s.ox += G.wind * 9 * dt;
+    if (s.ox > 14) s.ox -= 28; else if (s.ox < -14) s.ox += 28;
+    windPos[i * 3] = hero.position.x + s.ox;
+    windPos[i * 3 + 1] = s.y + Math.sin(G.t * 2 + i) * 0.4;
+    windPos[i * 3 + 2] = s.z;
+  }
+  windGeo.attributes.position.needsUpdate = true;
+}
+
 /* ══════════════ HERO & STATE ══════════════ */
 let hero = createHero('marc');
 scene.add(hero);
@@ -177,6 +263,7 @@ const G = {
   pumpAmp: 1.0, holding: false, armed: false,
   grade: '', lastFlips: 0, lastFlipBonus: 0,
   trick: false, flipRot: 0, salute: 0,
+  world: 0, wind: 0, windOff: 0, netBounce: false, netSaves: 0,
   flyFrom: new THREE.Vector3(), flyTo: new THREE.Vector3(), flyT: 0, flyDur: 0.72, arcH: 2.4, flyNext: -1, flyMode: 'catch',
   vel: new THREE.Vector3(),
   timeScale: 1, slowmo: 0, fovKick: 0, shake: 0,
@@ -253,7 +340,7 @@ function vibrate(ms) { if (navigator.vibrate) { try { navigator.vibrate(ms); } c
 
 /* ══════════════ UI ══════════════ */
 const $ = (id) => document.getElementById(id);
-const ui = { menu: $('menu'), over: $('over'), hud: $('hud'), score: $('score'), lives: $('lives'), combo: $('combo'), grade: $('grade'), comboHold: $('comboHold'), comboFill: $('comboFill'), big: $('bigmsg'), bigsub: $('bigsub'), flash: $('flash') };
+const ui = { menu: $('menu'), over: $('over'), hud: $('hud'), score: $('score'), lives: $('lives'), combo: $('combo'), grade: $('grade'), comboHold: $('comboHold'), comboFill: $('comboFill'), big: $('bigmsg'), bigsub: $('bigsub'), flash: $('flash'), banner: $('banner'), bannerTxt: $('bannerTxt'), worldTag: $('worldTag'), wind: $('windTag') };
 let lastScore = -1;
 function refreshHUD() {
   if (G.score !== lastScore) {
@@ -286,6 +373,10 @@ function startGame() {
   G.spin = 0; G.pumpAmp = 1.0; G.holding = false; G.armed = false;
   G.grade = ''; G.lastFlips = 0; G.lastFlipBonus = 0; G.trick = false; G.flipRot = 0; G.salute = 0;
   G.timeScale = 1; G.slowmo = 0; G.fovKick = 0; G.shake = 0;
+  G.world = 0; G.wind = 0; G.windOff = 0; G.netBounce = false; G.netSaves = 0;
+  ui.worldTag.textContent = WORLD_NAMES[0].toUpperCase();
+  ui.wind.style.opacity = '0';
+  for (const n of nets) { n.used = false; n.flashT = 0; }
   bars[0].theta = -1.0; bars[0].omega = 0;
   for (const s of stars) { s.got = false; s.m.visible = true; }
   for (const r of rings) { r.got = false; r.m.visible = true; }
@@ -301,10 +392,11 @@ function endGame(win) {
   G.mode = win ? 'win' : 'over';
   ui.hud.style.display = 'none';
   ui.comboHold.style.opacity = '0';
+  ui.wind.style.opacity = '0';
   tapBtn.classList.remove('on');
   trail.visible = false;
-  ui.big.textContent = win ? '🎉 You did it!' : 'Nice flying!';
-  ui.bigsub.textContent = 'Score ' + G.score + (win ? ' — champions!' : '');
+  ui.big.textContent = win ? '🎉 World tour complete!' : 'Nice flying!';
+  ui.bigsub.textContent = 'Score ' + G.score + (win ? ' — all 4 worlds, champions!' : ' — reached the ' + WORLD_NAMES[G.world] + ' world');
   ui.over.classList.remove('hidden');
 }
 
@@ -347,6 +439,8 @@ function releaseBar() {
   else if (diff < 0.35) { G.grade = 'good'; flyDur = 0.75; arcH = 2.4; reach = 4.2; showGrade('GOOD!', '#d8ffef'); }
   else { G.grade = 'ok'; flyDur = 0.95; arcH = 1.5; reach = 3.0; showGrade('OK', '#9a8fc5'); }
   reach *= 0.85 + (amp - AMP_MIN) / (AMP_MAX - AMP_MIN) * 0.3;  // pumping extends reach
+  if (b.w === SPACE_W) { flyDur *= 1.25; reach *= 1.12; }        // Space: low gravity, floatier arcs
+  G.windOff = 0;
 
   const nb = bars[nextI];
   const from = hero.position.clone();
@@ -363,8 +457,17 @@ function releaseBar() {
 }
 
 /* ══════════════ CATCH ══════════════ */
+function enterWorld(w) {
+  G.world = w;
+  ui.bannerTxt.textContent = 'World ' + (w + 1) + ' — ' + WORLD_NAMES[w];
+  ui.banner.classList.remove('show'); void ui.banner.offsetWidth; ui.banner.classList.add('show');
+  ui.worldTag.textContent = WORLD_NAMES[w].toUpperCase();
+  flash(0.3); vibrate(18);
+}
+
 function doCatch(ci) {
   const flips = Math.floor(G.flipRot / (Math.PI * 2));
+  const fromW = bars[G.active].w;
   G.active = ci; G.state = 'swing';
   bars[ci].theta = -0.5;
   bars[ci].omega = G.grade === 'perfect' ? 2.0 : 1.7;
@@ -380,11 +483,12 @@ function doCatch(ci) {
   burst(hero.position, G.grade === 'perfect' ? 40 : 22, false, G.grade === 'perfect' ? 7 : 5);
   if (G.grade === 'perfect') { G.slowmo = 0.4; G.salute = 0.7; }
   flash(0.25); vibrate(16); refreshHUD();
+  if (bars[ci].w !== fromW) enterWorld(bars[ci].w);
   if (ci >= NBARS - 1) endGame(true);
 }
 
 function loseLife() {
-  G.lives--; G.combo = 0; G.comboT = 0;
+  G.lives--; G.combo = 0; G.comboT = 0; G.netBounce = false; G.windOff = 0;
   G.shake = 0.15; flash(0.5); vibrate(30);
   trail.visible = false;
   refreshHUD();
@@ -405,6 +509,15 @@ function stepBar(b, dt, driven) {
 }
 
 function physics(dt) {
+  G.world = bars[G.active].w;
+  // Beach mechanic: gusts of wind (visible streaks) push the flight arc
+  if (G.world === BEACH_W) {
+    const gp = Math.sin(G.t * 0.8);
+    G.wind = Math.abs(gp) > 0.55 ? Math.sign(gp) * 1.6 * ((Math.abs(gp) - 0.55) / 0.45) : 0;
+  } else G.wind = 0;
+  ui.wind.textContent = G.wind > 0 ? '💨 »»' : '«« 💨';
+  ui.wind.style.opacity = Math.abs(G.wind) > 0.25 ? '1' : '0';
+
   // pump toward held/rest amplitude
   G.pumpAmp += ((G.holding && G.state === 'swing' ? AMP_MAX : AMP_MIN) - G.pumpAmp) * Math.min(1, dt * 1.7);
 
@@ -415,8 +528,14 @@ function physics(dt) {
   } else if (G.state === 'fly') {
     G.flyT += dt;
     const a = Math.min(1, G.flyT / G.flyDur);
+    if (G.flyMode === 'catch' && G.flyNext >= 0) {  // track drifting Jungle bars
+      const nb = bars[G.flyNext];
+      G.flyTo.set(nb.x + L * Math.sin(-0.5), nb.py - L * Math.cos(-0.5) - HANG, 0);
+    }
+    if (G.wind !== 0) G.windOff += G.wind * dt * (G.trick ? 0.3 : 1);  // flips fight the wind
     const p = G.flyFrom.clone().lerp(G.flyTo, a);
     p.y += Math.sin(a * Math.PI) * G.arcH;
+    p.x += G.windOff;
     hero.position.copy(p);
     const spinSpd = G.trick ? 16 : 6.5;
     G.spin += dt * spinSpd;
@@ -432,18 +551,28 @@ function physics(dt) {
       }
     }
     if (a >= 1) {
-      if (G.flyMode === 'catch') doCatch(G.flyNext);
-      else { // fell short
-        G.vel.set(2.2, 0, 0); G.state = 'fumble';
-        showGrade('TOO FAR!', '#ff9d5c');
+      if (G.flyMode === 'catch' && Math.abs(G.windOff) <= 1.35) doCatch(G.flyNext);
+      else { // fell short — or the gust won
+        G.vel.set(G.flyMode === 'catch' ? 1.0 : 2.2, 0, 0); G.state = 'fumble';
+        showGrade(G.flyMode === 'catch' ? 'GUSTED!' : 'TOO FAR!', '#ff9d5c');
       }
     }
   } else if (G.state === 'fumble') {
-    G.vel.y -= GF * dt;
+    G.vel.y -= (G.world === SPACE_W ? GF * 0.8 : GF) * dt;  // Space: low gravity
     hero.position.addScaledVector(G.vel, dt);
     G.spin += dt * 4; hero.rotation.z = G.spin;
     trailPush(hero.position, false, G.t);
-    if (hero.position.y < MISS_Y) loseLife();
+    const net = nets[G.world];
+    if (!G.netBounce && G.vel.y < 0 && hero.position.y < NET_Y + 0.3 && net && !net.used) {
+      // Bonus net: one save per world — bounce back up, no life lost
+      net.used = true; net.flashT = 1; G.netBounce = true; G.netSaves++;
+      G.vel.y = 9.5; G.vel.x = THREE.MathUtils.clamp(bars[G.active].x - hero.position.x, -3, 3) * 0.6;
+      showGrade('SAVED BY THE NET!', '#8affc1');
+      burst(hero.position, 26, false, 6); flash(0.2); vibrate(20);
+    } else if (G.netBounce && G.vel.y <= 0) {  // bounce apex → back on the bar
+      G.netBounce = false; G.state = 'swing'; G.armed = false; trail.visible = false;
+      const b = bars[G.active]; b.theta = -G.pumpAmp * 0.6; b.omega = 0;
+    } else if (hero.position.y < MISS_Y) loseLife();
   }
 
   // combo expiry (urgency)
@@ -466,8 +595,13 @@ function physics(dt) {
       G.score += 25; showCombo('+25 ⭐'); burst(s.m.position, 12, true, 4); refreshHUD(); vibrate(8);
     }
   }
-  // rings idle pulse
-  for (const r of rings) { if (!r.got) { r.m.rotation.y += dt * 1.4; const s2 = 1 + Math.sin(G.t * 4) * 0.05; r.m.scale.setScalar(s2); } }
+  // rings idle pulse (+ Space rings bob vertically)
+  for (const r of rings) {
+    if (r.got) continue;
+    r.m.rotation.y += dt * 1.4;
+    const s2 = 1 + Math.sin(G.t * 4) * 0.05; r.m.scale.setScalar(s2);
+    if (r.mvY) r.m.position.y = r.baseY + Math.sin(G.t * 1.3 + r.baseX) * 1.2;
+  }
 }
 
 /* ══════════════ CAMERA ══════════════ */
@@ -518,7 +652,21 @@ window.__game = {
     combo: G.combo, grade: G.grade, flips: G.lastFlips, flipBonus: G.lastFlipBonus,
     theta: bars[G.active] ? bars[G.active].theta : 0, omega: bars[G.active] ? bars[G.active].omega : 0,
     amp: G.pumpAmp, timeScale: G.timeScale, hero: hero.position.toArray(),
+    world: G.world, worldName: WORLD_NAMES[G.world], netSaves: G.netSaves,
+    wind: +G.wind.toFixed(2), windOff: +G.windOff.toFixed(2),
   }),
+  warp: (i) => {  // test helper: jump to bar i (camera snaps along)
+    if (G.mode !== 'playing') return;
+    i = Math.max(0, Math.min(NBARS - 1, i));
+    G.active = i; G.state = 'swing'; G.armed = false; G.holding = false;
+    G.netBounce = false; G.windOff = 0; G.world = bars[i].w;
+    trail.visible = false;
+    const b = bars[i]; b.theta = -0.6; b.omega = 1.2;
+    placeHeroOnBar(b);
+    camera.position.set(hero.position.x - 7.5, Math.max(hero.position.y + 4, 3), 12);
+    camTarget.set(hero.position.x + 2.5, hero.position.y - 0.5, 0);
+    ui.worldTag.textContent = WORLD_NAMES[G.world].toUpperCase();
+  },
   pick: (c) => { if (menuHeroes[c]) { G.char = c; rebuildHero(); updateMenuSelection(); } },
   menu: () => ({
     podium: menuGroup.visible,
@@ -543,7 +691,18 @@ function frame(now) {
   const sdt = dt * G.timeScale;
 
   world.update(G.t);
+  world.applyMood(stage, G.mode === 'playing' ? hero.position.x : PODX);
   for (const b of bars) layoutBar(b);
+
+  // safety nets: visible in play only; flash + dip when they catch someone
+  netGroup.visible = G.mode === 'playing';
+  for (const n of nets) {
+    if (n.flashT > 0) {
+      n.flashT -= dt;
+      n.m.material.opacity = 0.3 + Math.max(0, n.flashT) * 0.5;
+      n.m.position.y = NET_Y - Math.sin(Math.max(0, n.flashT) * Math.PI) * 0.6;
+    } else { n.m.material.opacity = n.used ? 0.1 : 0.3; n.m.position.y = NET_Y; }
+  }
 
   if (G.mode === 'playing') {
     physics(sdt);
@@ -558,6 +717,7 @@ function frame(now) {
     menuCamera();
   }
   updateConfetti(dt);
+  updateWind(dt);
 
   // highlight next catchable bar
   for (let i = 0; i < NBARS; i++) {

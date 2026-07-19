@@ -1,5 +1,5 @@
 /* Trapeze Stars 3D — offline service worker (runtime cache-first for same-origin) */
-const CACHE = 'trapeze3d-v1';
+const CACHE = 'trapeze3d-v2';
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png']).catch(() => {})).then(() => self.skipWaiting()));

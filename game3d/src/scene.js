@@ -68,5 +68,5 @@ export function createStage(container) {
   // ?lowfx -> skip post-processing (slow GPUs / software rendering fallback)
   const lowfx = new URLSearchParams(location.search).has('lowfx');
   const render = lowfx ? () => renderer.render(scene, camera) : () => composer.render();
-  return { renderer, scene, camera, composer, key, render };
+  return { renderer, scene, camera, composer, key, ambient, rim, fill, render };
 }
