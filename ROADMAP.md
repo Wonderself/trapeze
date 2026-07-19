@@ -21,11 +21,11 @@ Règle d'or du projet : **tout doit rester gratuit, hors-ligne et sans dépendan
 - [x] Mobile complet + **Vibration API** + **Screen Wake Lock** + PWA racine
 - [x] Record persistant (`localStorage`)
 
-## 🎯 Prochaines étapes (dans l'ordre)
+## 🎯 Prochaines étapes (dans l'ordre — une session par conversation, modèle conseillé entre parenthèses)
 
-1. **Session 3D-4 — Addiction & rétention** (`AUDIT.md`) : audio complet, high score + médailles + best combo persistés, mode infini.
-2. **Gamepad API** (2D + 3D) : support manette — natif, gratuit.
-3. **Podium local des 10 meilleurs scores** avec initiales (localStorage — pas de serveur).
+1. **Session 3D-4 — Addiction & rétention** (`AUDIT.md`, **Fable 5**) : audio complet, high score + médailles + best combo persistés, mode infini.
+2. **Session 3D-5 — Manette & podium local** (`AUDIT.md`, **Opus 4.8**) : Gamepad API + top 10 local avec initiales (localStorage — pas de serveur).
+3. **Session 3D-6 — Accessibilité & partage** (`AUDIT.md`, **Sonnet 5**) : reduced-motion, réduction des flashs, contraste HUD, photo finish + Web Share.
 
 ## 💡 Idées au-delà (toujours gratuit, natif)
 

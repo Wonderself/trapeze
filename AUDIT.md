@@ -3,6 +3,7 @@ Dernière mise à jour : 2026-07-19 — Direction active : **Trapeze Stars 3D** 
 
 <!-- ═══ NEXT (lu par CLAUDE.md pour l'auto-avancement) ═══
 PROCHAINE SESSION : Session 3D-4 — Addiction & rétention  (statut ⬜ À faire)
+MODÈLE CONSEILLÉ : Fable 5 (audio génératif WebAudio + équilibrage du mode infini = les deux points délicats)
 ACTION : exécuter la Session 3D-4 telle que décrite plus bas, tester (node game3d/test/smoke3d.mjs + captures),
 rebuild → copier game3d/dist/ vers docs/, mettre à jour ce fichier, commit + push sur main.
 ════════════════════════════════════════════════════════ -->
@@ -23,14 +24,22 @@ rebuild → copier game3d/dist/ vers docs/, mettre à jour ce fichier, commit + 
   5. **Zéro rétention** : pas de high score sauvegardé, pas de médailles, pas de mode infini (→ 3D-4).
 
 ## 🗓️ TABLEAU DES SESSIONS (roadmap 3D)
-| # | Session | Objectif (1 ligne) | Coût | Durée est. | Statut |
-|---|---------|--------------------|------|------------|--------|
-| 3D-1 | Jouabilité & game feel | Le timing devient un vrai skill (Perfect/Good/OK), tricks aériens, slow-mo, caméra vivante, particules, trail | 🔴 | ~60-90 min | ✅ Fait (2026-07-18) |
-| 3D-2 | Beauté & identité | Chapiteau complet, matériaux riches, Marc/Claire différenciés et animés, menu 3D podium | 🔴 | ~60-90 min | ✅ Fait (2026-07-18) |
-| 3D-3 | Diversité & mondes | 4 mondes (Cirque/Jungle/Plage/Espace) + 1 mécanique nouvelle par monde, transitions | 🔴 | ~60-90 min | ✅ Fait (2026-07-19) |
-| 3D-4 | Addiction & rétention | Audio complet, high score + médailles + best combo persistés, mode infini avec montée en difficulté | 🟡 | ~45-60 min | ⬜ À faire |
+| # | Session | Objectif (1 ligne) | Coût | Durée est. | Modèle conseillé | Statut |
+|---|---------|--------------------|------|------------|------------------|--------|
+| 3D-1 | Jouabilité & game feel | Le timing devient un vrai skill (Perfect/Good/OK), tricks aériens, slow-mo, caméra vivante, particules, trail | 🔴 | ~60-90 min | Fable 5 | ✅ Fait (2026-07-18) |
+| 3D-2 | Beauté & identité | Chapiteau complet, matériaux riches, Marc/Claire différenciés et animés, menu 3D podium | 🔴 | ~60-90 min | Opus | ✅ Fait (2026-07-18) |
+| 3D-3 | Diversité & mondes | 4 mondes (Cirque/Jungle/Plage/Espace) + 1 mécanique nouvelle par monde, transitions | 🔴 | ~60-90 min | Fable 5 | ✅ Fait (2026-07-19) |
+| 3D-4 | Addiction & rétention | Audio complet, high score + médailles + best combo persistés, mode infini avec montée en difficulté | 🟡 | ~45-60 min | **Fable 5** | ⬜ À faire |
+| 3D-5 | Manette & podium local | Gamepad API + top 10 local avec initiales (localStorage), écran de saisie | 🟡 | ~45-60 min | **Opus 4.8** | ⬜ À faire |
+| 3D-6 | Accessibilité & partage | `prefers-reduced-motion`, option « réduire les flashs », contraste HUD, photo finish (Web Share) | 🟢 | ~30-45 min | **Sonnet 5** | ⬜ À faire |
 
 Légende coût : 🟢 léger · 🟡 moyen · 🔴 lourd (à faire en début de fenêtre de quota)
+
+**Règle de choix du modèle** (à annoncer à Emmanuel avant chaque session) :
+- 🔴 lourd ou mécanique délicate à équilibrer (physique, audio génératif, difficulté) → **Fable 5** (`claude-fable-5`).
+- 🟡 moyen, périmètre bien spécifié dans la fiche → **Opus 4.8** (`claude-opus-4-8`).
+- 🟢 léger, polish/options/fixes ciblés → **Sonnet 5** (`claude-sonnet-5`).
+- Correctif d'une ligne, question sur le repo → Sonnet 5 suffit toujours.
 
 ## 📝 DÉTAIL DES SESSIONS
 
@@ -73,6 +82,27 @@ Légende coût : 🟢 léger · 🟡 moyen · 🔴 lourd (à faire en début de 
 4. **Écran de fin enrichi** : récap étoiles/combos/médaille + « Made with ❤ for Marc & Claire » + bouton replay immédiat (< 1 s pour relancer — crucial pour l'addictivité).
 **Critères** : reload → high score conservé ; mode infini atteint en headless ; 0 erreur JS.
 
+**Prompt de lancement prêt à copier (modèle : Fable 5) :**
+> Lis CLAUDE.md puis AUDIT.md (racine du repo trapeze) — ne re-diagnostique pas, applique l'Étape 0 (resync git). Exécute la **Session 3D-4 — Addiction & rétention** exactement comme décrite : musique WebAudio générative par monde + SFX (woosh/ding/fanfare/applaudissements), persistance localStorage `ts3d_*` (high score, best combo, médailles par monde affichées au menu), mode infini après le monde 4 (+5 % vitesse et −5 % fenêtre PERFECT par boucle, avec plancher), écran de fin enrichi avec replay < 1 s. Étends `window.__game` et `smoke3d.mjs` pour vérifier les critères (persistance après reload, mode infini atteint). Rebuild → copie dist/ vers docs/. Mets à jour AUDIT.md (statut 3D-4 → ✅ + historique + NEXT → 3D-5), commit, push sur main. Réponds concis, diffs seulement.
+
+### Session 3D-5 — Manette & podium local (🟡)
+1. **Gamepad API** (jeu 3D d'abord) : bouton A = maintenir/lâcher (mapping identique à Space), détection à chaud (`gamepadconnected`), petit badge « 🎮 » au HUD quand une manette est active. Zéro dépendance, API native.
+2. **Podium local top 10** : à la fin d'un run classé dans le top 10 (localStorage `ts3d_board`), écran de saisie de 3 initiales (style arcade, molette de lettres jouable au clavier/tactile/manette) ; tableau affiché au menu (rang, initiales, score, médaille).
+3. **Intégration menu** : le podium des scores partage l'écran menu sans casser le podium 3D des persos (panneau latéral ou onglet).
+**Critères** : manette simulée ou mapping vérifié en headless si possible, sinon vérif clavier du flux de saisie ; top 10 persistant après reload ; 0 erreur JS.
+
+**Prompt de lancement prêt à copier (modèle : Opus 4.8) :**
+> Lis CLAUDE.md puis AUDIT.md (racine du repo trapeze) — ne re-diagnostique pas, applique l'Étape 0 (resync git). Exécute la **Session 3D-5 — Manette & podium local** exactement comme décrite : Gamepad API (bouton A = maintenir/lâcher, badge 🎮 au HUD), top 10 local avec saisie de 3 initiales style arcade (localStorage `ts3d_board`), tableau des scores au menu sans casser le podium 3D. Étends le test headless (top 10 persistant après reload). Rebuild → docs/. Mets à jour AUDIT.md (statut, historique, NEXT → 3D-6), commit, push sur main. Réponds concis, diffs seulement.
+
+### Session 3D-6 — Accessibilité & partage (🟢)
+1. **Accessibilité** : respecter `prefers-reduced-motion` (couper shake/slow-mo visuel excessif), option « réduire les flashs » dans le menu (persistée), passe de contraste sur le HUD (fond semi-opaque derrière les textes fins).
+2. **Photo finish** : à la fin d'un run, capture du plus beau moment (`canvas.toBlob()` sur le catch PERFECT au combo max) + bouton « Share » (Web Share API, fallback téléchargement PNG).
+3. **Polish final** : tout petit backlog restant (curseurs, focus clavier des menus, titre de page, favicon 3D).
+**Critères** : option persistée après reload ; blob de partage généré en headless ; 0 erreur JS.
+
+**Prompt de lancement prêt à copier (modèle : Sonnet 5) :**
+> Lis CLAUDE.md puis AUDIT.md (racine du repo trapeze) — ne re-diagnostique pas, applique l'Étape 0 (resync git). Exécute la **Session 3D-6 — Accessibilité & partage** exactement comme décrite : `prefers-reduced-motion` + option « réduire les flashs » persistée, contraste HUD, photo finish (canvas.toBlob du catch PERFECT au combo max + Web Share API avec fallback téléchargement), micro-polish (focus clavier, titre, favicon). Étends le test headless (option persistée, blob généré). Rebuild → docs/. Mets à jour AUDIT.md (statut, historique, NEXT → « aucune session ⬜ : proposer la suite »), commit, push sur main. Réponds concis, diffs seulement.
+
 ## 🔍 RÉFÉRENCE TECHNIQUE (game3d/ — pour ne pas relire le code)
 - **Stack** : Three.js 0.160 + Vite 5, modules dans `game3d/src/` : `main.js` (état `G`, physique pendule `stepBar`, `release()`, arc assisté kinématique `flyFrom/flyTo/flyT`, caméra, boucle, UI DOM, **menu podium 3D** `menuGroup`/`turntable`/`menuHeroes`/`curtain`, **filets** `nets[]`, **rafales** `updateWind`, `window.__game` pour tests) ; `scene.js` (renderer, ACES, bloom UnrealBloomPass 0.7/0.85/0.82, rim light froide + fill chaud — expose `ambient/key/rim/fill` pour le mood) ; `world.js` (**4 mondes** : chapiteau complet sur son segment (parois/toit rayés `stripeTexture`, mât, arche de sortie, piste, foule+fanions InstancedMesh, spots), **Jungle** arbres/lianes/lucioles, **Plage** soleil couchant émissif + mer + palmiers + mouettes battantes, **Espace** grille néon additive + 5 portes toriques néon + planète annelée + étoiles filantes ; **`applyMood(stage,x)`** = blend fog/bg/hémisphère/key par smoothstep ±4 autour de chaque frontière ; `update(t)`) ; `player.js` (héros low-poly différenciés, `poseHero` états swing/fly/salute/idle).
 - **Mondes (3D-3)** : `BARS_PER_WORLD=12`, `NWORLDS=4` → `NBARS=48` ; `worldSegs[]` = bornes X à mi-chemin entre mondes ; premier bar de chaque monde à `PY0` (entrée douce). Espacement par monde : Cirque/Espace 4.5–7.5, **Jungle 4.2–5.6** (ses barres dérivent en X : `mv≈±1.0`, suivi de cible en vol → toujours rattrapable), **Plage 4.5–6.5** (rafales `G.wind` sinusoïdales ; en vol `G.windOff` dérive l'arc, vrille = dérive ×0.3, catch raté si `|windOff|>1.35` → « GUSTED! »). **Espace** : `flyDur ×1.25`, `reach ×1.12`, chute `GF×0.8`, anneaux bonus oscillants en Y. **Filet bonus** : 1 par monde à `NET_Y=-3.6`, rebond sans perte de vie (« SAVED BY THE NET! »), opacité 0.1 une fois utilisé. Bannière DOM `#banner` « World N — Nom » au premier catch du monde + `#worldTag` sous le score + `#windTag` 💨.
@@ -86,6 +116,7 @@ Légende coût : 🟢 léger · 🟡 moyen · 🔴 lourd (à faire en début de 
 - **Jeu 2D** (racine) : intact, PWA propre, ne plus y toucher sauf demande.
 
 ## ✅ HISTORIQUE
+- [2026-07-19] Réconciliation & plan de sessions (Fable 5) — la Session 3D-3, terminée mais restée sur la branche `claude/lance-3d-3-gwjxwe` (push sur `main` jamais effectué → session « fantôme » invisible depuis un clone frais), a été **vérifiée en headless** (rebuild + `smoke3d.mjs` EXIT 0 : 4 mondes traversés, victoire score 51 175, combo x47, filet testé, 0 erreur JS) puis **ramenée sur `main` en fast-forward**. Docs : colonne « Modèle conseillé » + règle de choix du modèle dans le tableau des sessions, fiches et prompts pour 3D-4/3D-5/3D-6, **Étape 0 de resync git** ajoutée au protocole de `CLAUDE.md` (leçon : un clone de session peut être périmé/mono-branche — toujours `git fetch origin main` avant d'analyser quoi que ce soit). Note : la branche `claude/derniere-session-3d-72w49o` contient une passe pseudo-3D du jeu 2D faite depuis une base périmée (avant la refonte des personnages) — **archivée, à ne pas merger** (le 2D est gelé ; tout son contenu est déjà couvert ou dépassé par le jeu 3D).
 - [2026-07-19] Session 3D-3 ✅ (Fable 5) — **diversité & mondes** : rail porté à 48 barres = 4 mondes de 12 (Cirque → Jungle → Plage → Espace), chapiteau resserré sur son segment avec arche de sortie, sols par monde. **Jungle** : lianes vertes, arbres, lucioles additifs, barres qui dérivent en X (suivi de cible en vol pour rester généreux). **Plage** : coucher de soleil émissif + halo, mer, palmiers, mouettes battantes, rafales de vent visibles (streaks) qui poussent l'arc — la vrille réduit la dérive ×0.3, « GUSTED! » si la rafale gagne. **Espace** : gravité de vol réduite (arcs ×1.25, portée ×1.12, chute ×0.8), grille néon, 5 portes toriques néon, planète annelée, étoiles filantes, anneaux bonus oscillants. **Filet bonus** 1×/monde (« SAVED BY THE NET! », rebond sans perte de vie, filet grisé ensuite). Transitions : `applyMood` blende fog/fond/lumières autour de chaque frontière + bannière « World N — Nom » + tag de monde au HUD. Harnais étendu (`warp`, world/netSaves/wind) ; smoke test enrichi : filet sauve 1× puis vie perdue, captures des 4 mondes, traversée intégrale par bot (EXIT 0, 0 erreur JS hors font sandbox). Build déployé dans `docs/`. Prochaine étape : **Session 3D-4 — Addiction & rétention**.
 - [2026-07-19] Identité personnages (hors-session, demande d'Emmanuel) — canon fixé dans `CHARACTERS.md` : **Marc le petit** (jeune, blond, cheveux longs, **natte animée** dans le dos) et **Claire la grande** (blond clair, cheveux longs, étoile d'or). Appliqué en **2D** (natte 5 segments réactive à l'état, chevelures refaites, échelles 1.22/1.38, spotlight suiveur, Wake Lock) et en **3D** (`player.js` : deux blonds différenciés, natte en pivot animée dans `poseHero`, tailles 0.92/1.06 compensées au point de prise `GRIP_Y`). Docs musclées : README, GAME_DESIGN, CHARACTERS, ROADMAP. Smoke test a–g verts, build redéployé dans `docs/`.
 - [2026-07-12] Audit 2D complet (Fable 5) — 4 bugs critiques identifiés, plan 2 sessions.
