@@ -47,6 +47,33 @@ function saveRec() {
 }
 setMuted(REC.mute);
 
+/* ── local top-10 leaderboard (localStorage ts3d_board) ── */
+function loadBoard() {
+  try { const a = JSON.parse(localStorage.getItem('ts3d_board') || '[]'); return Array.isArray(a) ? a : []; }
+  catch (e) { return []; }
+}
+let BOARD = loadBoard();
+function saveBoard() { try { localStorage.setItem('ts3d_board', JSON.stringify(BOARD)); } catch (e) {} }
+const BOARD_MAX = 10;
+// where a score would land (0-based); -1 if it doesn't make the top 10.
+function boardRank(score) {
+  if (score <= 0) return -1;
+  const rank = BOARD.filter((e) => e.s >= score).length;   // ties place below existing equals
+  return rank < BOARD_MAX ? rank : -1;
+}
+function boardAdd(initials, score, medal, lap) {
+  const entry = { i: initials, s: score, m: medal, l: lap };
+  BOARD.push(entry);
+  BOARD.sort((a, b) => b.s - a.s);
+  BOARD = BOARD.slice(0, BOARD_MAX);
+  saveBoard();
+  return BOARD.indexOf(entry);   // -1 if it fell off the end
+}
+
+/* ── initials-entry state (arcade wheel) ── */
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+let entryChars = [0, 0, 0], entrySlot = 0, lastBoardIdx = -1;
+
 /* deterministic layout rng (stable for tests) */
 let _s = 20260718;
 const rnd = () => { _s = (_s * 1103515245 + 12345) & 0x7fffffff; return _s / 0x7fffffff; };
@@ -362,14 +389,62 @@ function refreshBest() {
   ui.best.classList.remove('hidden');
 }
 function refreshMute() { ui.muteBtn.textContent = REC.mute ? '🔇' : '🔊'; }
+
+/* ── leaderboard rendering (menu panel + end screen) ── */
+function renderBoard(el, highlightIdx) {
+  if (!BOARD.length) {
+    el.innerHTML = '<div class="bTitle">🏆 HIGH SCORES</div><div class="bEmpty">No scores yet —<br>be the first to fly!</div>';
+    return;
+  }
+  let rows = '';
+  for (let i = 0; i < BOARD.length; i++) {
+    const e = BOARD[i];
+    const medal = e.m > 0 ? MEDAL_ICON[e.m] : '';
+    rows += '<div class="bRow' + (i === highlightIdx ? ' hl' : '') + '">' +
+      '<span class="bRk">' + (i + 1) + '</span>' +
+      '<span class="bIn">' + e.i + '</span>' +
+      '<span class="bMe">' + medal + '</span>' +
+      '<span class="bSc">' + e.s.toLocaleString('en') + '</span></div>';
+  }
+  el.innerHTML = '<div class="bTitle">🏆 HIGH SCORES</div>' + rows;
+}
+function refreshBoard() { renderBoard(ui.menuBoard, lastBoardIdx); }
+
+/* ── initials entry (arcade wheel) ── */
+function renderEntry() {
+  for (let s = 0; s < 3; s++) {
+    entrySlotEls[s].querySelector('.lch').textContent = LETTERS[entryChars[s]];
+    entrySlotEls[s].classList.toggle('active', s === entrySlot);
+  }
+}
+function entryMove(dir) { entrySlot = (entrySlot + dir + 3) % 3; renderEntry(); sfx.click(); }
+function entrySpin(slot, dir) { entrySlot = slot; entryChars[slot] = (entryChars[slot] + dir + LETTERS.length) % LETTERS.length; renderEntry(); sfx.click(); }
+function openEntry(rank) {
+  entryChars = [0, 0, 0]; entrySlot = 0;
+  ui.entryRank.textContent = '#' + (rank + 1) + ' place';
+  ui.entryScore.textContent = 'Score ' + G.score.toLocaleString('en');
+  renderEntry();
+  ui.over.classList.add('hidden'); ui.entry.classList.remove('hidden');
+  sfx.fanfare();
+}
+function entryConfirm() {
+  if (ui.entry.classList.contains('hidden')) return;
+  const initials = entryChars.map((i) => LETTERS[i]).join('');
+  lastBoardIdx = boardAdd(initials, G.score, Math.max(...G.runMedals), G.lap);
+  ui.entry.classList.add('hidden');
+  sfx.click();
+  showOver();
+}
+
 function enterMenu() {
   G.mode = 'menu';
   hero.visible = false;
   menuGroup.visible = true; curtain.visible = true; menuSpot.visible = true;
   if (!menuShown) { menuShown = true; curtainOpen = 0; curtainOpening = true; }
-  ui.over.classList.add('hidden'); ui.menu.classList.remove('hidden');
+  ui.over.classList.add('hidden'); ui.entry.classList.add('hidden'); ui.menu.classList.remove('hidden');
   updateMenuSelection();
   refreshBest();
+  refreshBoard();
 }
 
 function rebuildHero() { scene.remove(hero); hero = createHero(G.char); hero.visible = G.mode !== 'menu'; scene.add(hero); }
@@ -378,7 +453,8 @@ function vibrate(ms) { if (navigator.vibrate) { try { navigator.vibrate(ms); } c
 
 /* ══════════════ UI ══════════════ */
 const $ = (id) => document.getElementById(id);
-const ui = { menu: $('menu'), over: $('over'), hud: $('hud'), score: $('score'), lives: $('lives'), combo: $('combo'), grade: $('grade'), comboHold: $('comboHold'), comboFill: $('comboFill'), big: $('bigmsg'), bigsub: $('bigsub'), flash: $('flash'), banner: $('banner'), bannerTxt: $('bannerTxt'), worldTag: $('worldTag'), wind: $('windTag'), best: $('best'), newBest: $('newBest'), overStats: $('overStats'), overMedals: $('overMedals'), muteBtn: $('muteBtn') };
+const ui = { menu: $('menu'), over: $('over'), hud: $('hud'), score: $('score'), lives: $('lives'), combo: $('combo'), grade: $('grade'), comboHold: $('comboHold'), comboFill: $('comboFill'), big: $('bigmsg'), bigsub: $('bigsub'), flash: $('flash'), banner: $('banner'), bannerTxt: $('bannerTxt'), worldTag: $('worldTag'), wind: $('windTag'), best: $('best'), newBest: $('newBest'), overStats: $('overStats'), overMedals: $('overMedals'), muteBtn: $('muteBtn'), gpBadge: $('gpBadge'), menuBoard: $('menuBoard'), overBoard: $('overBoard'), entry: $('entry'), entryRank: $('entryRank'), entryScore: $('entryScore') };
+const entrySlotEls = [...document.querySelectorAll('#entryRow .letter')];
 let lastScore = -1;
 function refreshHUD() {
   if (G.score !== lastScore) {
@@ -404,13 +480,31 @@ ui.muteBtn.addEventListener('click', (e) => {
   REC.mute = !REC.mute; setMuted(REC.mute); saveRec(); refreshMute(); if (!REC.mute) sfx.click();
 });
 refreshMute();
-document.querySelectorAll('.pick').forEach((el) => el.addEventListener('click', () => {
-  document.querySelectorAll('.pick').forEach((p) => p.classList.remove('sel'));
-  el.classList.add('sel');
-  G.char = el.dataset.char;
+function selectChar(c) {
+  if (c !== 'marc' && c !== 'claire') return;
+  document.querySelectorAll('.pick').forEach((p) => p.classList.toggle('sel', p.dataset.char === c));
+  G.char = c;
   rebuildHero();
   updateMenuSelection();
-}));
+}
+document.querySelectorAll('.pick').forEach((el) => el.addEventListener('click', () => selectChar(el.dataset.char)));
+
+/* initials-entry buttons */
+entrySlotEls.forEach((el) => {
+  const s = +el.dataset.slot;
+  el.querySelector('.lup').addEventListener('click', (e) => { e.stopPropagation(); entrySpin(s, 1); });
+  el.querySelector('.ldn').addEventListener('click', (e) => { e.stopPropagation(); entrySpin(s, -1); });
+  el.querySelector('.lch').addEventListener('click', () => { entrySlot = s; renderEntry(); });
+});
+$('entryOk').addEventListener('click', () => entryConfirm());
+addEventListener('keydown', (e) => {
+  if (ui.entry.classList.contains('hidden')) return;
+  if (e.code === 'ArrowUp') { entrySpin(entrySlot, 1); e.preventDefault(); }
+  else if (e.code === 'ArrowDown') { entrySpin(entrySlot, -1); e.preventDefault(); }
+  else if (e.code === 'ArrowLeft') { entryMove(-1); e.preventDefault(); }
+  else if (e.code === 'ArrowRight') { entryMove(1); e.preventDefault(); }
+  else if (e.code === 'Enter') { entryConfirm(); e.preventDefault(); }
+});
 
 function startGame() {
   initAudio();
@@ -422,6 +516,8 @@ function startGame() {
   G.world = 0; G.wind = 0; G.windOff = 0; G.netBounce = false; G.netSaves = 0;
   G.lap = 0; G.diffN = 0; G.wScore = [0, 0, 0, 0]; G.runMedals = [0, 0, 0, 0];
   G.starsGot = 0; G.flipsTot = 0; G.maxCombo = 0;
+  lastBoardIdx = -1;
+  ui.entry.classList.add('hidden');
   ui.worldTag.textContent = WORLD_NAMES[0].toUpperCase();
   ui.wind.style.opacity = '0';
   for (const n of nets) { n.used = false; n.flashT = 0; }
@@ -443,6 +539,7 @@ function awardMedals() {
     if (t > REC.medals[w]) REC.medals[w] = t;
   }
 }
+let _newHigh = false;
 function endGame() {
   G.mode = 'over';
   ui.hud.style.display = 'none';
@@ -451,21 +548,28 @@ function endGame() {
   tapBtn.classList.remove('on');
   trail.visible = false;
   awardMedals();
-  const newHigh = G.score > REC.high;
-  if (newHigh) REC.high = G.score;
+  _newHigh = G.score > REC.high;
+  if (_newHigh) REC.high = G.score;
   if (G.maxCombo > REC.combo) REC.combo = G.maxCombo;
   saveRec();
+  // arcade flow: a top-10 run stops to enter initials, then the end screen
+  const rank = boardRank(G.score);
+  if (rank >= 0) openEntry(rank); else showOver();
+}
+function showOver() {
   ui.big.textContent = G.lap > 0 ? '🎉 What a run!' : 'Nice flying!';
   ui.bigsub.textContent = 'Score ' + G.score.toLocaleString('en') + ' · Best ' + REC.high.toLocaleString('en');
-  ui.newBest.classList.toggle('hidden', !newHigh);
+  ui.newBest.classList.toggle('hidden', !_newHigh);
   ui.overStats.innerHTML =
     '<div><b>' + G.starsGot + '</b>⭐ stars</div>' +
     '<div><b>' + G.flipsTot + '</b>🌀 flips</div>' +
     '<div><b>x' + G.maxCombo + '</b>🔥 best combo</div>' +
     '<div><b>' + (G.lap > 0 ? G.lap + (G.lap > 1 ? ' laps' : ' lap') : WORLD_NAMES[G.world]) + '</b>🌍 ' + (G.lap > 0 ? 'endless!' : 'reached') + '</div>';
   ui.overMedals.textContent = G.runMedals.map((t, w) => WORLD_ICON[w] + MEDAL_ICON[t]).join('  ');
+  if (lastBoardIdx >= 0) { renderBoard(ui.overBoard, lastBoardIdx); ui.overBoard.classList.remove('hidden'); }
+  else ui.overBoard.classList.add('hidden');
   ui.over.classList.remove('hidden');
-  if (newHigh) sfx.applause(); else sfx.fanfare();
+  if (_newHigh) sfx.applause(); else sfx.fanfare();
 }
 
 /* ══════════════ INPUT — hold to grip & pump, let go to fly, tap mid-air to flip ══════════════ */
@@ -487,6 +591,52 @@ addEventListener('pointerup', handleUp);
 addEventListener('pointercancel', handleUp);
 tapBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); handleDown(); });
 tapBtn.addEventListener('pointerup', (e) => { e.stopPropagation(); handleUp(); });
+
+/* ══════════════ GAMEPAD — button A = grip/release (same as Space), d-pad/stick to navigate ══════════════ */
+let gpActive = false, gpPrevA = false;
+const gpPrev = {};                       // edge state for d-pad buttons
+function updateGpBadge() { ui.gpBadge.style.display = gpActive ? 'inline-block' : 'none'; }
+function gpNav(d) {                       // directional input routed by screen
+  if (!ui.entry.classList.contains('hidden')) {
+    if (d === 'up') entrySpin(entrySlot, 1);
+    else if (d === 'down') entrySpin(entrySlot, -1);
+    else if (d === 'left') entryMove(-1);
+    else if (d === 'right') entryMove(1);
+  } else if (G.mode === 'menu') {
+    if (d === 'left') selectChar('marc');
+    else if (d === 'right') selectChar('claire');
+  }
+}
+function gpA(pressed) {                   // A pressed/released, routed by screen
+  if (pressed) {
+    if (G.mode === 'playing') handleDown();
+    else if (!ui.entry.classList.contains('hidden')) entryConfirm();
+    else if (G.mode === 'menu') { initAudio(); sfx.click(); startGame(); }
+    else if (G.mode === 'over') { initAudio(); sfx.click(); startGame(); }   // instant replay
+  } else if (G.mode === 'playing') handleUp();
+}
+let gpAxPrimed = true;
+function pollGamepad() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  let pad = null;
+  for (const p of pads) { if (p) { pad = p; break; } }
+  if (!!pad !== gpActive) { gpActive = !!pad; updateGpBadge(); }
+  if (!pad) { gpPrevA = false; return; }
+  const a = !!(pad.buttons[0] && pad.buttons[0].pressed);   // face button A
+  if (a !== gpPrevA) { gpA(a); gpPrevA = a; }
+  const edge = (i) => { const now = !!(pad.buttons[i] && pad.buttons[i].pressed); const was = gpPrev[i]; gpPrev[i] = now; return now && !was; };
+  if (edge(12)) gpNav('up'); if (edge(13)) gpNav('down');
+  if (edge(14)) gpNav('left'); if (edge(15)) gpNav('right');
+  const ax = pad.axes[0] || 0, ay = pad.axes[1] || 0;      // left stick as a debounced d-pad
+  if (Math.abs(ax) < 0.3 && Math.abs(ay) < 0.3) gpAxPrimed = true;
+  else if (gpAxPrimed && (Math.abs(ax) > 0.65 || Math.abs(ay) > 0.65)) {
+    gpAxPrimed = false;
+    if (Math.abs(ax) > Math.abs(ay)) gpNav(ax > 0 ? 'right' : 'left');
+    else gpNav(ay > 0 ? 'down' : 'up');
+  }
+}
+addEventListener('gamepadconnected', () => { gpActive = true; updateGpBadge(); });
+addEventListener('gamepaddisconnected', () => pollGamepad());
 
 /* ══════════════ RELEASE: graded by timing ══════════════ */
 function releaseBar() {
@@ -757,7 +907,18 @@ window.__game = {
   }),
   records: () => ({ high: REC.high, bestCombo: REC.combo, medals: [...REC.medals], mute: REC.mute }),
   over: () => { if (G.mode === 'playing') endGame(); },
-  wipe: () => { try { ['ts3d_high', 'ts3d_combo', 'ts3d_medals', 'ts3d_mute'].forEach((k) => localStorage.removeItem(k)); } catch (e) {} REC = loadRec(); refreshBest(); },
+  wipe: () => {
+    try { ['ts3d_high', 'ts3d_combo', 'ts3d_medals', 'ts3d_mute', 'ts3d_board'].forEach((k) => localStorage.removeItem(k)); } catch (e) {}
+    REC = loadRec(); BOARD = loadBoard(); lastBoardIdx = -1; refreshBest();
+  },
+  // leaderboard + initials-entry harness (3D-5)
+  board: () => BOARD.map((e) => ({ ...e })),
+  entry: () => ({ open: !ui.entry.classList.contains('hidden'), slot: entrySlot, chars: entryChars.map((i) => LETTERS[i]).join('') }),
+  setEntry: (str) => { for (let s = 0; s < 3; s++) { const idx = LETTERS.indexOf((str[s] || 'A').toUpperCase()); entryChars[s] = idx < 0 ? 0 : idx; } renderEntry(); },
+  entrySpin: (slot, dir) => entrySpin(slot, dir),
+  entryMove: (dir) => entryMove(dir),
+  entryConfirm: () => entryConfirm(),
+  gp: () => ({ active: gpActive }),
   audio: () => audioState(),
   mute: (m) => { REC.mute = !!m; setMuted(REC.mute); saveRec(); refreshMute(); },
   warp: (i) => {  // test helper: jump to bar i (camera snaps along)
@@ -790,6 +951,7 @@ function frame(now) {
   let dt = (now - last) / 1000; last = now;
   dt = Math.min(dt, 0.05);
   G.t += dt;
+  pollGamepad();
 
   // slow-mo bookkeeping (real-time)
   if (G.slowmo > 0) { G.slowmo -= dt; G.timeScale = 0.35; }

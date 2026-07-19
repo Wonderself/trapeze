@@ -80,6 +80,35 @@
   #banner.show{animation:bannerIn 2.6s ease forwards}
   @keyframes bannerIn{0%{opacity:0;transform:scale(.7)}15%{opacity:1;transform:scale(1.06)}25%{transform:scale(1)}75%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
   #banner div{display:inline-block;padding:10px 34px;border-radius:40px;background:rgba(10,4,26,.55);border:2px solid var(--gold);font-size:clamp(20px,5vw,34px);font-weight:700;color:#ffe9a8;letter-spacing:2px;backdrop-filter:blur(3px)}
+
+  /* ---- gamepad badge (3D-5) ---- */
+  #gpBadge{position:fixed;top:48px;right:18px;z-index:6;font-size:19px;display:none;pointer-events:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));animation:gpIn .3s ease}
+  @keyframes gpIn{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:scale(1)}}
+
+  /* ---- leaderboard panel (3D-5) ---- */
+  .board{background:rgba(10,4,26,.62);border:1px solid rgba(255,207,63,.32);border-radius:14px;padding:10px 12px;backdrop-filter:blur(6px)}
+  #menuBoard{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:clamp(148px,42vw,208px);z-index:4;max-height:74vh;overflow:hidden}
+  .bTitle{font-size:13px;font-weight:700;color:var(--gold);letter-spacing:2px;text-align:center;margin-bottom:6px}
+  .bRow{display:flex;align-items:center;gap:6px;padding:2px 3px;border-radius:6px;line-height:1.55}
+  .bRow.hl{background:rgba(255,207,63,.22);box-shadow:0 0 0 1px rgba(255,207,63,.45)}
+  .bRk{width:16px;text-align:right;font-size:12px;font-weight:700;color:#9a8fc5}
+  .bIn{width:34px;font-weight:700;letter-spacing:1px;color:#fff}
+  .bMe{width:16px;text-align:center;font-size:13px}
+  .bSc{flex:1;text-align:right;font-size:13px;color:#ffe9a8;font-weight:600;font-variant-numeric:tabular-nums}
+  .bEmpty{color:#8f82bd;font-size:11px;text-align:center;padding:4px 0;line-height:1.5}
+  #overBoard{width:min(320px,86vw);margin-top:16px}
+
+  /* ---- initials entry (arcade, 3D-5) ---- */
+  #entryTitle{font-size:clamp(24px,7vw,44px);font-weight:700;color:var(--gold);letter-spacing:2px;text-shadow:0 0 22px rgba(255,200,60,.6)}
+  #entryRank{margin-top:4px;font-size:clamp(13px,4vw,18px);color:#8affc1;font-weight:600;letter-spacing:2px}
+  #entryScore{margin-top:2px;font-size:clamp(14px,4vw,20px);color:#ffe9a8;font-weight:600}
+  #entryRow{display:flex;gap:14px;margin:26px 0 8px}
+  .letter{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .letter .lch{font-size:clamp(38px,11vw,62px);font-weight:700;width:clamp(46px,13vw,72px);text-align:center;color:#fff;background:rgba(14,5,32,.55);border:2px solid rgba(255,255,255,.18);border-radius:12px;line-height:1.3}
+  .letter.active .lch{border-color:var(--gold);color:var(--gold);box-shadow:0 0 22px rgba(255,200,60,.45)}
+  .letter button{width:clamp(40px,11vw,60px);height:34px;border:none;border-radius:9px;background:rgba(255,255,255,.12);color:#fff;font-size:16px;cursor:pointer;font-family:inherit}
+  .letter button:active{transform:scale(.9);background:rgba(255,255,255,.28)}
+  #entryHint{margin-top:10px;font-size:12px;color:#7d6bb0;line-height:1.7}
 </style>
 </head>
 <body>
@@ -89,6 +118,7 @@
   <div><div id="score">0<small>SCORE</small></div><div id="worldTag">CIRCUS</div></div>
   <div id="lives">❤❤❤</div>
 </div>
+<div id="gpBadge" title="Gamepad connected">🎮</div>
 <div id="banner"><div id="bannerTxt">World 2 — Jungle</div></div>
 <div id="windTag">💨</div>
 <div id="combo"></div>
@@ -110,8 +140,9 @@
       <div class="pick claire" data-char="claire"><div class="nm">CLAIRE</div><span class="tag">▲ PICKED</span></div>
     </div>
     <button class="btn" id="playBtn">▶ PLAY</button>
-    <div id="hint"><b>Hold</b> to grip &amp; pump your swing — <b>let go</b> at the top to fly!<br>Tap in the air for a <b>FLIP</b> bonus. Desktop: hold &amp; release <b>Space</b>.</div>
+    <div id="hint"><b>Hold</b> to grip &amp; pump your swing — <b>let go</b> at the top to fly!<br>Tap in the air for a <b>FLIP</b> bonus. Space / gamepad <b>A</b> also work.</div>
   </div>
+  <div id="menuBoard" class="board"></div>
 </div>
 
 <div id="over" class="screen hidden">
@@ -120,11 +151,25 @@
   <div id="newBest" class="hidden">★ NEW BEST! ★</div>
   <div id="overStats"></div>
   <div id="overMedals"></div>
+  <div id="overBoard" class="board hidden"></div>
   <div class="btnRow">
     <button class="btn" id="replayBtn">↻ REPLAY</button>
     <button class="btn ghost" id="againBtn">MENU</button>
   </div>
   <div id="hint">Made with ❤ for Marc &amp; Claire</div>
+</div>
+
+<div id="entry" class="screen hidden">
+  <div id="entryTitle">★ NEW HIGH SCORE ★</div>
+  <div id="entryRank">#1 place</div>
+  <div id="entryScore">Score 0</div>
+  <div id="entryRow">
+    <div class="letter" data-slot="0"><button class="lup" aria-label="up">▲</button><span class="lch">A</span><button class="ldn" aria-label="down">▼</button></div>
+    <div class="letter" data-slot="1"><button class="lup" aria-label="up">▲</button><span class="lch">A</span><button class="ldn" aria-label="down">▼</button></div>
+    <div class="letter" data-slot="2"><button class="lup" aria-label="up">▲</button><span class="lch">A</span><button class="ldn" aria-label="down">▼</button></div>
+  </div>
+  <button class="btn" id="entryOk">✔ OK</button>
+  <div id="entryHint">Enter your initials — arrows / swipe / gamepad · Enter or A to confirm</div>
 </div>
 
 <button id="muteBtn" aria-label="Sound on/off">🔊</button>

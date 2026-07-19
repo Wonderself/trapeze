@@ -1,5 +1,6 @@
 // Headless WebGL smoke test — Session 3D-1 criteria (a)-(f), 3D-2 (g) 3D menu,
-// 3D-3 (h) 4 worlds + safety net + full traversal.
+// 3D-3 (h) 4 worlds + safety net + full traversal, 3D-4 (d/e/f/j) endless+records+audio,
+// 3D-5 (k) gamepad mapping + arcade initials entry + persistent top-10 leaderboard.
 // Environment-agnostic: resolves playwright + paths so it runs anywhere.
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -59,6 +60,30 @@ try {
     return { podium: before.podium, heroes: before.heroes, curtainOpen: before.curtainOpen, switched: after.char };
   });
   await page.evaluate(() => window.__game.pick('marc'));
+
+  // ---- (k1) gamepad: hot-plug detected (badge shows), A = primary action (starts game) ----
+  results.k_gamepad = await page.evaluate(() => new Promise((res) => {
+    window.__pad = {
+      id: 'test-pad', index: 0, connected: true, mapping: 'standard',
+      buttons: Array.from({ length: 16 }, () => ({ pressed: false, value: 0 })),
+      axes: [0, 0, 0, 0],
+    };
+    const real = navigator.getGamepads ? navigator.getGamepads.bind(navigator) : () => [];
+    navigator.getGamepads = () => [window.__pad];
+    window.dispatchEvent(new Event('gamepadconnected'));
+    setTimeout(() => {
+      const active = window.__game.gp().active;
+      const badge = getComputedStyle(document.getElementById('gpBadge')).display !== 'none';
+      window.__pad.buttons[0].pressed = true;                 // press A at the menu
+      setTimeout(() => {
+        const started = window.__game.state().mode === 'playing';
+        window.__pad.buttons[0].pressed = false;
+        navigator.getGamepads = real;
+        window.dispatchEvent(new Event('gamepaddisconnected')); // unplug
+        setTimeout(() => res({ active, badge, started, inactiveAfter: window.__game.gp().active }), 150);
+      }, 160);
+    }, 140);
+  }));
 
   // ---- (a) release at the ideal moment -> PERFECT ----
   await page.evaluate(() => window.__game.start('claire'));
@@ -173,20 +198,36 @@ try {
   await page.waitForTimeout(600);
   await page.screenshot({ path: `${OUT}/3d4-lap2.png` });   // endless banner / lap 2 under way
 
-  // ---- (e) enriched end screen + records written ----
+  // ---- (k2) a top-10 run stops for initials (arcade wheel), driven by real keyboard events ----
+  results.k_entryOpen = await page.evaluate(() => { window.__game.over(); return window.__game.entry(); });
+  await page.evaluate(() => {
+    const key = (code) => window.dispatchEvent(new KeyboardEvent('keydown', { code, bubbles: true }));
+    key('ArrowRight');                                  // A A A -> slot 1
+    key('ArrowUp'); key('ArrowUp');                     // slot 1: A -> C
+    key('ArrowRight');                                  // -> slot 2
+    key('ArrowUp'); key('ArrowUp'); key('ArrowUp'); key('ArrowUp'); // slot 2: A -> E  => "ACE"
+  });
+  results.k_entryChars = await page.evaluate(() => window.__game.entry().chars);
+  await page.screenshot({ path: `${OUT}/3d5-entry.png` });
+  await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter', bubbles: true }))); // confirm
+
+  // ---- (e) enriched end screen + records + leaderboard entry written ----
   results.e_end = await page.evaluate(() => {
-    window.__game.over();
     const r = window.__game.records();
+    const b = window.__game.board();
     return {
       overVisible: !document.getElementById('over').classList.contains('hidden'),
+      entryClosed: document.getElementById('entry').classList.contains('hidden'),
       stats: document.getElementById('overStats').children.length,
       medalsShown: document.getElementById('overMedals').textContent.length > 0,
+      boardShown: !document.getElementById('overBoard').classList.contains('hidden'),
       newBest: !document.getElementById('newBest').classList.contains('hidden'),
       high: r.high, bestCombo: r.bestCombo, medals: r.medals,
       score: window.__game.state().score,
+      boardLen: b.length, top: b[0],
     };
   });
-  await page.screenshot({ path: `${OUT}/3d4-end.png` });
+  await page.screenshot({ path: `${OUT}/3d5-end.png` });
 
   // ---- (f) persistence: records survive a full page reload ----
   await page.goto('http://localhost:8130/index.html?lowfx', { waitUntil: 'load' });
@@ -194,6 +235,8 @@ try {
   results.f_persist = await page.evaluate(() => ({
     ...window.__game.records(),
     bestShown: !document.getElementById('best').classList.contains('hidden'),
+    board: window.__game.board(),
+    boardRows: document.getElementById('menuBoard').querySelectorAll('.bRow').length,
   }));
 
   console.log('RESULTS', JSON.stringify(results, null, 1));
@@ -217,12 +260,21 @@ try {
   else if (!worldsOk) code = 12;                                    // 4 worlds present & tracked
   else if (!results.d_endless || !results.d_endless.ok) code = 8;
   else if (results.d_endless.maxWorld !== 3 || results.d_endless.lap < 1 || results.d_endless.diffN < 1) code = 13;  // full tour then endless engaged
-  else if (!(results.e_end && results.e_end.overVisible && results.e_end.stats >= 4 && results.e_end.medalsShown
+  else if (!(results.e_end && results.e_end.overVisible && results.e_end.entryClosed && results.e_end.stats >= 4 && results.e_end.medalsShown
              && results.e_end.newBest && results.e_end.high === results.e_end.score && results.e_end.high > 0
              && results.e_end.bestCombo > 0 && results.e_end.medals.some((m) => m > 0))) code = 14;  // enriched end screen + records
   else if (!(results.f_persist && results.f_persist.high === results.e_end.high
              && results.f_persist.bestCombo === results.e_end.bestCombo && results.f_persist.bestShown)) code = 15;  // records survive reload
   else if (!(results.j_audio && results.j_audio.ready)) code = 16;  // WebAudio context created
+  // ---- 3D-5 gates ----
+  else if (!(results.k_gamepad && results.k_gamepad.active && results.k_gamepad.badge
+             && results.k_gamepad.started && !results.k_gamepad.inactiveAfter)) code = 17;  // gamepad hot-plug + A mapping
+  else if (!(results.k_entryOpen && results.k_entryOpen.open && results.k_entryChars === 'ACE'
+             && results.e_end.boardShown && results.e_end.boardLen >= 1
+             && results.e_end.top && results.e_end.top.i === 'ACE' && results.e_end.top.s === results.e_end.score)) code = 18;  // arcade initials entry
+  else if (!(results.f_persist.board && results.f_persist.board.length >= 1
+             && results.f_persist.board[0].i === 'ACE' && results.f_persist.board[0].s === results.e_end.score
+             && results.f_persist.boardRows >= 1)) code = 19;  // top-10 leaderboard survives reload
   else if (realErrors.length) code = 2;
   await browser.close();
 } catch (e) {
