@@ -33,8 +33,9 @@ function loadRec() {
       combo: +localStorage.getItem('ts3d_combo') || 0,
       medals: JSON.parse(localStorage.getItem('ts3d_medals') || '[0,0,0,0]'),
       mute: localStorage.getItem('ts3d_mute') === '1',
+      reduceFx: localStorage.getItem('ts3d_reducefx') === '1',
     };
-  } catch (e) { return { high: 0, combo: 0, medals: [0, 0, 0, 0], mute: false }; }
+  } catch (e) { return { high: 0, combo: 0, medals: [0, 0, 0, 0], mute: false, reduceFx: false }; }
 }
 let REC = loadRec();
 function saveRec() {
@@ -43,9 +44,22 @@ function saveRec() {
     localStorage.setItem('ts3d_combo', String(REC.combo));
     localStorage.setItem('ts3d_medals', JSON.stringify(REC.medals));
     localStorage.setItem('ts3d_mute', REC.mute ? '1' : '0');
+    localStorage.setItem('ts3d_reducefx', REC.reduceFx ? '1' : '0');
   } catch (e) {}
 }
 setMuted(REC.mute);
+
+/* ── accessibility: prefers-reduced-motion (OS setting) + "reduce flashes" option (menu, persisted) ── */
+let osReducedMotion = false;
+try {
+  const mq = matchMedia('(prefers-reduced-motion: reduce)');
+  osReducedMotion = mq.matches;
+  const onMQ = (e) => { osReducedMotion = e.matches; };
+  if (mq.addEventListener) mq.addEventListener('change', onMQ); else if (mq.addListener) mq.addListener(onMQ);
+} catch (e) {}
+// true when either the OS asks for reduced motion, or the player opted into "reduce flashes"
+const reduceMotion = () => osReducedMotion || REC.reduceFx;
+const reduceFlashes = () => REC.reduceFx;
 
 /* ── local top-10 leaderboard (localStorage ts3d_board) ── */
 function loadBoard() {
@@ -389,6 +403,12 @@ function refreshBest() {
   ui.best.classList.remove('hidden');
 }
 function refreshMute() { ui.muteBtn.textContent = REC.mute ? '🔇' : '🔊'; }
+function refreshFx() {
+  ui.fxBtn.textContent = REC.reduceFx ? '🌙' : '✨';
+  ui.fxBtn.classList.toggle('on', REC.reduceFx);
+  ui.fxBtn.setAttribute('aria-pressed', String(REC.reduceFx));
+  ui.fxBtn.setAttribute('aria-label', REC.reduceFx ? 'Flashes reduced — tap to restore' : 'Reduce flashes');
+}
 
 /* ── leaderboard rendering (menu panel + end screen) ── */
 function renderBoard(el, highlightIdx) {
@@ -453,7 +473,7 @@ function vibrate(ms) { if (navigator.vibrate) { try { navigator.vibrate(ms); } c
 
 /* ══════════════ UI ══════════════ */
 const $ = (id) => document.getElementById(id);
-const ui = { menu: $('menu'), over: $('over'), hud: $('hud'), score: $('score'), lives: $('lives'), combo: $('combo'), grade: $('grade'), comboHold: $('comboHold'), comboFill: $('comboFill'), big: $('bigmsg'), bigsub: $('bigsub'), flash: $('flash'), banner: $('banner'), bannerTxt: $('bannerTxt'), worldTag: $('worldTag'), wind: $('windTag'), best: $('best'), newBest: $('newBest'), overStats: $('overStats'), overMedals: $('overMedals'), muteBtn: $('muteBtn'), gpBadge: $('gpBadge'), menuBoard: $('menuBoard'), overBoard: $('overBoard'), entry: $('entry'), entryRank: $('entryRank'), entryScore: $('entryScore') };
+const ui = { menu: $('menu'), over: $('over'), hud: $('hud'), score: $('score'), lives: $('lives'), combo: $('combo'), grade: $('grade'), comboHold: $('comboHold'), comboFill: $('comboFill'), big: $('bigmsg'), bigsub: $('bigsub'), flash: $('flash'), banner: $('banner'), bannerTxt: $('bannerTxt'), worldTag: $('worldTag'), wind: $('windTag'), best: $('best'), newBest: $('newBest'), overStats: $('overStats'), overMedals: $('overMedals'), muteBtn: $('muteBtn'), fxBtn: $('fxBtn'), gpBadge: $('gpBadge'), menuBoard: $('menuBoard'), overBoard: $('overBoard'), entry: $('entry'), entryRank: $('entryRank'), entryScore: $('entryScore'), photoWrap: $('photoWrap'), photoImg: $('photoImg'), shareBtn: $('shareBtn') };
 const entrySlotEls = [...document.querySelectorAll('#entryRow .letter')];
 let lastScore = -1;
 function refreshHUD() {
@@ -468,7 +488,7 @@ let comboTimer = 0, gradeTimer = 0;
 function showCombo(txt) { ui.combo.textContent = txt; ui.combo.style.opacity = '1'; comboTimer = 1.1; }
 function showGrade(txt, color) { ui.grade.textContent = txt; ui.grade.style.color = color || '#fff'; ui.grade.style.opacity = '1'; ui.grade.classList.remove('zoom'); void ui.grade.offsetWidth; ui.grade.classList.add('zoom'); gradeTimer = 0.9; }
 let flashV = 0;
-function flash(v) { flashV = Math.max(flashV, v); }
+function flash(v) { flashV = Math.max(flashV, reduceFlashes() ? v * 0.35 : v); }
 
 const tapBtn = $('tapBtn');
 $('playBtn').addEventListener('click', () => { initAudio(); sfx.click(); startGame(); });
@@ -480,14 +500,26 @@ ui.muteBtn.addEventListener('click', (e) => {
   REC.mute = !REC.mute; setMuted(REC.mute); saveRec(); refreshMute(); if (!REC.mute) sfx.click();
 });
 refreshMute();
+ui.fxBtn.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
+ui.fxBtn.addEventListener('click', (e) => {
+  e.stopPropagation(); initAudio();
+  REC.reduceFx = !REC.reduceFx; saveRec(); refreshFx(); sfx.click();
+});
+refreshFx();
 function selectChar(c) {
   if (c !== 'marc' && c !== 'claire') return;
-  document.querySelectorAll('.pick').forEach((p) => p.classList.toggle('sel', p.dataset.char === c));
+  document.querySelectorAll('.pick').forEach((p) => { p.classList.toggle('sel', p.dataset.char === c); p.setAttribute('aria-pressed', String(p.dataset.char === c)); });
   G.char = c;
   rebuildHero();
   updateMenuSelection();
 }
-document.querySelectorAll('.pick').forEach((el) => el.addEventListener('click', () => selectChar(el.dataset.char)));
+document.querySelectorAll('.pick').forEach((el) => {
+  el.addEventListener('click', () => selectChar(el.dataset.char));
+  // keyboard focus support: divs with role="button" don't auto-activate on Enter/Space
+  el.addEventListener('keydown', (e) => {
+    if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); selectChar(el.dataset.char); }
+  });
+});
 
 /* initials-entry buttons */
 entrySlotEls.forEach((el) => {
@@ -517,6 +549,8 @@ function startGame() {
   G.lap = 0; G.diffN = 0; G.wScore = [0, 0, 0, 0]; G.runMedals = [0, 0, 0, 0];
   G.starsGot = 0; G.flipsTot = 0; G.maxCombo = 0;
   lastBoardIdx = -1;
+  pendingPhoto = false;
+  if (lastPhotoURL) { URL.revokeObjectURL(lastPhotoURL); lastPhotoURL = null; lastPhotoBlob = null; }
   ui.entry.classList.add('hidden');
   ui.worldTag.textContent = WORLD_NAMES[0].toUpperCase();
   ui.wind.style.opacity = '0';
@@ -568,6 +602,8 @@ function showOver() {
   ui.overMedals.textContent = G.runMedals.map((t, w) => WORLD_ICON[w] + MEDAL_ICON[t]).join('  ');
   if (lastBoardIdx >= 0) { renderBoard(ui.overBoard, lastBoardIdx); ui.overBoard.classList.remove('hidden'); }
   else ui.overBoard.classList.add('hidden');
+  if (lastPhotoURL) { ui.photoImg.src = lastPhotoURL; ui.photoWrap.classList.add('show'); ui.shareBtn.classList.remove('hidden'); }
+  else { ui.photoWrap.classList.remove('show'); ui.shareBtn.classList.add('hidden'); }
   ui.over.classList.remove('hidden');
   if (_newHigh) sfx.applause(); else sfx.fanfare();
 }
@@ -729,7 +765,11 @@ function doCatch(ci) {
   showCombo((G.combo > 1 ? `x${G.combo}  ` : '') + `+${gain + flipBonus}`);
   if (flips > 0) setTimeout(() => showGrade(`FLIP +${flipBonus}`, '#ff6db0'), 120);
   burst(hero.position, G.grade === 'perfect' ? 40 : 22, false, G.grade === 'perfect' ? 7 : 5);
-  if (G.grade === 'perfect') { G.slowmo = 0.4; G.salute = 0.7; sfx.perfect(); } else sfx.catch(G.combo);
+  if (G.grade === 'perfect') {
+    G.slowmo = reduceMotion() ? 0.15 : 0.4; G.salute = 0.7; sfx.perfect();
+    // photo finish: capture the best (highest-combo) PERFECT catch of the run
+    if (G.combo === G.maxCombo) capturePhotoFinish();
+  } else sfx.catch(G.combo);
   flash(0.25); vibrate(16); refreshHUD();
   if (ci >= NBARS - 1) { lapComplete(); return; }
   if (bars[ci].w !== fromW) enterWorld(bars[ci].w);
@@ -857,17 +897,20 @@ function physics(dt) {
 const camTarget = new THREE.Vector3();
 function updateCamera(dt) {
   const h = hero.position;
-  const dolly = G.timeScale < 0.9 ? 0.9 : 1;
+  const rm = reduceMotion();
+  const dolly = (!rm && G.timeScale < 0.9) ? 0.9 : 1;
   const desired = new THREE.Vector3(h.x - 7.5 * dolly, Math.max(h.y + 4 * dolly, 3), 12 * dolly);
   camera.position.lerp(desired, 1 - Math.pow(0.001, dt));
   if (G.shake > 0) {
     G.shake -= dt;
-    camera.position.x += (Math.random() - 0.5) * 0.3;
-    camera.position.y += (Math.random() - 0.5) * 0.3;
+    if (!rm) {   // prefers-reduced-motion / "reduce flashes": skip the jitter, keep the hit feedback (vibrate/flash)
+      camera.position.x += (Math.random() - 0.5) * 0.3;
+      camera.position.y += (Math.random() - 0.5) * 0.3;
+    }
   }
   camTarget.lerp(new THREE.Vector3(h.x + 2.5, h.y - 0.5, 0), 1 - Math.pow(0.0015, dt));
   camera.lookAt(camTarget);
-  const targetFov = 58 + G.fovKick * 7;
+  const targetFov = 58 + G.fovKick * (rm ? 3 : 7);
   if (Math.abs(camera.fov - targetFov) > 0.05) { camera.fov = targetFov; camera.updateProjectionMatrix(); }
   G.fovKick = Math.max(0, G.fovKick - dt * 2.2);
 }
@@ -890,6 +933,34 @@ function updateMenu(dt) {
   }
 }
 
+/* ══════════════ PHOTO FINISH — capture the run's best PERFECT catch, then let it be shared ══════════════ */
+let lastPhotoBlob = null, lastPhotoURL = null, pendingPhoto = false;
+function capturePhotoFinish() { pendingPhoto = true; }   // grabbed right after the next render (see frame loop)
+function grabPhotoFrame() {
+  const canvas = stage.renderer.domElement;
+  if (!canvas.toBlob) return;
+  canvas.toBlob((blob) => {
+    if (!blob) return;
+    if (lastPhotoURL) URL.revokeObjectURL(lastPhotoURL);
+    lastPhotoBlob = blob;
+    lastPhotoURL = URL.createObjectURL(blob);
+  }, 'image/png');
+}
+async function sharePhoto() {
+  if (!lastPhotoBlob) return;
+  try {
+    const file = new File([lastPhotoBlob], 'trapeze-stars-photo-finish.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: 'Trapeze Stars 3D', text: 'My best catch — score ' + G.score.toLocaleString('en') + '!' });
+      return;
+    }
+  } catch (e) { /* share cancelled / unsupported — fall back to a direct download */ }
+  const a = document.createElement('a');
+  a.href = lastPhotoURL; a.download = 'trapeze-stars-photo-finish.png';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+ui.shareBtn.addEventListener('click', () => { sfx.click(); sharePhoto(); });
+
 /* ══════════════ TEST HARNESS ══════════════ */
 window.__game = {
   start: (c) => { if (c) { G.char = c; } startGame(); },
@@ -905,7 +976,13 @@ window.__game = {
     wind: +G.wind.toFixed(2), windOff: +G.windOff.toFixed(2),
     lap: G.lap, diffN: G.diffN, starsGot: G.starsGot, flipsTot: G.flipsTot, maxCombo: G.maxCombo,
   }),
-  records: () => ({ high: REC.high, bestCombo: REC.combo, medals: [...REC.medals], mute: REC.mute }),
+  records: () => ({ high: REC.high, bestCombo: REC.combo, medals: [...REC.medals], mute: REC.mute, reduceFx: REC.reduceFx }),
+  // accessibility (3D-6): OS prefers-reduced-motion + the persisted "reduce flashes" menu option
+  a11y: () => ({ osReducedMotion, reduceFx: REC.reduceFx, effective: reduceMotion() }),
+  setReduceFx: (v) => { REC.reduceFx = !!v; saveRec(); refreshFx(); },
+  // photo finish (3D-6): the best (highest-combo) PERFECT catch of the run, captured via canvas.toBlob()
+  photo: () => ({ hasPhoto: !!lastPhotoBlob, size: lastPhotoBlob ? lastPhotoBlob.size : 0, type: lastPhotoBlob ? lastPhotoBlob.type : null, url: !!lastPhotoURL }),
+  sharePhoto: () => sharePhoto(),
   over: () => { if (G.mode === 'playing') endGame(); },
   wipe: () => {
     try { ['ts3d_high', 'ts3d_combo', 'ts3d_medals', 'ts3d_mute', 'ts3d_board'].forEach((k) => localStorage.removeItem(k)); } catch (e) {}
@@ -999,6 +1076,7 @@ function frame(now) {
   if (flashV > 0) { flashV = Math.max(0, flashV - dt * 1.4); ui.flash.style.opacity = String(flashV); }
 
   stage.render();
+  if (pendingPhoto) { pendingPhoto = false; grabPhotoFrame(); }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

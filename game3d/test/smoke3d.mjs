@@ -46,6 +46,11 @@ try {
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${OUT}/3d4-menu.png` }); // podium + open curtain
 
+  // ---- (l1) accessibility: default state (no OS reduced-motion in this headless profile) + toggling
+  // "reduce flashes" via its real HUD button (#fxBtn) is reflected instantly ----
+  results.l_fxDefault = await page.evaluate(() => window.__game.a11y());
+  results.l_fxToggle = await page.evaluate(() => { document.getElementById('fxBtn').click(); return window.__game.a11y(); });
+
   results.webgl = await page.evaluate(() => {
     const c = document.querySelector('canvas');
     const gl = c && (c.getContext('webgl2') || c.getContext('webgl'));
@@ -75,13 +80,19 @@ try {
       const active = window.__game.gp().active;
       const badge = getComputedStyle(document.getElementById('gpBadge')).display !== 'none';
       window.__pad.buttons[0].pressed = true;                 // press A at the menu
-      setTimeout(() => {
+      // poll (rather than a single fixed-delay check) so a slow/throttled headless rAF
+      // doesn't turn a real pass into a flaky failure — the gate itself is unchanged.
+      const deadline = performance.now() + 1500;
+      const check = () => {
         const started = window.__game.state().mode === 'playing';
-        window.__pad.buttons[0].pressed = false;
-        navigator.getGamepads = real;
-        window.dispatchEvent(new Event('gamepaddisconnected')); // unplug
-        setTimeout(() => res({ active, badge, started, inactiveAfter: window.__game.gp().active }), 150);
-      }, 160);
+        if (started || performance.now() > deadline) {
+          window.__pad.buttons[0].pressed = false;
+          navigator.getGamepads = real;
+          window.dispatchEvent(new Event('gamepaddisconnected')); // unplug
+          setTimeout(() => res({ active, badge, started, inactiveAfter: window.__game.gp().active }), 150);
+        } else requestAnimationFrame(check);
+      };
+      requestAnimationFrame(check);
     }, 140);
   }));
 
@@ -229,7 +240,11 @@ try {
   });
   await page.screenshot({ path: `${OUT}/3d5-end.png` });
 
-  // ---- (f) persistence: records survive a full page reload ----
+  // ---- (m) photo finish: canvas.toBlob() fired on the run's best PERFECT catch, share/download wired ----
+  results.m_photo = await page.evaluate(() => window.__game.photo());
+  results.m_shareVisible = await page.evaluate(() => !document.getElementById('shareBtn').classList.contains('hidden'));
+
+  // ---- (f) persistence: records survive a full page reload, incl. the "reduce flashes" a11y option ----
   await page.goto('http://localhost:8130/index.html?lowfx', { waitUntil: 'load' });
   await page.waitForTimeout(900);
   results.f_persist = await page.evaluate(() => ({
@@ -237,6 +252,7 @@ try {
     bestShown: !document.getElementById('best').classList.contains('hidden'),
     board: window.__game.board(),
     boardRows: document.getElementById('menuBoard').querySelectorAll('.bRow').length,
+    a11y: window.__game.a11y(),
   }));
 
   console.log('RESULTS', JSON.stringify(results, null, 1));
@@ -275,6 +291,11 @@ try {
   else if (!(results.f_persist.board && results.f_persist.board.length >= 1
              && results.f_persist.board[0].i === 'ACE' && results.f_persist.board[0].s === results.e_end.score
              && results.f_persist.boardRows >= 1)) code = 19;  // top-10 leaderboard survives reload
+  // ---- 3D-6 gates ----
+  else if (!(results.l_fxDefault && results.l_fxDefault.reduceFx === false
+             && results.l_fxToggle && results.l_fxToggle.reduceFx === true && results.l_fxToggle.effective === true)) code = 20;  // "reduce flashes" option toggles live
+  else if (!(results.f_persist.a11y && results.f_persist.a11y.reduceFx === true)) code = 21;  // ... and survives reload
+  else if (!(results.m_photo && results.m_photo.hasPhoto && results.m_photo.size > 0 && results.m_photo.type === 'image/png' && results.m_shareVisible)) code = 22;  // photo-finish blob generated + Share button shown
   else if (realErrors.length) code = 2;
   await browser.close();
 } catch (e) {

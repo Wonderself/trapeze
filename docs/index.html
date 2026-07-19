@@ -8,7 +8,9 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <link rel="manifest" href="./manifest.json" />
 <link rel="apple-touch-icon" href="./icon-192.png" />
-<title>Trapeze Stars 3D ✨</title>
+<link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="./icon-192.png" type="image/png" />
+<title>Trapeze Stars 3D ✨ — a circus gift for Marc &amp; Claire</title>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet" />
 <style>
   :root{ --gold:#ffcf3f; --pink:#ff6db0; --blue:#54c8ff; }
@@ -17,17 +19,18 @@
   #app{position:fixed;inset:0}
   canvas{display:block;width:100%;height:100%}
 
-  /* ---- HUD ---- */
+  /* ---- HUD (contrast pass: semi-opaque plate behind the thin/small text) ---- */
   #hud{position:fixed;top:0;left:0;right:0;padding:14px 18px;display:none;justify-content:space-between;align-items:flex-start;pointer-events:none;z-index:5;text-shadow:0 2px 10px rgba(0,0,0,.7)}
+  #hud>div{background:rgba(8,3,20,.4);padding:6px 14px;border-radius:14px;backdrop-filter:blur(3px)}
   #score{font-size:30px;font-weight:700;color:var(--gold);letter-spacing:.5px;transition:transform .16s cubic-bezier(.2,2,.4,1)}
   #score.pop{transform:scale(1.28)}
   #score small{display:block;font-size:12px;color:#cbb2ff;font-weight:500;letter-spacing:2px}
   #lives{font-size:24px;letter-spacing:2px}
-  #combo{position:fixed;top:70px;left:50%;transform:translateX(-50%);font-size:22px;font-weight:700;color:#fff;opacity:0;transition:opacity .2s;z-index:5;pointer-events:none;text-shadow:0 2px 12px rgba(255,120,220,.8)}
+  #combo{position:fixed;top:70px;left:50%;transform:translateX(-50%);font-size:22px;font-weight:700;color:#fff;opacity:0;transition:opacity .2s;z-index:5;pointer-events:none;text-shadow:0 2px 12px rgba(255,120,220,.8);background:rgba(8,3,20,.35);padding:3px 14px;border-radius:20px}
   #grade{position:fixed;top:32%;left:50%;transform:translate(-50%,-50%);font-size:clamp(30px,8vw,58px);font-weight:700;opacity:0;transition:opacity .15s;z-index:6;pointer-events:none;letter-spacing:2px;text-shadow:0 4px 24px rgba(0,0,0,.6)}
   #grade.zoom{animation:gradeZoom .5s cubic-bezier(.2,2.2,.4,1)}
   @keyframes gradeZoom{0%{transform:translate(-50%,-50%) scale(.4)}60%{transform:translate(-50%,-50%) scale(1.15)}100%{transform:translate(-50%,-50%) scale(1)}}
-  #comboHold{position:fixed;top:14px;left:50%;transform:translateX(-50%);text-align:center;z-index:5;pointer-events:none;opacity:0;transition:opacity .25s;font-size:16px;font-weight:700;color:#ffb2dd;text-shadow:0 2px 8px rgba(0,0,0,.7)}
+  #comboHold{position:fixed;top:14px;left:50%;transform:translateX(-50%);text-align:center;z-index:5;pointer-events:none;opacity:0;transition:opacity .25s;font-size:16px;font-weight:700;color:#ffb2dd;text-shadow:0 2px 8px rgba(0,0,0,.7);background:rgba(8,3,20,.4);padding:4px 16px 6px;border-radius:16px}
   #comboBar{width:110px;height:4px;margin:4px auto 0;border-radius:3px;background:rgba(255,255,255,.15);overflow:hidden}
   #comboFill{height:100%;width:100%;border-radius:3px;background:linear-gradient(90deg,#ff6db0,#ffcf3f)}
 
@@ -49,6 +52,16 @@
   .pick.sel .tag{opacity:1;color:var(--gold)}
   .btn{margin-top:4px;padding:14px 40px;border:none;border-radius:40px;font-family:inherit;font-size:20px;font-weight:700;color:#3a1500;cursor:pointer;background:linear-gradient(180deg,#ffe08a,#ffb028);box-shadow:0 8px 26px rgba(255,170,30,.4);transition:transform .1s}
   .btn:active{transform:scale(.95)}
+
+  /* ---- accessibility: cursors + keyboard focus (3D-6) ---- */
+  button,.pick,.letter .lch{cursor:pointer}
+  button:focus-visible,.pick:focus-visible,#playBtn:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+  .pick{outline-offset:4px}
+  @media (prefers-reduced-motion: reduce){
+    #grade.zoom{animation:none}
+    #banner.show{animation:bannerIn 2.6s linear forwards}
+    #newBest{animation:none}
+  }
   #hint{margin-top:16px;font-size:12px;color:#7d6bb0;line-height:1.7}
   #bigmsg{font-size:clamp(30px,9vw,60px);font-weight:700;color:#fff}
   #bigsub{margin-top:10px;font-size:clamp(15px,4vw,20px);color:var(--gold)}
@@ -62,10 +75,19 @@
   #overStats div{padding:8px 6px;border-radius:12px;background:rgba(14,5,32,.5);border:1px solid rgba(255,255,255,.12);font-size:13px;color:#e8dcff}
   #overStats b{display:block;font-size:19px;color:#fff}
   #overMedals{margin-top:12px;font-size:clamp(13px,3.6vw,17px);letter-spacing:3px;color:#ffe9a8}
-  .btnRow{display:flex;gap:12px;margin-top:24px}
+  .btnRow{display:flex;gap:12px;margin-top:24px;flex-wrap:wrap;justify-content:center}
   .btn.ghost{background:rgba(14,5,32,.55);color:#e8dcff;border:2px solid rgba(255,255,255,.25);box-shadow:none;font-size:16px;padding:12px 26px}
   #muteBtn{position:fixed;left:16px;bottom:18px;z-index:12;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(14,5,32,.55);color:#fff;font-size:19px;cursor:pointer;backdrop-filter:blur(4px)}
   #muteBtn:active{transform:scale(.9)}
+  #fxBtn{position:fixed;left:68px;bottom:18px;z-index:12;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(14,5,32,.55);color:#fff;font-size:18px;cursor:pointer;backdrop-filter:blur(4px)}
+  #fxBtn:active{transform:scale(.9)}
+  #fxBtn.on{border-color:var(--gold);box-shadow:0 0 12px rgba(255,207,63,.5)}
+
+  /* ---- photo finish (3D-6) ---- */
+  #photoWrap{margin-top:14px;display:none}
+  #photoWrap.show{display:block}
+  #photoImg{width:min(260px,72vw);border-radius:14px;border:2px solid rgba(255,207,63,.45);box-shadow:0 8px 26px rgba(0,0,0,.5)}
+  #photoCap{margin-top:4px;font-size:11px;letter-spacing:2px;color:#b79bff;text-transform:uppercase}
 
   /* ---- mobile action button ---- */
   #tapBtn{position:fixed;right:22px;bottom:26px;width:96px;height:96px;border-radius:50%;border:3px solid rgba(255,215,60,.85);background:radial-gradient(circle at 38% 32%,rgba(255,235,120,.55),rgba(255,140,0,.5));color:#fff;font-size:15px;font-weight:700;display:none;align-items:center;justify-content:center;z-index:6;box-shadow:0 0 34px rgba(255,180,20,.6);touch-action:manipulation}
@@ -75,7 +97,7 @@
 
   /* ---- worlds ---- */
   #worldTag{font-size:11px;color:#8fd0ff;letter-spacing:3px;font-weight:600;margin-top:2px}
-  #windTag{position:fixed;top:60px;right:20px;font-size:18px;font-weight:700;color:#bfe9ff;opacity:0;transition:opacity .35s;z-index:5;pointer-events:none;text-shadow:0 2px 10px rgba(0,0,0,.7)}
+  #windTag{position:fixed;top:60px;right:20px;font-size:18px;font-weight:700;color:#bfe9ff;opacity:0;transition:opacity .35s;z-index:5;pointer-events:none;text-shadow:0 2px 10px rgba(0,0,0,.7);background:rgba(8,3,20,.35);padding:2px 10px;border-radius:12px}
   #banner{position:fixed;top:36%;left:0;right:0;text-align:center;z-index:7;pointer-events:none;opacity:0}
   #banner.show{animation:bannerIn 2.6s ease forwards}
   @keyframes bannerIn{0%{opacity:0;transform:scale(.7)}15%{opacity:1;transform:scale(1.06)}25%{transform:scale(1)}75%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
@@ -110,7 +132,7 @@
   .letter button:active{transform:scale(.9);background:rgba(255,255,255,.28)}
   #entryHint{margin-top:10px;font-size:12px;color:#7d6bb0;line-height:1.7}
 </style>
-  <script type="module" crossorigin src="./assets/index-C5ECDqCX.js"></script>
+  <script type="module" crossorigin src="./assets/index-ByUqP_Ic.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -137,8 +159,8 @@
   </div>
   <div class="menuBottom">
     <div class="pickRow">
-      <div class="pick marc sel" data-char="marc"><div class="nm">MARC</div><span class="tag">▲ PICKED</span></div>
-      <div class="pick claire" data-char="claire"><div class="nm">CLAIRE</div><span class="tag">▲ PICKED</span></div>
+      <div class="pick marc sel" data-char="marc" tabindex="0" role="button" aria-pressed="true" aria-label="Play as Marc"><div class="nm">MARC</div><span class="tag">▲ PICKED</span></div>
+      <div class="pick claire" data-char="claire" tabindex="0" role="button" aria-pressed="false" aria-label="Play as Claire"><div class="nm">CLAIRE</div><span class="tag">▲ PICKED</span></div>
     </div>
     <button class="btn" id="playBtn">▶ PLAY</button>
     <div id="hint"><b>Hold</b> to grip &amp; pump your swing — <b>let go</b> at the top to fly!<br>Tap in the air for a <b>FLIP</b> bonus. Space / gamepad <b>A</b> also work.</div>
@@ -152,9 +174,11 @@
   <div id="newBest" class="hidden">★ NEW BEST! ★</div>
   <div id="overStats"></div>
   <div id="overMedals"></div>
+  <div id="photoWrap"><img id="photoImg" alt="Your best PERFECT catch this run" /><div id="photoCap">📸 Photo finish</div></div>
   <div id="overBoard" class="board hidden"></div>
   <div class="btnRow">
     <button class="btn" id="replayBtn">↻ REPLAY</button>
+    <button class="btn ghost hidden" id="shareBtn">📤 SHARE</button>
     <button class="btn ghost" id="againBtn">MENU</button>
   </div>
   <div id="hint">Made with ❤ for Marc &amp; Claire</div>
@@ -174,6 +198,7 @@
 </div>
 
 <button id="muteBtn" aria-label="Sound on/off">🔊</button>
+<button id="fxBtn" aria-label="Reduce flashes" aria-pressed="false">✨</button>
 
 </body>
 </html>
