@@ -49,6 +49,19 @@ function saveRec() {
 }
 setMuted(REC.mute);
 
+/* ── daily challenge (3D-7): one shared rail per UTC day, best-of-day persisted ── */
+const dailySeed = () => { const d = new Date(); return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); };
+function loadDaily() {
+  try { const o = JSON.parse(localStorage.getItem('ts3d_daily') || 'null'); return o && o.d === dailySeed() ? o : null; }
+  catch (e) { return null; }
+}
+function saveDaily(score) {
+  try {
+    const cur = loadDaily();
+    if (!cur || score > cur.s) localStorage.setItem('ts3d_daily', JSON.stringify({ d: dailySeed(), s: score }));
+  } catch (e) {}
+}
+
 /* ── accessibility: prefers-reduced-motion (OS setting) + "reduce flashes" option (menu, persisted) ── */
 let osReducedMotion = false;
 try {
@@ -193,7 +206,7 @@ const rings = [];
     m.position.set((A.x + B.x) / 2, (A.py + B.py) / 2 - L * 0.88 - HANG + 1.9, 0);
     scene.add(m);
     // Space mechanic: rings bob up and down — thread them mid-flight
-    rings.push({ m, got: false, baseX: m.position.x, baseY: m.position.y, mvY: A.w === SPACE_W });
+    rings.push({ m, got: false, gi, baseX: m.position.x, baseY: m.position.y, mvY: A.w === SPACE_W });
   }
 }
 
@@ -224,6 +237,92 @@ for (let w = 0; w < NWORLDS; w++) {
   m.position.set((s.x0 + s.x1) / 2, NET_Y, 0);
   netGroup.add(m);
   nets.push({ m, used: false, flashT: 0 });
+}
+
+/* ══════════════ DAILY LAYOUT (3D-7) — same X rail, heights & drifts re-rolled from the UTC date ══════════════ */
+const basePy = barDefs.map((d) => ({ py: d.py, mv: d.mv, mvSpd: d.mvSpd, mvPh: d.mvPh }));
+function applyLayout(daily) {
+  let s = daily ? (dailySeed() * 2654435761) % 0x7fffffff : 0;
+  const drnd = () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
+  for (let i = 0; i < NBARS; i++) {
+    const d = barDefs[i], first = i % BARS_PER_WORLD === 0, b = bars[i];
+    if (daily) {
+      d.py = i === 0 || first ? PY0 : PY0 + drnd() * 2.4 - 1.2;
+      if (d.mv !== undefined) { d.mv = 0.6 + drnd() * 0.4; d.mvSpd = 0.45 + drnd() * 0.3; d.mvPh = drnd() * 6.28; }
+    } else {
+      d.py = basePy[i].py; d.mv = basePy[i].mv; d.mvSpd = basePy[i].mvSpd; d.mvPh = basePy[i].mvPh;
+    }
+    b.py = d.py; b.mv = d.mv; b.mvSpd = d.mvSpd; b.mvPh = d.mvPh;
+    b.anchor.position.y = d.py;
+  }
+  // stars & rings follow the re-rolled heights (X stays fixed so the 4 worlds' décor is untouched)
+  let si = 0;
+  for (let i = 0; i < NBARS - 1; i++) {
+    const A = barDefs[i], B = barDefs[i + 1];
+    for (let k = 0; k < 2; k++) {
+      const f = (k + 1) / 3;
+      stars[si].m.position.y = (A.py + B.py) / 2 - L + 1.4 + Math.sin(f * Math.PI) * 2.2;
+      si++;
+    }
+  }
+  for (const r of rings) {
+    const A = barDefs[r.gi], B = barDefs[r.gi + 1];
+    r.baseY = (A.py + B.py) / 2 - L * 0.88 - HANG + 1.9;
+    r.m.position.y = r.baseY;
+  }
+}
+
+/* ══════════════ FIREWORKS (3D-7) — one pooled additive Points system, 3-5 salvos ══════════════ */
+const FW_N = 260;
+const fwPos = new Float32Array(FW_N * 3).fill(-999);
+const fwCol = new Float32Array(FW_N * 3);
+const fwGeo = new THREE.BufferGeometry();
+fwGeo.setAttribute('position', new THREE.BufferAttribute(fwPos, 3));
+fwGeo.setAttribute('color', new THREE.BufferAttribute(fwCol, 3));
+const fwPts = new THREE.Points(fwGeo, new THREE.PointsMaterial({ size: 0.3, vertexColors: true, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }));
+scene.add(fwPts);
+const fwP = [];
+for (let i = 0; i < FW_N; i++) fwP.push({ life: 0, max: 1, x: 0, y: -999, z: 0, vx: 0, vy: 0, vz: 0 });
+let fwSalvos = [];
+const _fc = new THREE.Color();
+function fwBurst(x, y, z) {
+  const hue = Math.random();
+  let made = 0;
+  for (let i = 0; i < FW_N && made < 52; i++) {
+    const p = fwP[i];
+    if (p.life > 0) continue;
+    p.max = p.life = 1.1 + Math.random() * 0.6;
+    p.x = x; p.y = y; p.z = z;
+    const a = Math.random() * Math.PI * 2, b = Math.acos(Math.random() * 2 - 1), sp = 4.5 + Math.random() * 2.5;
+    p.vx = Math.sin(b) * Math.cos(a) * sp; p.vy = Math.cos(b) * sp; p.vz = Math.sin(b) * Math.sin(a) * sp * 0.4;
+    _fc.setHSL((hue + Math.random() * 0.08) % 1, 1, 0.6);
+    fwCol[i * 3] = _fc.r; fwCol[i * 3 + 1] = _fc.g; fwCol[i * 3 + 2] = _fc.b;
+    made++;
+  }
+  if (!reduceFlashes()) flash(0.12);
+  sfx.firework();
+}
+function fireworksShow(n) {
+  fwSalvos = [];
+  const bx = hero.position.x, by = Math.max(hero.position.y, 0);
+  for (let i = 0; i < n; i++) fwSalvos.push({ t: G.t + 0.3 + i * 0.6, x: bx + (Math.random() * 12 - 6), y: by + 4 + Math.random() * 3.5, z: -2 + Math.random() * 4 });
+  sfx.ovation();
+}
+function updateFireworks(dt) {
+  for (let i = fwSalvos.length - 1; i >= 0; i--) {
+    if (G.t >= fwSalvos[i].t) { const sv = fwSalvos[i]; fwBurst(sv.x, sv.y, sv.z); fwSalvos.splice(i, 1); }
+  }
+  let any = false;
+  for (let i = 0; i < FW_N; i++) {
+    const p = fwP[i];
+    if (p.life <= 0) { fwPos[i * 3 + 1] = -999; continue; }
+    any = true;
+    p.life -= dt;
+    p.vy -= 3.2 * dt; p.vx *= 1 - dt * 0.8; p.vz *= 1 - dt * 0.8;
+    p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+    fwPos[i * 3] = p.x; fwPos[i * 3 + 1] = p.y; fwPos[i * 3 + 2] = p.z;
+  }
+  if (any) { fwGeo.attributes.position.needsUpdate = true; fwGeo.attributes.color.needsUpdate = true; }
 }
 
 /* ══════════════ TRAIL (ribbon of additive points) ══════════════ */
@@ -337,6 +436,7 @@ const G = {
   flyFrom: new THREE.Vector3(), flyTo: new THREE.Vector3(), flyT: 0, flyDur: 0.72, arcH: 2.4, flyNext: -1, flyMode: 'catch',
   vel: new THREE.Vector3(),
   timeScale: 1, slowmo: 0, fovKick: 0, shake: 0,
+  attract: false, daily: false,
 };
 
 /* ══════════════ MENU PODIUM (3D character select) ══════════════ */
@@ -388,6 +488,57 @@ const valance = new THREE.Mesh(
 valance.position.set(PODX, 1.1, 4.3);
 curtain.add(valance);
 let curtainOpen = 0, curtainOpening = false, menuShown = false, menuSpin = 0;
+
+/* ══════════════ CINEMATIC INTRO (3D-7) — fly-through + spots + animated logo, skippable ══════════════ */
+const LOWFX = new URLSearchParams(location.search).has('lowfx');
+const intro = { active: false, done: false, t: 0, lit: 0 };
+let baseLights = null;   // captured lazily so we always restore the stage's real values
+const INTRO_DUR = 3.6, INTRO_SPOTS = [0.7, 1.3, 1.9];
+function playIntro() {
+  if (intro.active || G.mode !== 'menu') return;   // intro only makes sense over the menu scene
+  if (!baseLights) baseLights = { key: stage.key.intensity, rim: stage.rim.intensity, fill: stage.fill.intensity, amb: stage.ambient.intensity };
+  intro.active = true; intro.t = 0; intro.lit = 0;
+  stage.key.intensity = baseLights.key * 0.06;
+  stage.rim.intensity = baseLights.rim * 0.06;
+  stage.fill.intensity = baseLights.fill * 0.06;
+  stage.ambient.intensity = baseLights.amb * 0.25;
+  ui.menu.classList.add('hidden');
+  ui.introLogo.classList.remove('show');
+}
+function finishIntro() {
+  intro.active = false; intro.done = true;
+  if (baseLights) {
+    stage.key.intensity = baseLights.key; stage.rim.intensity = baseLights.rim;
+    stage.fill.intensity = baseLights.fill; stage.ambient.intensity = baseLights.amb;
+  }
+  ui.introLogo.classList.remove('show');
+  if (G.mode === 'menu') ui.menu.classList.remove('hidden');
+  if (curtainOpen < 1) curtainOpening = true;
+  lastInputT = G.t;
+}
+function updateIntro(dt) {
+  intro.t += dt;
+  const T = intro.t, k = Math.min(1, T / INTRO_DUR);
+  while (intro.lit < 3 && T > INTRO_SPOTS[intro.lit]) {   // spots wake up one by one
+    intro.lit++;
+    if (intro.lit === 1) stage.key.intensity = baseLights.key;
+    else if (intro.lit === 2) { stage.rim.intensity = baseLights.rim; stage.fill.intensity = baseLights.fill; }
+    else stage.ambient.intensity = baseLights.amb;
+    if (!reduceFlashes()) flash(0.1);
+    sfx.spot();
+  }
+  const e = 1 - Math.pow(1 - k, 3);   // ease-out dolly: high above the rail → down to the podium
+  camera.position.set(
+    PODX + (1 - e) * 36,
+    -3.4 + (1 - e) * 12.5,
+    8.8 + (1 - e) * 15 + Math.sin(k * Math.PI) * 3
+  );
+  const look = new THREE.Vector3(PODX + (1 - e) * 16, -5 + (1 - e) * 7, 0);
+  camera.lookAt(look);
+  if (camera.fov !== 55) { camera.fov = 55; camera.updateProjectionMatrix(); }
+  if (T > 2.2) ui.introLogo.classList.add('show');
+  if (T >= INTRO_DUR) { sfx.fanfare(); finishIntro(); }
+}
 
 function updateMenuSelection() {
   for (const nm in menuHeroes) {
@@ -456,15 +607,29 @@ function entryConfirm() {
   showOver();
 }
 
+function refreshDaily() {
+  const d = loadDaily();
+  ui.dailyBest.textContent = d ? "Today's best: " + d.s.toLocaleString('en') : 'New rail every day — same for everyone!';
+}
 function enterMenu() {
   G.mode = 'menu';
   hero.visible = false;
   menuGroup.visible = true; curtain.visible = true; menuSpot.visible = true;
-  if (!menuShown) { menuShown = true; curtainOpen = 0; curtainOpening = true; }
-  ui.over.classList.add('hidden'); ui.entry.classList.add('hidden'); ui.menu.classList.remove('hidden');
+  ui.attractBar.classList.remove('show');
+  ui.hud.style.display = 'none'; tapBtn.classList.remove('on'); trail.visible = false;  // e.g. leaving the demo mid-flight
+  if (!menuShown) {
+    menuShown = true; curtainOpen = 0;
+    // first menu ever: cinematic intro (auto-skipped on ?lowfx / reduced motion)
+    if (!intro.done && !LOWFX && !reduceMotion()) { playIntro(); }
+    else { intro.done = true; curtainOpening = true; }
+  }
+  ui.over.classList.add('hidden'); ui.entry.classList.add('hidden');
+  if (!intro.active) ui.menu.classList.remove('hidden');
+  lastInputT = G.t;
   updateMenuSelection();
   refreshBest();
   refreshBoard();
+  refreshDaily();
 }
 
 function rebuildHero() { scene.remove(hero); hero = createHero(G.char); hero.visible = G.mode !== 'menu'; scene.add(hero); }
@@ -473,7 +638,7 @@ function vibrate(ms) { if (navigator.vibrate) { try { navigator.vibrate(ms); } c
 
 /* ══════════════ UI ══════════════ */
 const $ = (id) => document.getElementById(id);
-const ui = { menu: $('menu'), over: $('over'), hud: $('hud'), score: $('score'), lives: $('lives'), combo: $('combo'), grade: $('grade'), comboHold: $('comboHold'), comboFill: $('comboFill'), big: $('bigmsg'), bigsub: $('bigsub'), flash: $('flash'), banner: $('banner'), bannerTxt: $('bannerTxt'), worldTag: $('worldTag'), wind: $('windTag'), best: $('best'), newBest: $('newBest'), overStats: $('overStats'), overMedals: $('overMedals'), muteBtn: $('muteBtn'), fxBtn: $('fxBtn'), gpBadge: $('gpBadge'), menuBoard: $('menuBoard'), overBoard: $('overBoard'), entry: $('entry'), entryRank: $('entryRank'), entryScore: $('entryScore'), photoWrap: $('photoWrap'), photoImg: $('photoImg'), shareBtn: $('shareBtn') };
+const ui = { menu: $('menu'), over: $('over'), hud: $('hud'), score: $('score'), lives: $('lives'), combo: $('combo'), grade: $('grade'), comboHold: $('comboHold'), comboFill: $('comboFill'), big: $('bigmsg'), bigsub: $('bigsub'), flash: $('flash'), banner: $('banner'), bannerTxt: $('bannerTxt'), worldTag: $('worldTag'), wind: $('windTag'), best: $('best'), newBest: $('newBest'), overStats: $('overStats'), overMedals: $('overMedals'), muteBtn: $('muteBtn'), fxBtn: $('fxBtn'), gpBadge: $('gpBadge'), menuBoard: $('menuBoard'), overBoard: $('overBoard'), entry: $('entry'), entryRank: $('entryRank'), entryScore: $('entryScore'), photoWrap: $('photoWrap'), photoImg: $('photoImg'), shareBtn: $('shareBtn'), introLogo: $('introLogo'), attractBar: $('attractBar'), dailyBest: $('dailyBest') };
 const entrySlotEls = [...document.querySelectorAll('#entryRow .letter')];
 let lastScore = -1;
 function refreshHUD() {
@@ -491,9 +656,11 @@ let flashV = 0;
 function flash(v) { flashV = Math.max(flashV, reduceFlashes() ? v * 0.35 : v); }
 
 const tapBtn = $('tapBtn');
-$('playBtn').addEventListener('click', () => { initAudio(); sfx.click(); startGame(); });
+$('playBtn').addEventListener('click', () => { initAudio(); sfx.click(); startGame(false); });
+$('dailyBtn').addEventListener('click', () => { initAudio(); sfx.click(); startGame(true); });     // daily challenge (3D-7)
+$('introBtn').addEventListener('click', () => { initAudio(); sfx.click(); playIntro(); });         // replay the cinematic intro
 $('againBtn').addEventListener('click', () => { sfx.click(); enterMenu(); });
-$('replayBtn').addEventListener('click', () => { initAudio(); sfx.click(); startGame(); });  // instant replay — no menu detour
+$('replayBtn').addEventListener('click', () => { initAudio(); sfx.click(); startGame(G.daily); });  // instant replay — no menu detour
 ui.muteBtn.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
 ui.muteBtn.addEventListener('click', (e) => {
   e.stopPropagation(); initAudio();
@@ -538,8 +705,10 @@ addEventListener('keydown', (e) => {
   else if (e.code === 'Enter') { entryConfirm(); e.preventDefault(); }
 });
 
-function startGame() {
+function startGame(daily) {
   initAudio();
+  G.daily = !!daily;
+  applyLayout(G.daily);                          // daily: shared date-seeded rail — otherwise the base one
   G.mode = 'playing'; G.state = 'swing'; G.active = 0;
   G.score = 0; lastScore = -1; G.combo = 0; G.comboT = 0; G.lives = 3;
   G.spin = 0; G.pumpAmp = 1.0; G.holding = false; G.armed = false;
@@ -581,18 +750,24 @@ function endGame() {
   ui.wind.style.opacity = '0';
   tapBtn.classList.remove('on');
   trail.visible = false;
+  if (G.attract) { exitAttract(); return; }   // demo run leaves no trace (no records, no board)
   awardMedals();
   _newHigh = G.score > REC.high;
   if (_newHigh) REC.high = G.score;
   if (G.maxCombo > REC.combo) REC.combo = G.maxCombo;
   saveRec();
+  // daily challenge: its own best-of-day record; different rail so it stays off the main board
+  let newDaily = false;
+  if (G.daily) { const cur = loadDaily(); newDaily = !cur || G.score > cur.s; saveDaily(G.score); }
+  const rank = G.daily ? -1 : boardRank(G.score);
+  // grand finale: fireworks + ovation on a completed tour, a #1 score or a new daily best
+  if (G.lap > 0 || (rank === 0 && G.score > 0) || newDaily) fireworksShow(reduceFlashes() ? 2 : 4);
   // arcade flow: a top-10 run stops to enter initials, then the end screen
-  const rank = boardRank(G.score);
   if (rank >= 0) openEntry(rank); else showOver();
 }
 function showOver() {
   ui.big.textContent = G.lap > 0 ? '🎉 What a run!' : 'Nice flying!';
-  ui.bigsub.textContent = 'Score ' + G.score.toLocaleString('en') + ' · Best ' + REC.high.toLocaleString('en');
+  ui.bigsub.textContent = (G.daily ? '📅 DAILY · ' : '') + 'Score ' + G.score.toLocaleString('en') + ' · Best ' + (G.daily ? (loadDaily() || { s: G.score }).s : REC.high).toLocaleString('en');
   ui.newBest.classList.toggle('hidden', !_newHigh);
   ui.overStats.innerHTML =
     '<div><b>' + G.starsGot + '</b>⭐ stars</div>' +
@@ -633,6 +808,7 @@ let gpActive = false, gpPrevA = false;
 const gpPrev = {};                       // edge state for d-pad buttons
 function updateGpBadge() { ui.gpBadge.style.display = gpActive ? 'inline-block' : 'none'; }
 function gpNav(d) {                       // directional input routed by screen
+  if (intro.active || G.attract) { anyRealInput(); return; }
   if (!ui.entry.classList.contains('hidden')) {
     if (d === 'up') entrySpin(entrySlot, 1);
     else if (d === 'down') entrySpin(entrySlot, -1);
@@ -644,11 +820,13 @@ function gpNav(d) {                       // directional input routed by screen
   }
 }
 function gpA(pressed) {                   // A pressed/released, routed by screen
+  if (pressed && (intro.active || G.attract)) { anyRealInput(); return; }   // gamepad also skips intro / exits demo
   if (pressed) {
+    lastInputT = G.t;
     if (G.mode === 'playing') handleDown();
     else if (!ui.entry.classList.contains('hidden')) entryConfirm();
-    else if (G.mode === 'menu') { initAudio(); sfx.click(); startGame(); }
-    else if (G.mode === 'over') { initAudio(); sfx.click(); startGame(); }   // instant replay
+    else if (G.mode === 'menu') { initAudio(); sfx.click(); startGame(false); }
+    else if (G.mode === 'over') { initAudio(); sfx.click(); startGame(G.daily); }   // instant replay
   } else if (G.mode === 'playing') handleUp();
 }
 let gpAxPrimed = true;
@@ -673,6 +851,43 @@ function pollGamepad() {
 }
 addEventListener('gamepadconnected', () => { gpActive = true; updateGpBadge(); });
 addEventListener('gamepaddisconnected', () => pollGamepad());
+
+/* ══════════════ ATTRACT / DEMO MODE (3D-7) — the game plays itself after 20 s of menu idle ══════════════ */
+const ATTRACT_AFTER = 20;           // s of menu inactivity before the demo starts
+let lastInputT = 0;
+const bot = { flipped: false };
+function startAttract() {
+  if (G.mode !== 'menu' || intro.active || G.attract) return;
+  G.attract = true;
+  bot.flipped = false;
+  G.char = Math.random() < 0.5 ? 'marc' : 'claire';
+  startGame(false);
+  ui.attractBar.classList.add('show');
+}
+function exitAttract() {
+  if (!G.attract) return;
+  G.attract = false;
+  ui.attractBar.classList.remove('show');
+  enterMenu();
+}
+function updateBot() {   // same strategy as the smoke-test bot: pump, release near the peak, flip against Beach wind
+  if (G.state === 'swing') {
+    bot.flipped = false;
+    if (!G.holding) handleDown();
+    else {
+      const b = bars[G.active];
+      if (b.omega > 0 && Math.abs(b.theta - 0.45 * G.pumpAmp) < 0.2 * G.pumpAmp && G.pumpAmp > 1.18) handleUp();
+    }
+  } else if (G.state === 'fly' && G.world === BEACH_W && !bot.flipped) { handleDown(); bot.flipped = true; }
+}
+// any real input: skip the intro, or hand the game back from demo mode (capture phase = runs first)
+function anyRealInput() {
+  lastInputT = G.t;
+  if (intro.active) finishIntro();
+  else if (G.attract) exitAttract();
+}
+addEventListener('keydown', anyRealInput, true);
+addEventListener('pointerdown', anyRealInput, true);
 
 /* ══════════════ RELEASE: graded by timing ══════════════ */
 function releaseBar() {
@@ -985,8 +1200,8 @@ window.__game = {
   sharePhoto: () => sharePhoto(),
   over: () => { if (G.mode === 'playing') endGame(); },
   wipe: () => {
-    try { ['ts3d_high', 'ts3d_combo', 'ts3d_medals', 'ts3d_mute', 'ts3d_board'].forEach((k) => localStorage.removeItem(k)); } catch (e) {}
-    REC = loadRec(); BOARD = loadBoard(); lastBoardIdx = -1; refreshBest();
+    try { ['ts3d_high', 'ts3d_combo', 'ts3d_medals', 'ts3d_mute', 'ts3d_board', 'ts3d_daily'].forEach((k) => localStorage.removeItem(k)); } catch (e) {}
+    REC = loadRec(); BOARD = loadBoard(); lastBoardIdx = -1; refreshBest(); refreshDaily();
   },
   // leaderboard + initials-entry harness (3D-5)
   board: () => BOARD.map((e) => ({ ...e })),
@@ -996,6 +1211,20 @@ window.__game = {
   entryMove: (dir) => entryMove(dir),
   entryConfirm: () => entryConfirm(),
   gp: () => ({ active: gpActive }),
+  // cinematic intro (3D-7)
+  intro: () => ({ active: intro.active, done: intro.done, t: +intro.t.toFixed(2) }),
+  skipIntro: () => { if (intro.active) finishIntro(); else intro.done = true; },
+  playIntro: () => playIntro(),
+  // attract / demo mode (3D-7)
+  attract: () => ({ active: G.attract, idle: +(G.t - lastInputT).toFixed(1) }),
+  startAttract: () => startAttract(),
+  toMenu: () => enterMenu(),
+  // daily challenge (3D-7): seed + the first bars of the current rail (determinism check)
+  daily: () => ({
+    active: G.daily, seed: dailySeed(), best: (loadDaily() || { s: 0 }).s,
+    bars: barDefs.slice(0, 3).map((d) => [+d.x.toFixed(3), +d.py.toFixed(3)]),
+  }),
+  startDaily: () => startGame(true),
   audio: () => audioState(),
   mute: (m) => { REC.mute = !!m; setMuted(REC.mute); saveRec(); refreshMute(); },
   warp: (i) => {  // test helper: jump to bar i (camera snaps along)
@@ -1050,6 +1279,7 @@ function frame(now) {
   }
 
   if (G.mode === 'playing') {
+    if (G.attract) updateBot();
     physics(sdt);
     let ps = 'swing';
     if (G.state === 'fly') ps = 'fly';
@@ -1059,9 +1289,12 @@ function frame(now) {
   } else {
     for (let i = 0; i < NBARS; i++) stepBar(bars[i], dt, false);
     if (G.mode === 'menu') updateMenu(dt);
-    menuCamera();
+    if (intro.active) updateIntro(dt); else menuCamera();
+    // attract mode: after 20 s of menu inactivity, the game demos itself (real browsers only)
+    if (G.mode === 'menu' && !intro.active && !navigator.webdriver && G.t - lastInputT > ATTRACT_AFTER) startAttract();
   }
   updateConfetti(dt);
+  updateFireworks(dt);
   updateWind(dt);
   updateAudio(G.mode);
 

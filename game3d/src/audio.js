@@ -116,4 +116,13 @@ export const sfx = {
   fanfare: S((t) => [60, 64, 67, 72].forEach((m, i) => osc('square', f(m + 12), t + i * 0.09, 0.2, 0.14))),
   applause: S((t) => { for (let i = 0; i < 34; i++) noise(t + i * 0.045 + Math.random() * 0.03, 0.05, 0.06 * (1 - i / 40), 900, 4200); }),
   click: S((t) => osc('sine', 700, t, 0.05, 0.12)),
+  // 3D-7 — cinematic intro & grand finale
+  spot: S((t) => { osc('sine', 90, t, 0.5, 0.35, sfxG, 55); noise(t, 0.25, 0.10, 2200, 6500); }),                       // spotlight "thunk + hum"
+  firework: S((t) => { noise(t, 0.5, 0.45, 150, 900); osc('sine', 880, t, 0.7, 0.09, sfxG, 110); }),                    // boom + falling whistle
+  ovation: S((t) => {                                                                                                    // applause crescendo (~3.5 s)
+    for (let i = 0; i < 70; i++) {
+      const v = 0.02 + 0.085 * Math.min(1, i / 25) * (1 - Math.max(0, i - 46) / 26);
+      noise(t + i * 0.05 + Math.random() * 0.04, 0.055, Math.max(0.006, v), 800, 4500);
+    }
+  }),
 };

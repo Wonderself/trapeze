@@ -4,7 +4,7 @@
 // Environment-agnostic: resolves playwright + paths so it runs anywhere.
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { mkdirSync, existsSync } from 'node:fs';
+import { mkdirSync, existsSync, readFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 
@@ -39,6 +39,21 @@ try {
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
 
   await page.goto('http://localhost:8130/index.html', { waitUntil: 'load' });
+
+  // ---- (n) cinematic intro: plays on a fresh full-fx load, skipIntro() hands the menu back ----
+  await page.waitForFunction(() => !!window.__game, null, { timeout: 15000 });
+  results.n_intro = await page.evaluate(() => {
+    const before = window.__game.intro();
+    window.__game.skipIntro();
+    const after = window.__game.intro();
+    return {
+      ranOrRunning: before.active || before.done,   // active when we catch it, done if headless was slow enough to finish it
+      doneAfter: after.done, activeAfter: after.active,
+      menuVisible: !document.getElementById('menu').classList.contains('hidden'),
+      logoHidden: !document.getElementById('introLogo').classList.contains('show'),
+    };
+  });
+
   // curtain opens on the game clock (dt-clamped), so under slow headless GPUs it needs
   // more real time than on a 60fps device — poll until it's open instead of guessing.
   await page.waitForFunction(() => window.__game && window.__game.menu().curtainOpen >= 0.9, null, { timeout: 20000 }).catch(() => {});
@@ -94,6 +109,29 @@ try {
       };
       requestAnimationFrame(check);
     }, 140);
+  }));
+
+  // ---- (o) attract / demo mode: startAttract() has the bot playing, any key hands back the menu ----
+  results.o_attract = await page.evaluate(() => new Promise((res) => {
+    window.__game.toMenu();          // the gamepad test left a game running
+    window.__game.startAttract();
+    const t0 = performance.now();
+    const chk = () => {
+      const a = window.__game.attract(), s = window.__game.state();
+      if (a.active && s.mode === 'playing') {
+        const barShown = getComputedStyle(document.getElementById('attractBar')).display !== 'none';
+        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyQ', bubbles: true }));  // any key exits
+        setTimeout(() => res({
+          started: true, barShown,
+          activeAfter: window.__game.attract().active,
+          modeAfter: window.__game.state().mode,
+          barAfter: getComputedStyle(document.getElementById('attractBar')).display !== 'none',
+        }), 350);
+        return;
+      }
+      if (performance.now() - t0 > 8000) return res({ started: false });
+      requestAnimationFrame(chk);
+    }; chk();
   }));
 
   // ---- (a) release at the ideal moment -> PERFECT ----
@@ -255,6 +293,22 @@ try {
     a11y: window.__game.a11y(),
   }));
 
+  // ---- (p) daily challenge: date-seeded rail is deterministic across two fresh loads ----
+  results.p_daily1 = await page.evaluate(() => { window.__game.startDaily(); return window.__game.daily(); });
+  await page.goto('http://localhost:8130/index.html?lowfx', { waitUntil: 'load' });
+  await page.waitForFunction(() => !!window.__game, null, { timeout: 15000 });
+  results.p_daily2 = await page.evaluate(() => { window.__game.startDaily(); return window.__game.daily(); });
+  // and the base rail (PLAY) must differ from the daily one — a real re-roll, not a no-op
+  results.p_base = await page.evaluate(() => { window.__game.start('marc'); return window.__game.daily(); });
+
+  // ---- (q) commercial showcase page shipped alongside the game ----
+  results.q_showcase = (() => {
+    try {
+      const h = readFileSync(path.join(DIST, 'showcase.html'), 'utf8');
+      return { present: true, cta: h.includes('Play the demo'), shots: existsSync(path.join(DIST, 'shots', 'menu.jpg')) };
+    } catch { return { present: false }; }
+  })();
+
   console.log('RESULTS', JSON.stringify(results, null, 1));
   console.log('captures in', OUT);
   console.log('errors:', errors.length);
@@ -296,6 +350,16 @@ try {
              && results.l_fxToggle && results.l_fxToggle.reduceFx === true && results.l_fxToggle.effective === true)) code = 20;  // "reduce flashes" option toggles live
   else if (!(results.f_persist.a11y && results.f_persist.a11y.reduceFx === true)) code = 21;  // ... and survives reload
   else if (!(results.m_photo && results.m_photo.hasPhoto && results.m_photo.size > 0 && results.m_photo.type === 'image/png' && results.m_shareVisible)) code = 22;  // photo-finish blob generated + Share button shown
+  // ---- 3D-7 gates ----
+  else if (!(results.n_intro && results.n_intro.ranOrRunning && results.n_intro.doneAfter
+             && !results.n_intro.activeAfter && results.n_intro.menuVisible && results.n_intro.logoHidden)) code = 23;  // cinematic intro plays & is skippable
+  else if (!(results.o_attract && results.o_attract.started && results.o_attract.barShown
+             && !results.o_attract.activeAfter && results.o_attract.modeAfter === 'menu' && !results.o_attract.barAfter)) code = 24;  // attract mode starts, any key exits
+  else if (!(results.p_daily1 && results.p_daily2 && results.p_daily1.active && results.p_daily2.active
+             && results.p_daily1.seed === results.p_daily2.seed
+             && JSON.stringify(results.p_daily1.bars) === JSON.stringify(results.p_daily2.bars)
+             && JSON.stringify(results.p_base.bars) !== JSON.stringify(results.p_daily1.bars))) code = 25;  // daily rail deterministic (and a real re-roll)
+  else if (!(results.q_showcase && results.q_showcase.present && results.q_showcase.cta && results.q_showcase.shots)) code = 26;  // showcase landing page shipped in dist
   else if (realErrors.length) code = 2;
   await browser.close();
 } catch (e) {
