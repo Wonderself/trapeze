@@ -3,6 +3,7 @@ import { createStage } from './scene.js';
 import { createWorld } from './world.js';
 import { createHero, poseHero } from './player.js';
 import { initAudio, updateAudio, setWorld as setAudioWorld, setMuted, audioState, sfx } from './audio.js';
+import { netConfigured, netSetConfig, fetchWorldTop, submitWorldScore, netNewRun, SCORE_MAX } from './net.js';
 
 /* ══════════════ TUNING ══════════════ */
 const PY0 = 6.2;          // base pivot height
@@ -100,6 +101,12 @@ function boardAdd(initials, score, medal, lap) {
 /* ── initials-entry state (arcade wheel) ── */
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 let entryChars = [0, 0, 0], entrySlot = 0, lastBoardIdx = -1;
+
+/* ── world leaderboard state (3D-8) — fetched only at menu / end of run ── */
+let boardTab = 'local';                 // 'local' | 'world' (world tab exists only when configured)
+let worldRows = null;                   // last fetched world top-10, or null
+let worldLoading = false, worldFetchP = null;
+let lastNetSubmit = null;               // {i, s} of this device's last world submission (for highlight)
 
 /* deterministic layout rng (stable for tests) */
 let _s = 20260718;
@@ -561,25 +568,68 @@ function refreshFx() {
   ui.fxBtn.setAttribute('aria-label', REC.reduceFx ? 'Flashes reduced — tap to restore' : 'Reduce flashes');
 }
 
-/* ── leaderboard rendering (menu panel + end screen) ── */
+/* ── leaderboard rendering (menu panel + end screen) — LOCAL / WORLD tabs (3D-8) ── */
 function renderBoard(el, highlightIdx) {
-  if (!BOARD.length) {
-    el.innerHTML = '<div class="bTitle">🏆 HIGH SCORES</div><div class="bEmpty">No scores yet —<br>be the first to fly!</div>';
-    return;
+  const showWorld = netConfigured();
+  const tab = showWorld ? boardTab : 'local';
+  let html = '<div class="bTitle">🏆 HIGH SCORES</div>';
+  if (showWorld) {
+    html += '<div class="bTabs">' +
+      '<span class="bTab' + (tab === 'local' ? ' sel' : '') + '" data-tab="local">LOCAL</span>' +
+      '<span class="bTab' + (tab === 'world' ? ' sel' : '') + '" data-tab="world">WORLD</span></div>';
   }
-  let rows = '';
-  for (let i = 0; i < BOARD.length; i++) {
+  if (tab === 'world') {
+    if (worldLoading && !worldRows) html += '<div class="bEmpty">…</div>';
+    else if (!worldRows || !worldRows.length) html += '<div class="bEmpty">No world scores yet —<br>be the first to fly!</div>';
+    else for (let i = 0; i < worldRows.length; i++) {
+      const e = worldRows[i];   // sanitized in net.js (A-Z0-9 initials, clamped ints)
+      const mine = lastNetSubmit && e.i === lastNetSubmit.i && e.s === lastNetSubmit.s;
+      html += '<div class="bRow' + (mine ? ' hl' : '') + '">' +
+        '<span class="bRk">' + (i + 1) + '</span>' +
+        '<span class="bIn">' + e.i + '</span>' +
+        '<span class="bMe">' + (e.l > 0 ? '🔁' : WORLD_ICON[e.w]) + '</span>' +
+        '<span class="bSc">' + e.s.toLocaleString('en') + '</span></div>';
+    }
+  } else if (!BOARD.length) {
+    html += '<div class="bEmpty">No scores yet —<br>be the first to fly!</div>';
+  } else for (let i = 0; i < BOARD.length; i++) {
     const e = BOARD[i];
     const medal = e.m > 0 ? MEDAL_ICON[e.m] : '';
-    rows += '<div class="bRow' + (i === highlightIdx ? ' hl' : '') + '">' +
+    html += '<div class="bRow' + (i === highlightIdx ? ' hl' : '') + '">' +
       '<span class="bRk">' + (i + 1) + '</span>' +
       '<span class="bIn">' + e.i + '</span>' +
       '<span class="bMe">' + medal + '</span>' +
       '<span class="bSc">' + e.s.toLocaleString('en') + '</span></div>';
   }
-  el.innerHTML = '<div class="bTitle">🏆 HIGH SCORES</div>' + rows;
+  el.innerHTML = html;
+  el.querySelectorAll('.bTab').forEach((t) => t.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    if (boardTab === t.dataset.tab) return;
+    boardTab = t.dataset.tab;
+    if (boardTab === 'world') refreshWorldBoard();
+    refreshBoard(); sfx.click();
+  }));
 }
-function refreshBoard() { renderBoard(ui.menuBoard, lastBoardIdx); }
+function refreshBoard() {
+  renderBoard(ui.menuBoard, lastBoardIdx);
+  if (!ui.over.classList.contains('hidden') && !ui.overBoard.classList.contains('hidden')) renderBoard(ui.overBoard, lastBoardIdx);
+}
+/* fetch the world top-10 (menu / end-of-run only — never mid-game). Silent fallback:
+ * any failure keeps or returns to the LOCAL tab, no error is ever shown. */
+function refreshWorldBoard(force) {
+  if (!netConfigured()) return;
+  if (worldFetchP && !force) return;
+  worldLoading = true;
+  refreshBoard();
+  const p = fetchWorldTop(10).then((rows) => {
+    if (worldFetchP !== p) return;      // superseded by a newer fetch
+    worldLoading = false; worldFetchP = null;
+    if (rows) worldRows = rows;
+    else if (!worldRows) boardTab = 'local';   // nothing to show: quiet local fallback
+    refreshBoard();
+  });
+  worldFetchP = p;
+}
 
 /* ── initials entry (arcade wheel) ── */
 function renderEntry() {
@@ -602,6 +652,13 @@ function entryConfirm() {
   if (ui.entry.classList.contains('hidden')) return;
   const initials = entryChars.map((i) => LETTERS[i]).join('');
   lastBoardIdx = boardAdd(initials, G.score, Math.max(...G.runMedals), G.lap);
+  // world leaderboard (3D-8): submit at the same moment — no extra entry screen.
+  // One submit per run (netNewRun in startGame); daily runs stay off the board (different rail).
+  if (netConfigured() && !G.daily) {
+    lastNetSubmit = { i: initials, s: Math.max(0, Math.min(SCORE_MAX, Math.round(G.score))) };
+    submitWorldScore({ initials, score: G.score, world: G.world, lap: G.lap })
+      .then((ok) => { if (ok) refreshWorldBoard(true); });
+  }
   ui.entry.classList.add('hidden');
   sfx.click();
   showOver();
@@ -629,6 +686,7 @@ function enterMenu() {
   updateMenuSelection();
   refreshBest();
   refreshBoard();
+  if (netConfigured()) refreshWorldBoard();   // 3D-8: fetch only at the menu, never mid-game
   refreshDaily();
 }
 
@@ -718,6 +776,7 @@ function startGame(daily) {
   G.lap = 0; G.diffN = 0; G.wScore = [0, 0, 0, 0]; G.runMedals = [0, 0, 0, 0];
   G.starsGot = 0; G.flipsTot = 0; G.maxCombo = 0;
   lastBoardIdx = -1;
+  netNewRun();   // 3D-8: re-arm the one-submit-per-run throttle
   pendingPhoto = false;
   if (lastPhotoURL) { URL.revokeObjectURL(lastPhotoURL); lastPhotoURL = null; lastPhotoBlob = null; }
   ui.entry.classList.add('hidden');
@@ -1211,6 +1270,17 @@ window.__game = {
   entryMove: (dir) => entryMove(dir),
   entryConfirm: () => entryConfirm(),
   gp: () => ({ active: gpActive }),
+  // world leaderboard (3D-8): inspect state + inject a test config (mock endpoint in smoke tests)
+  net: () => ({
+    configured: netConfigured(), tab: boardTab, loading: worldLoading,
+    rows: worldRows ? worldRows.map((r) => ({ ...r })) : null,
+    lastSubmit: lastNetSubmit ? { ...lastNetSubmit } : null,
+  }),
+  netTest: (url, key) => {
+    netSetConfig(url, key);
+    boardTab = 'world'; worldRows = null; worldLoading = false; worldFetchP = null;
+    refreshWorldBoard(true);
+  },
   // cinematic intro (3D-7)
   intro: () => ({ active: intro.active, done: intro.done, t: +intro.t.toFixed(2) }),
   skipIntro: () => { if (intro.active) finishIntro(); else intro.done = true; },

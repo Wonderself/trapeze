@@ -1,82 +1,85 @@
-/* net.js — Session 3D-7 scaffold: world-leaderboard abstraction. NOT wired in yet.
+/* net.js — Session 3D-8: world-leaderboard client (Supabase REST, zero dependency).
  *
- * Today the game uses the local top-10 board in main.js (localStorage ts3d_board).
- * This module is the ready-made seam for a shared online board, at zero cost:
+ * Design rules:
+ *  - Config lives in net-config.js (the ONLY file Emmanuel edits). Not configured
+ *    => netConfigured() is false, no network request is EVER made, the game keeps
+ *    its local top-10 exactly as before.
+ *  - Plain fetch against the auto-generated PostgREST API — no @supabase/supabase-js,
+ *    the bundle stays light.
+ *  - Short timeout (3.5 s) + one light retry on reads; silent failure everywhere:
+ *    offline / misconfigured / server error => callers fall back to the local board,
+ *    never an error message on screen.
+ *  - Client-side sanity (the real guard is RLS server-side): initials filtered to
+ *    A-Z0-9 (3 chars), score clamped to a plausible bound, one submit per run.
  *
- *   To activate later (free tier, ~10 min):
- *   1. Create a free Supabase project (https://supabase.com — no credit card).
- *   2. SQL editor:  create table scores (
- *        id bigint generated always as identity primary key,
- *        initials text not null check (char_length(initials) = 3),
- *        score int not null check (score >= 0 and score < 10000000),
- *        medal int not null default 0, lap int not null default 0,
- *        day int,                        -- daily-challenge seed (YYYYMMDD) or null
- *        created_at timestamptz default now());
- *      Enable RLS + policies: allow anonymous INSERT and SELECT (read top 100).
- *   3. Paste the project URL + anon public key below (the anon key is designed
- *      to be shipped in client code; RLS is the guard).
- *   4. In main.js, import { createBoard } and use it instead of BOARD read/writes.
- *
- * Until then: constants empty => createBoard() returns the Local adapter and the
- * game behaves exactly as it does today. No network request is ever made.
+ * Setup guide for the free Supabase project: game3d/SUPABASE_SETUP.md
  */
 
-const SUPABASE_URL = '';        // e.g. 'https://xyzcompany.supabase.co'
-const SUPABASE_ANON_KEY = '';   // anon public key (safe to embed — protected by RLS)
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './net-config.js';
 
-const BOARD_MAX = 10;
+export const SCORE_MAX = 500000;   // matches the SQL check constraint
+const TIMEOUT_MS = 3500;
 
-/* ── Local adapter: same storage & semantics as today's board ── */
-class LocalBoard {
-  constructor(key = 'ts3d_board') { this.key = key; this.online = false; }
-  async top(n = BOARD_MAX) {
-    try { const a = JSON.parse(localStorage.getItem(this.key) || '[]'); return Array.isArray(a) ? a.slice(0, n) : []; }
-    catch (e) { return []; }
-  }
-  async submit({ initials, score, medal = 0, lap = 0 }) {
-    const list = await this.top(BOARD_MAX);
-    const entry = { i: initials, s: score, m: medal, l: lap };
-    list.push(entry);
-    list.sort((a, b) => b.s - a.s);
-    const kept = list.slice(0, BOARD_MAX);
-    try { localStorage.setItem(this.key, JSON.stringify(kept)); } catch (e) {}
-    return kept.indexOf(entry);   // rank, or -1 if it fell off
-  }
+let cfg = { url: SUPABASE_URL, key: SUPABASE_ANON_KEY };
+
+export function netConfigured() { return !!(cfg.url && cfg.key); }
+/* test hook (used by window.__game.netTest): inject a config at runtime */
+export function netSetConfig(url, key) { cfg = { url: url || '', key: key || '' }; }
+
+/* one fetch with timeout; `retries` extra attempts (reads only — never retry a POST) */
+async function req(path, opts = {}, retries = 0) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  try {
+    const r = await fetch(cfg.url.replace(/\/$/, '') + '/rest/v1/scores' + path, {
+      ...opts,
+      headers: {
+        apikey: cfg.key, Authorization: 'Bearer ' + cfg.key,
+        'Content-Type': 'application/json', ...(opts.headers || {}),
+      },
+      signal: ctrl.signal,
+    });
+    if (!r.ok) throw new Error('http ' + r.status);
+    return r;
+  } catch (e) {
+    if (retries > 0) return req(path, opts, retries - 1);
+    throw e;
+  } finally { clearTimeout(t); }
 }
 
-/* ── Supabase adapter: plain fetch against the auto-generated REST API, zero dependency ── */
-class SupabaseBoard {
-  constructor(url, key) {
-    this.base = url.replace(/\/$/, '') + '/rest/v1/scores';
-    this.headers = { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' };
-    this.online = true;
-    this.fallback = new LocalBoard();   // network trouble must never lose a score
-  }
-  async top(n = BOARD_MAX, day = null) {
-    try {
-      const q = this.base + '?select=initials,score,medal,lap&order=score.desc&limit=' + n +
-        (day ? '&day=eq.' + day : '&day=is.null');
-      const r = await fetch(q, { headers: this.headers });
-      if (!r.ok) throw new Error('http ' + r.status);
-      const rows = await r.json();
-      return rows.map((e) => ({ i: e.initials, s: e.score, m: e.medal, l: e.lap }));
-    } catch (e) { return this.fallback.top(n); }
-  }
-  async submit({ initials, score, medal = 0, lap = 0, day = null }) {
-    try {
-      const r = await fetch(this.base, {
-        method: 'POST', headers: this.headers,
-        body: JSON.stringify({ initials, score, medal, lap, day }),
-      });
-      if (!r.ok) throw new Error('http ' + r.status);
-    } catch (e) { /* offline / misconfigured: keep it locally so nothing is lost */ }
-    return this.fallback.submit({ initials, score, medal, lap });
-  }
+const cleanInitials = (v) =>
+  (String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '') + 'AAA').slice(0, 3);
+const cleanScore = (v) => Math.max(0, Math.min(SCORE_MAX, Math.round(+v || 0)));
+
+/* GET top n world scores → [{i, s, w, l}] or null on any failure (caller falls back) */
+export async function fetchWorldTop(n = 10) {
+  if (!netConfigured()) return null;
+  try {
+    const r = await req('?select=initials,score,world,lap&order=score.desc&limit=' + n, {}, 1);
+    const rows = await r.json();
+    if (!Array.isArray(rows)) return null;
+    // sanitize server rows before they reach innerHTML
+    return rows.slice(0, n).map((e) => ({
+      i: cleanInitials(e.initials), s: cleanScore(e.score),
+      w: Math.max(0, Math.min(3, e.world | 0)), l: Math.max(0, Math.min(999, e.lap | 0)),
+    }));
+  } catch (e) { return null; }
 }
 
-/* ── factory: silently falls back to local when Supabase isn't configured ── */
-export function createBoard() {
-  if (SUPABASE_URL && SUPABASE_ANON_KEY) return new SupabaseBoard(SUPABASE_URL, SUPABASE_ANON_KEY);
-  return new LocalBoard();
+/* POST one score. Throttled to one submit per run (reset via netNewRun in startGame). */
+let submittedThisRun = false;
+export function netNewRun() { submittedThisRun = false; }
+export async function submitWorldScore({ initials, score, world = 0, lap = 0 }) {
+  if (!netConfigured() || submittedThisRun) return false;
+  submittedThisRun = true;
+  try {
+    await req('', {
+      method: 'POST',
+      body: JSON.stringify({
+        initials: cleanInitials(initials), score: cleanScore(score),
+        world: Math.max(0, Math.min(3, world | 0)), lap: Math.max(0, Math.min(999, lap | 0)),
+      }),
+    });
+    return true;
+  } catch (e) { return false; }   // offline / misconfigured: local board already has it
 }
-export { LocalBoard, SupabaseBoard };

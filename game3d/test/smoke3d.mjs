@@ -1,6 +1,7 @@
 // Headless WebGL smoke test — Session 3D-1 criteria (a)-(f), 3D-2 (g) 3D menu,
 // 3D-3 (h) 4 worlds + safety net + full traversal, 3D-4 (d/e/f/j) endless+records+audio,
-// 3D-5 (k) gamepad mapping + arcade initials entry + persistent top-10 leaderboard.
+// 3D-5 (k) gamepad mapping + arcade initials entry + persistent top-10 leaderboard,
+// 3D-8 (r/s/t) world leaderboard: inert when unconfigured, mocked Supabase GET/POST, silent fallback.
 // Environment-agnostic: resolves playwright + paths so it runs anywhere.
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -35,7 +36,7 @@ try {
     args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--autoplay-policy=no-user-gesture-required']
   });
   const page = await browser.newPage({ viewport: { width: 960, height: 560 } });
-  page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+  page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text() + ' [' + ((m.location() && m.location().url) || '') + ']'); });
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
 
   await page.goto('http://localhost:8130/index.html', { waitUntil: 'load' });
@@ -71,6 +72,12 @@ try {
     const gl = c && (c.getContext('webgl2') || c.getContext('webgl'));
     return gl ? 'ok' : 'missing';
   });
+
+  // ---- (r) world leaderboard NOT configured: no WORLD tab, no world rows, flow untouched (3D-8) ----
+  results.r_net = await page.evaluate(() => ({
+    ...window.__game.net(),
+    tabs: document.querySelectorAll('#menuBoard .bTab').length,
+  }));
 
   // ---- (g) 3D menu: podium visible, both characters shown, curtain opened, pick switches ----
   results.g_menu = await page.evaluate(() => {
@@ -309,12 +316,81 @@ try {
     } catch { return { present: false }; }
   })();
 
+  // ---- (s) world leaderboard configured (mocked Supabase endpoint via page.route):
+  //      WORLD tab appears, GET fills it, a finished run POSTs initials+score (3D-8) ----
+  const postedBodies = [];
+  await page.route('**/rest/v1/scores*', (route) => {
+    const rq = route.request();
+    if (rq.method() === 'POST') {
+      postedBodies.push(rq.postDataJSON());
+      return route.fulfill({ status: 201, contentType: 'application/json', body: '[]' });
+    }
+    return route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify([
+        { initials: 'ZAP', score: 91000, world: 3, lap: 2 },
+        { initials: 'BOB', score: 4200, world: 1, lap: 0 },
+      ]),
+    });
+  });
+  await page.goto('http://localhost:8130/index.html?lowfx', { waitUntil: 'load' });
+  await page.waitForFunction(() => !!window.__game, null, { timeout: 15000 });
+  await page.evaluate(() => { window.__game.wipe(); window.__game.netTest('https://mock-project.supabase.co', 'mock-anon-key'); });
+  await page.waitForFunction(() => { const n = window.__game.net(); return !n.loading && n.rows && n.rows.length >= 2; }, null, { timeout: 12000 });
+  results.s_worldTab = await page.evaluate(() => ({
+    ...window.__game.net(),
+    tabs: document.querySelectorAll('#menuBoard .bTab').length,
+    rowCount: document.querySelectorAll('#menuBoard .bRow').length,
+    topIn: (document.querySelector('#menuBoard .bRow .bIn') || {}).textContent || '',
+  }));
+  await page.screenshot({ path: `${OUT}/3d8-world.png` });
+  // short run: one good catch for a non-zero score, then end it -> initials -> POST
+  await page.evaluate(() => window.__game.start('marc'));
+  await page.waitForTimeout(300);
+  results.s_run = await page.evaluate(() => new Promise((res) => {
+    const t0 = performance.now();
+    let phase = 'air';
+    const loop = () => {
+      const s = window.__game.state();
+      if (s.score > 0 && s.state === 'swing') return res({ ok: true, score: s.score });
+      if (s.mode !== 'playing') return res({ ok: false, why: s.mode });
+      if (performance.now() - t0 > 90000) return res({ ok: false, why: 'timeout' });
+      if (s.state === 'swing') {
+        if (phase !== 'hold') { window.__game.down(); phase = 'hold'; }
+        else if (s.omega > 0 && Math.abs(s.theta - 0.45 * s.amp) < 0.2 * s.amp && s.amp > 1.18) { window.__game.up(); phase = 'fly'; }
+      } else phase = 'air';
+      requestAnimationFrame(loop);
+    }; loop();
+  }));
+  await page.evaluate(() => window.__game.over());
+  results.s_entry = await page.evaluate(() => window.__game.entry());
+  await page.evaluate(() => { window.__game.setEntry('SUP'); window.__game.entryConfirm(); });
+  await page.waitForTimeout(1400);   // POST then top-10 refetch
+  results.s_post = postedBodies.length ? postedBodies[0] : null;
+  results.s_postCount = postedBodies.length;
+  results.s_net2 = await page.evaluate(() => window.__game.net());
+  await page.screenshot({ path: `${OUT}/3d8-post.png` });
+
+  // ---- (t) mocked network failure: silent LOCAL fallback, zero JS error (3D-8) ----
+  await page.unroute('**/rest/v1/scores*');
+  await page.route('**/rest/v1/scores*', (route) => route.abort('failed'));
+  await page.goto('http://localhost:8130/index.html?lowfx', { waitUntil: 'load' });
+  await page.waitForFunction(() => !!window.__game, null, { timeout: 15000 });
+  await page.evaluate(() => window.__game.netTest('https://mock-project.supabase.co', 'mock-anon-key'));
+  await page.waitForFunction(() => { const n = window.__game.net(); return n.configured && !n.loading && n.rows === null; }, null, { timeout: 20000 });
+  results.t_fail = await page.evaluate(() => ({
+    ...window.__game.net(),
+    localRows: document.querySelectorAll('#menuBoard .bRow').length,
+    tabSel: ((document.querySelector('#menuBoard .bTab.sel') || {}).textContent || '').trim(),
+  }));
+
   console.log('RESULTS', JSON.stringify(results, null, 1));
   console.log('captures in', OUT);
   console.log('errors:', errors.length);
   errors.slice(0, 15).forEach(e => console.log('  -', e));
 
-  const realErrors = errors.filter(e => !e.includes('ERR_CONNECTION_RESET'));
+  // font noise in sandbox + resource errors from the DELIBERATELY failed mock endpoint (t) are expected
+  const realErrors = errors.filter(e => !e.includes('ERR_CONNECTION_RESET') && !e.includes('rest/v1/scores') && !e.includes('mock-project.supabase.co'));
   const m = results.g_menu || {};
   const n1 = results.h_net1 || {}, n2 = results.h_net2 || {};
   const worldsOk = ['circus', 'jungle', 'beach', 'space'].every(
@@ -360,6 +436,19 @@ try {
              && JSON.stringify(results.p_daily1.bars) === JSON.stringify(results.p_daily2.bars)
              && JSON.stringify(results.p_base.bars) !== JSON.stringify(results.p_daily1.bars))) code = 25;  // daily rail deterministic (and a real re-roll)
   else if (!(results.q_showcase && results.q_showcase.present && results.q_showcase.cta && results.q_showcase.shots)) code = 26;  // showcase landing page shipped in dist
+  // ---- 3D-8 gates ----
+  else if (!(results.r_net && results.r_net.configured === false && results.r_net.tabs === 0
+             && results.r_net.rows === null)) code = 27;  // unconfigured: WORLD tab absent, flow untouched
+  else if (!(results.s_worldTab && results.s_worldTab.configured && results.s_worldTab.tab === 'world'
+             && results.s_worldTab.tabs === 2 && results.s_worldTab.rowCount >= 2
+             && results.s_worldTab.topIn === 'ZAP' && results.s_worldTab.rows[0].s === 91000)) code = 28;  // mocked GET fills the WORLD tab
+  else if (!(results.s_run && results.s_run.ok && results.s_entry && results.s_entry.open
+             && results.s_post && results.s_post.initials === 'SUP' && results.s_post.score === results.s_run.score
+             && results.s_postCount === 1
+             && results.s_net2 && results.s_net2.lastSubmit && results.s_net2.lastSubmit.i === 'SUP')) code = 29;  // end-of-run POST: initials+score, one per run
+  else if (!(results.t_fail && results.t_fail.configured && results.t_fail.tab === 'local'
+             && results.t_fail.rows === null && results.t_fail.localRows >= 1
+             && results.t_fail.tabSel === 'LOCAL')) code = 30;  // network failure: silent LOCAL fallback
   else if (realErrors.length) code = 2;
   await browser.close();
 } catch (e) {
