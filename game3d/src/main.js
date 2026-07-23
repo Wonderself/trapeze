@@ -89,8 +89,10 @@ function boardRank(score) {
   const rank = BOARD.filter((e) => e.s >= score).length;   // ties place below existing equals
   return rank < BOARD_MAX ? rank : -1;
 }
-function boardAdd(initials, score, medal, lap) {
-  const entry = { i: initials, s: score, m: medal, l: lap };
+function boardAdd(name, score, medal, lap) {
+  // { i: name } — field kept short/compat with pre-existing localStorage entries
+  // (older saves hold a 3-letter initials string there; both render the same way).
+  const entry = { i: name, s: score, m: medal, l: lap };
   BOARD.push(entry);
   BOARD.sort((a, b) => b.s - a.s);
   BOARD = BOARD.slice(0, BOARD_MAX);
@@ -98,9 +100,19 @@ function boardAdd(initials, score, medal, lap) {
   return BOARD.indexOf(entry);   // -1 if it fell off the end
 }
 
-/* ── initials-entry state (arcade wheel) ── */
-const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-let entryChars = [0, 0, 0], entrySlot = 0, lastBoardIdx = -1;
+/* ── name-entry state (free-text field, up to 20 chars) ── */
+const NAME_MAX = 20;
+let lastBoardIdx = -1;
+/* letters (any script)/digits/space/apostrophe/hyphen only; trims, caps length, never empty */
+function sanitizeName(v) {
+  const cleaned = String(v || '')
+    .replace(/[^\p{L}\p{N} '\-]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, NAME_MAX)
+    .trim();
+  return cleaned || 'PLAYER';
+}
 
 /* ── world leaderboard state (3D-8) — fetched only at menu / end of run ── */
 let boardTab = 'local';                 // 'local' | 'world' (world tab exists only when configured)
@@ -582,7 +594,7 @@ function renderBoard(el, highlightIdx) {
     if (worldLoading && !worldRows) html += '<div class="bEmpty">…</div>';
     else if (!worldRows || !worldRows.length) html += '<div class="bEmpty">No world scores yet —<br>be the first to fly!</div>';
     else for (let i = 0; i < worldRows.length; i++) {
-      const e = worldRows[i];   // sanitized in net.js (A-Z0-9 initials, clamped ints)
+      const e = worldRows[i];   // sanitized in net.js (name up to 20 chars, clamped ints)
       const mine = lastNetSubmit && e.i === lastNetSubmit.i && e.s === lastNetSubmit.s;
       html += '<div class="bRow' + (mine ? ' hl' : '') + '">' +
         '<span class="bRk">' + (i + 1) + '</span>' +
@@ -631,32 +643,25 @@ function refreshWorldBoard(force) {
   worldFetchP = p;
 }
 
-/* ── initials entry (arcade wheel) ── */
-function renderEntry() {
-  for (let s = 0; s < 3; s++) {
-    entrySlotEls[s].querySelector('.lch').textContent = LETTERS[entryChars[s]];
-    entrySlotEls[s].classList.toggle('active', s === entrySlot);
-  }
-}
-function entryMove(dir) { entrySlot = (entrySlot + dir + 3) % 3; renderEntry(); sfx.click(); }
-function entrySpin(slot, dir) { entrySlot = slot; entryChars[slot] = (entryChars[slot] + dir + LETTERS.length) % LETTERS.length; renderEntry(); sfx.click(); }
+/* ── name entry (real text field — desktop keyboard, mobile virtual keyboard, gamepad A to confirm) ── */
 function openEntry(rank) {
-  entryChars = [0, 0, 0]; entrySlot = 0;
+  ui.entryInput.value = '';
   ui.entryRank.textContent = '#' + (rank + 1) + ' place';
   ui.entryScore.textContent = 'Score ' + G.score.toLocaleString('en');
-  renderEntry();
   ui.over.classList.add('hidden'); ui.entry.classList.remove('hidden');
   sfx.fanfare();
+  // autofocus opens the native virtual keyboard on mobile; rAF lets the screen swap settle first
+  requestAnimationFrame(() => { try { ui.entryInput.focus({ preventScroll: true }); } catch (e) { ui.entryInput.focus(); } });
 }
 function entryConfirm() {
   if (ui.entry.classList.contains('hidden')) return;
-  const initials = entryChars.map((i) => LETTERS[i]).join('');
-  lastBoardIdx = boardAdd(initials, G.score, Math.max(...G.runMedals), G.lap);
+  const name = sanitizeName(ui.entryInput.value);
+  lastBoardIdx = boardAdd(name, G.score, Math.max(...G.runMedals), G.lap);
   // world leaderboard (3D-8): submit at the same moment — no extra entry screen.
   // One submit per run (netNewRun in startGame); daily runs stay off the board (different rail).
   if (netConfigured() && !G.daily) {
-    lastNetSubmit = { i: initials, s: Math.max(0, Math.min(SCORE_MAX, Math.round(G.score))) };
-    submitWorldScore({ initials, score: G.score, world: G.world, lap: G.lap })
+    lastNetSubmit = { i: name, s: Math.max(0, Math.min(SCORE_MAX, Math.round(G.score))) };
+    submitWorldScore({ name, score: G.score, world: G.world, lap: G.lap })
       .then((ok) => { if (ok) refreshWorldBoard(true); });
   }
   ui.entry.classList.add('hidden');
@@ -696,8 +701,7 @@ function vibrate(ms) { if (navigator.vibrate) { try { navigator.vibrate(ms); } c
 
 /* ══════════════ UI ══════════════ */
 const $ = (id) => document.getElementById(id);
-const ui = { menu: $('menu'), over: $('over'), hud: $('hud'), score: $('score'), lives: $('lives'), combo: $('combo'), grade: $('grade'), comboHold: $('comboHold'), comboFill: $('comboFill'), big: $('bigmsg'), bigsub: $('bigsub'), flash: $('flash'), banner: $('banner'), bannerTxt: $('bannerTxt'), worldTag: $('worldTag'), wind: $('windTag'), best: $('best'), newBest: $('newBest'), overStats: $('overStats'), overMedals: $('overMedals'), muteBtn: $('muteBtn'), fxBtn: $('fxBtn'), gpBadge: $('gpBadge'), menuBoard: $('menuBoard'), overBoard: $('overBoard'), entry: $('entry'), entryRank: $('entryRank'), entryScore: $('entryScore'), photoWrap: $('photoWrap'), photoImg: $('photoImg'), shareBtn: $('shareBtn'), introLogo: $('introLogo'), attractBar: $('attractBar'), dailyBest: $('dailyBest') };
-const entrySlotEls = [...document.querySelectorAll('#entryRow .letter')];
+const ui = { menu: $('menu'), over: $('over'), hud: $('hud'), score: $('score'), lives: $('lives'), combo: $('combo'), grade: $('grade'), comboHold: $('comboHold'), comboFill: $('comboFill'), big: $('bigmsg'), bigsub: $('bigsub'), flash: $('flash'), banner: $('banner'), bannerTxt: $('bannerTxt'), worldTag: $('worldTag'), wind: $('windTag'), best: $('best'), newBest: $('newBest'), overStats: $('overStats'), overMedals: $('overMedals'), muteBtn: $('muteBtn'), fxBtn: $('fxBtn'), gpBadge: $('gpBadge'), menuBoard: $('menuBoard'), overBoard: $('overBoard'), entry: $('entry'), entryRank: $('entryRank'), entryScore: $('entryScore'), entryInput: $('entryInput'), photoWrap: $('photoWrap'), photoImg: $('photoImg'), shareBtn: $('shareBtn'), introLogo: $('introLogo'), attractBar: $('attractBar'), dailyBest: $('dailyBest') };
 let lastScore = -1;
 function refreshHUD() {
   if (G.score !== lastScore) {
@@ -746,21 +750,11 @@ document.querySelectorAll('.pick').forEach((el) => {
   });
 });
 
-/* initials-entry buttons */
-entrySlotEls.forEach((el) => {
-  const s = +el.dataset.slot;
-  el.querySelector('.lup').addEventListener('click', (e) => { e.stopPropagation(); entrySpin(s, 1); });
-  el.querySelector('.ldn').addEventListener('click', (e) => { e.stopPropagation(); entrySpin(s, -1); });
-  el.querySelector('.lch').addEventListener('click', () => { entrySlot = s; renderEntry(); });
-});
+/* name-entry: plain text field — Enter confirms, gamepad A confirms (see gpA below) */
 $('entryOk').addEventListener('click', () => entryConfirm());
 addEventListener('keydown', (e) => {
   if (ui.entry.classList.contains('hidden')) return;
-  if (e.code === 'ArrowUp') { entrySpin(entrySlot, 1); e.preventDefault(); }
-  else if (e.code === 'ArrowDown') { entrySpin(entrySlot, -1); e.preventDefault(); }
-  else if (e.code === 'ArrowLeft') { entryMove(-1); e.preventDefault(); }
-  else if (e.code === 'ArrowRight') { entryMove(1); e.preventDefault(); }
-  else if (e.code === 'Enter') { entryConfirm(); e.preventDefault(); }
+  if (e.code === 'Enter') { entryConfirm(); e.preventDefault(); }
 });
 
 function startGame(daily) {
@@ -854,8 +848,11 @@ function handleUp() {
   G.holding = false;
   if (G.state === 'swing' && G.armed) { G.armed = false; releaseBar(); }
 }
-addEventListener('keydown', (e) => { if (e.code === 'Space' && !e.repeat) { e.preventDefault(); handleDown(); } });
-addEventListener('keyup', (e) => { if (e.code === 'Space') { e.preventDefault(); handleUp(); } });
+// Space also needs to type a literal space in the name-entry field — don't hijack it as a
+// flight control while that field is up (or more generally while any text input has focus).
+const typingTarget = () => { const t = document.activeElement; return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA'); };
+addEventListener('keydown', (e) => { if (e.code === 'Space' && !e.repeat && !typingTarget()) { e.preventDefault(); handleDown(); } });
+addEventListener('keyup', (e) => { if (e.code === 'Space' && !typingTarget()) { e.preventDefault(); handleUp(); } });
 app.addEventListener('pointerdown', (e) => { e.preventDefault(); handleDown(); });
 addEventListener('pointerup', handleUp);
 addEventListener('pointercancel', handleUp);
@@ -868,12 +865,9 @@ const gpPrev = {};                       // edge state for d-pad buttons
 function updateGpBadge() { ui.gpBadge.style.display = gpActive ? 'inline-block' : 'none'; }
 function gpNav(d) {                       // directional input routed by screen
   if (intro.active || G.attract) { anyRealInput(); return; }
-  if (!ui.entry.classList.contains('hidden')) {
-    if (d === 'up') entrySpin(entrySlot, 1);
-    else if (d === 'down') entrySpin(entrySlot, -1);
-    else if (d === 'left') entryMove(-1);
-    else if (d === 'right') entryMove(1);
-  } else if (G.mode === 'menu') {
+  // name entry: a gamepad can't type — d-pad has nothing to steer there anymore.
+  if (!ui.entry.classList.contains('hidden')) return;
+  if (G.mode === 'menu') {
     if (d === 'left') selectChar('marc');
     else if (d === 'right') selectChar('claire');
   }
@@ -883,7 +877,16 @@ function gpA(pressed) {                   // A pressed/released, routed by scree
   if (pressed) {
     lastInputT = G.t;
     if (G.mode === 'playing') handleDown();
-    else if (!ui.entry.classList.contains('hidden')) entryConfirm();
+    else if (!ui.entry.classList.contains('hidden')) {
+      // a gamepad can't type a name — A confirms only once something was typed
+      // (keyboard or mobile virtual keyboard); otherwise just focus the field.
+      if (ui.entryInput.value.trim()) entryConfirm();
+      else {
+        try { ui.entryInput.focus({ preventScroll: true }); } catch (e) { ui.entryInput.focus(); }
+        ui.entryInput.classList.remove('needsName'); void ui.entryInput.offsetWidth; ui.entryInput.classList.add('needsName');
+        sfx.click();
+      }
+    }
     else if (G.mode === 'menu') { initAudio(); sfx.click(); startGame(false); }
     else if (G.mode === 'over') { initAudio(); sfx.click(); startGame(G.daily); }   // instant replay
   } else if (G.mode === 'playing') handleUp();
@@ -1262,12 +1265,10 @@ window.__game = {
     try { ['ts3d_high', 'ts3d_combo', 'ts3d_medals', 'ts3d_mute', 'ts3d_board', 'ts3d_daily'].forEach((k) => localStorage.removeItem(k)); } catch (e) {}
     REC = loadRec(); BOARD = loadBoard(); lastBoardIdx = -1; refreshBest(); refreshDaily();
   },
-  // leaderboard + initials-entry harness (3D-5)
+  // leaderboard + name-entry harness (3D-5; text field since the "full name" fix)
   board: () => BOARD.map((e) => ({ ...e })),
-  entry: () => ({ open: !ui.entry.classList.contains('hidden'), slot: entrySlot, chars: entryChars.map((i) => LETTERS[i]).join('') }),
-  setEntry: (str) => { for (let s = 0; s < 3; s++) { const idx = LETTERS.indexOf((str[s] || 'A').toUpperCase()); entryChars[s] = idx < 0 ? 0 : idx; } renderEntry(); },
-  entrySpin: (slot, dir) => entrySpin(slot, dir),
-  entryMove: (dir) => entryMove(dir),
+  entry: () => ({ open: !ui.entry.classList.contains('hidden'), value: ui.entryInput.value }),
+  setEntry: (str) => { ui.entryInput.value = String(str == null ? '' : str).slice(0, NAME_MAX); },
   entryConfirm: () => entryConfirm(),
   gp: () => ({ active: gpActive }),
   // world leaderboard (3D-8): inspect state + inject a test config (mock endpoint in smoke tests)

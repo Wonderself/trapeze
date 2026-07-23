@@ -24,7 +24,7 @@ ci-dessous → **Run**.
 -- Table des scores du leaderboard mondial
 create table public.scores (
   id bigint generated always as identity primary key,
-  initials text not null check (initials ~ '^[A-Z0-9]{3}$'),
+  initials text not null check (char_length(initials) between 1 and 20),
   score int not null check (score >= 0 and score <= 500000),
   world int not null default 0 check (world between 0 and 3),
   lap int not null default 0 check (lap between 0 and 999),
@@ -41,7 +41,7 @@ create policy "anon can read scores"
 -- Ajout d'un score par tout le monde, avec les mêmes bornes que la table
 create policy "anon can insert a score"
   on public.scores for insert to anon with check (
-    initials ~ '^[A-Z0-9]{3}$'
+    char_length(initials) between 1 and 20
     and score between 0 and 500000
     and world between 0 and 3
     and lap between 0 and 999
@@ -50,6 +50,22 @@ create policy "anon can insert a score"
 -- Volontairement AUCUNE policy UPDATE / DELETE : personne ne peut modifier
 -- ou effacer un score depuis le jeu.
 ```
+
+> ℹ️ La colonne s'appelle `initials` pour rester compatible avec l'ancien design (3 lettres
+> arcade), mais elle contient désormais le **nom complet** du joueur (jusqu'à 20 caractères) —
+> le jeu ne demande plus que 3 initiales, voir CLAUDE.md/AUDIT.md pour l'historique du correctif.
+>
+> Si tu as déjà créé cette table avec l'ancienne contrainte à 3 lettres, mets-la à jour sans
+> perdre les scores existants :
+> ```sql
+> alter table public.scores drop constraint scores_initials_check;
+> alter table public.scores add constraint scores_initials_check check (char_length(initials) between 1 and 20);
+> drop policy "anon can insert a score" on public.scores;
+> create policy "anon can insert a score" on public.scores for insert to anon with check (
+>   char_length(initials) between 1 and 20
+>   and score between 0 and 500000 and world between 0 and 3 and lap between 0 and 999
+> );
+> ```
 
 Tu dois voir `Success. No rows returned`.
 

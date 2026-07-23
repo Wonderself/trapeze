@@ -9,8 +9,12 @@
  *  - Short timeout (3.5 s) + one light retry on reads; silent failure everywhere:
  *    offline / misconfigured / server error => callers fall back to the local board,
  *    never an error message on screen.
- *  - Client-side sanity (the real guard is RLS server-side): initials filtered to
- *    A-Z0-9 (3 chars), score clamped to a plausible bound, one submit per run.
+ *  - Client-side sanity (the real guard is RLS server-side): name filtered to
+ *    letters/digits/space/apostrophe/hyphen (max 20 chars), score clamped to a
+ *    plausible bound, one submit per run. The wire/column name stays `initials`
+ *    for backward compatibility with any Supabase table already deployed from
+ *    the original 3-letter design (see SUPABASE_SETUP.md for the schema note
+ *    on widening the length check if the column still enforces 3 chars).
  *
  * Setup guide for the free Supabase project: game3d/SUPABASE_SETUP.md
  */
@@ -47,8 +51,14 @@ async function req(path, opts = {}, retries = 0) {
   } finally { clearTimeout(t); }
 }
 
-const cleanInitials = (v) =>
-  (String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '') + 'AAA').slice(0, 3);
+const NAME_MAX = 20;
+// same charset rule as the local board (main.js sanitizeName): letters/digits/
+// space/apostrophe/hyphen, trimmed, capped, never empty. Also handles legacy
+// rows/inputs that are still plain 3-letter initials — they pass through unchanged.
+const cleanName = (v) => {
+  const cleaned = String(v || '').replace(/[^\p{L}\p{N} '\-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, NAME_MAX).trim();
+  return cleaned || 'PLAYER';
+};
 const cleanScore = (v) => Math.max(0, Math.min(SCORE_MAX, Math.round(+v || 0)));
 
 /* GET top n world scores → [{i, s, w, l}] or null on any failure (caller falls back) */
@@ -60,7 +70,7 @@ export async function fetchWorldTop(n = 10) {
     if (!Array.isArray(rows)) return null;
     // sanitize server rows before they reach innerHTML
     return rows.slice(0, n).map((e) => ({
-      i: cleanInitials(e.initials), s: cleanScore(e.score),
+      i: cleanName(e.initials), s: cleanScore(e.score),
       w: Math.max(0, Math.min(3, e.world | 0)), l: Math.max(0, Math.min(999, e.lap | 0)),
     }));
   } catch (e) { return null; }
@@ -69,14 +79,14 @@ export async function fetchWorldTop(n = 10) {
 /* POST one score. Throttled to one submit per run (reset via netNewRun in startGame). */
 let submittedThisRun = false;
 export function netNewRun() { submittedThisRun = false; }
-export async function submitWorldScore({ initials, score, world = 0, lap = 0 }) {
+export async function submitWorldScore({ name, score, world = 0, lap = 0 }) {
   if (!netConfigured() || submittedThisRun) return false;
   submittedThisRun = true;
   try {
     await req('', {
       method: 'POST',
       body: JSON.stringify({
-        initials: cleanInitials(initials), score: cleanScore(score),
+        initials: cleanName(name), score: cleanScore(score),   // `initials` column kept for schema back-compat
         world: Math.max(0, Math.min(3, world | 0)), lap: Math.max(0, Math.min(999, lap | 0)),
       }),
     });

@@ -1,6 +1,6 @@
 // Headless WebGL smoke test — Session 3D-1 criteria (a)-(f), 3D-2 (g) 3D menu,
 // 3D-3 (h) 4 worlds + safety net + full traversal, 3D-4 (d/e/f/j) endless+records+audio,
-// 3D-5 (k) gamepad mapping + arcade initials entry + persistent top-10 leaderboard,
+// 3D-5 (k) gamepad mapping + full-name entry (up to 20 chars, real text field) + persistent top-10 leaderboard,
 // 3D-8 (r/s/t) world leaderboard: inert when unconfigured, mocked Supabase GET/POST, silent fallback.
 // Environment-agnostic: resolves playwright + paths so it runs anywhere.
 import { createRequire } from 'node:module';
@@ -254,18 +254,15 @@ try {
   await page.waitForTimeout(600);
   await page.screenshot({ path: `${OUT}/3d4-lap2.png` });   // endless banner / lap 2 under way
 
-  // ---- (k2) a top-10 run stops for initials (arcade wheel), driven by real keyboard events ----
+  // ---- (k2) a top-10 run stops for a full-name entry (real <input maxlength="20">), driven by
+  //      real keyboard typing — also exercises the 20-char cap with a name longer than that ----
   results.k_entryOpen = await page.evaluate(() => { window.__game.over(); return window.__game.entry(); });
-  await page.evaluate(() => {
-    const key = (code) => window.dispatchEvent(new KeyboardEvent('keydown', { code, bubbles: true }));
-    key('ArrowRight');                                  // A A A -> slot 1
-    key('ArrowUp'); key('ArrowUp');                     // slot 1: A -> C
-    key('ArrowRight');                                  // -> slot 2
-    key('ArrowUp'); key('ArrowUp'); key('ArrowUp'); key('ArrowUp'); // slot 2: A -> E  => "ACE"
-  });
-  results.k_entryChars = await page.evaluate(() => window.__game.entry().chars);
+  const LONG_NAME = 'MARC THE GREAT WONDER';               // 21 chars — must land truncated to 20
+  await page.click('#entryInput');
+  await page.keyboard.type(LONG_NAME);
+  results.k_entryValue = await page.evaluate(() => window.__game.entry().value);
   await page.screenshot({ path: `${OUT}/3d5-entry.png` });
-  await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter', bubbles: true }))); // confirm
+  await page.keyboard.press('Enter'); // confirm
 
   // ---- (e) enriched end screen + records + leaderboard entry written ----
   results.e_end = await page.evaluate(() => {
@@ -364,7 +361,8 @@ try {
   }));
   await page.evaluate(() => window.__game.over());
   results.s_entry = await page.evaluate(() => window.__game.entry());
-  await page.evaluate(() => { window.__game.setEntry('SUP'); window.__game.entryConfirm(); });
+  const WORLD_NAME = 'SUPER CHAMPION';                     // full name, not just 3 letters
+  await page.evaluate((n) => { window.__game.setEntry(n); window.__game.entryConfirm(); }, WORLD_NAME);
   await page.waitForTimeout(1400);   // POST then top-10 refetch
   results.s_post = postedBodies.length ? postedBodies[0] : null;
   results.s_postCount = postedBodies.length;
@@ -415,11 +413,12 @@ try {
   // ---- 3D-5 gates ----
   else if (!(results.k_gamepad && results.k_gamepad.active && results.k_gamepad.badge
              && results.k_gamepad.started && !results.k_gamepad.inactiveAfter)) code = 17;  // gamepad hot-plug + A mapping
-  else if (!(results.k_entryOpen && results.k_entryOpen.open && results.k_entryChars === 'ACE'
+  else if (!(results.k_entryOpen && results.k_entryOpen.open
+             && results.k_entryValue === LONG_NAME.slice(0, 20) && results.k_entryValue.length === 20
              && results.e_end.boardShown && results.e_end.boardLen >= 1
-             && results.e_end.top && results.e_end.top.i === 'ACE' && results.e_end.top.s === results.e_end.score)) code = 18;  // arcade initials entry
+             && results.e_end.top && results.e_end.top.i === LONG_NAME.slice(0, 20) && results.e_end.top.s === results.e_end.score)) code = 18;  // full-name entry, capped at 20 chars
   else if (!(results.f_persist.board && results.f_persist.board.length >= 1
-             && results.f_persist.board[0].i === 'ACE' && results.f_persist.board[0].s === results.e_end.score
+             && results.f_persist.board[0].i === LONG_NAME.slice(0, 20) && results.f_persist.board[0].s === results.e_end.score
              && results.f_persist.boardRows >= 1)) code = 19;  // top-10 leaderboard survives reload
   // ---- 3D-6 gates ----
   else if (!(results.l_fxDefault && results.l_fxDefault.reduceFx === false
@@ -443,9 +442,9 @@ try {
              && results.s_worldTab.tabs === 2 && results.s_worldTab.rowCount >= 2
              && results.s_worldTab.topIn === 'ZAP' && results.s_worldTab.rows[0].s === 91000)) code = 28;  // mocked GET fills the WORLD tab
   else if (!(results.s_run && results.s_run.ok && results.s_entry && results.s_entry.open
-             && results.s_post && results.s_post.initials === 'SUP' && results.s_post.score === results.s_run.score
+             && results.s_post && results.s_post.initials === WORLD_NAME && results.s_post.score === results.s_run.score
              && results.s_postCount === 1
-             && results.s_net2 && results.s_net2.lastSubmit && results.s_net2.lastSubmit.i === 'SUP')) code = 29;  // end-of-run POST: initials+score, one per run
+             && results.s_net2 && results.s_net2.lastSubmit && results.s_net2.lastSubmit.i === WORLD_NAME)) code = 29;  // end-of-run POST: full name+score, one per run
   else if (!(results.t_fail && results.t_fail.configured && results.t_fail.tab === 'local'
              && results.t_fail.rows === null && results.t_fail.localRows >= 1
              && results.t_fail.tabSel === 'LOCAL')) code = 30;  // network failure: silent LOCAL fallback
