@@ -2,6 +2,8 @@
    Same philosophy as the 2D game's playCircus/playJungle: short scheduled loops,
    but driven from the rAF loop via update() with a small lookahead. */
 
+import { voiceURL, hasAnyVoiceFile } from './assets.js';
+
 let ctx = null, master = null, musG = null, sfxG = null, noiseBuf = null;
 let muted = false, step = 0, nextT = 0, curWorld = 0;
 
@@ -21,7 +23,7 @@ export function initAudio() {
     if (ctx.state === 'suspended') ctx.resume().catch(() => {});
   } catch (e) { ctx = null; }
 }
-export function setMuted(m) { muted = m; if (master) master.gain.value = m ? 0 : 0.9; }
+export function setMuted(m) { muted = m; if (master) master.gain.value = m ? 0 : 0.9; if (m) voiceCancel(); }
 export function audioState() { return { ready: !!ctx, running: ctx ? ctx.state : 'none', muted }; }
 
 /* ── primitives ── */
@@ -91,9 +93,11 @@ function schedStep(st, t) {
 
 export function setWorld(w) { if (w !== curWorld) { curWorld = w; } }
 export function updateAudio(mode) {
+  voicePump();                       // voice runs even without an AudioContext (speechSynthesis)
+  duck += (duckTarget - duck) * 0.05;
   if (!ctx) return;
   if (ctx.state === 'suspended') { try { ctx.resume(); } catch (e) {} }
-  const want = mode === 'playing' && !muted ? 0.16 : 0;
+  const want = mode === 'playing' && !muted ? 0.16 * duck : 0;
   musG.gain.value += (want - musG.gain.value) * 0.08;
   if (mode !== 'playing') { nextT = 0; return; }
   const t = ctx.currentTime;
@@ -126,3 +130,147 @@ export const sfx = {
     }
   }),
 };
+
+/* ══════════════ PRESENTER VOICE (3D-9A) ══════════════
+ * A ringmaster announcing the show. Priority queue, no overlap, no repeats,
+ * a 2.5 s floor between lines and a per-line cooldown, so it never nags.
+ *
+ * Two backends, picked automatically and silently:
+ *   (a) static files  public/voice/<id>.mp3  — only when declared in src/assets.js
+ *       (declaring is what guarantees zero 404 / zero console error when absent)
+ *   (b) the browser's speechSynthesis, en-US, tuned bright & quick for a circus MC
+ *   (c) nothing available, or sound/voice muted → total silence
+ *
+ * Ducking: the generative music drops ~8 dB while a line plays and eases back after.
+ * Reactive lines are queued with a small delay so they land AFTER the SFX peak
+ * (fanfare / catch ding) instead of fighting it.
+ * The ids below are stable: they become the filenames in phase B. */
+const LINES = {
+  welcome: 'Ladies and gentlemen... welcome to Trapeze Stars!',
+  begin: 'Let the show begin!',
+  perfect: 'Perfect!',
+  combo10: 'Ten in a row! Incredible!',
+  combo25: 'Twenty-five! The crowd goes wild!',
+  world_jungle: 'Into the jungle!',
+  world_beach: 'To the beach!',
+  world_space: 'Off to the stars!',
+  net: 'Saved by the net!',
+  record: 'A new world record!',
+  endless: 'Endless mode! No stopping now!',
+  bye: 'What a performance! Come back soon!',
+};
+export const VOICE_IDS = Object.keys(LINES);
+
+const V_GAP = 2.5;            // s minimum between two spoken lines
+const V_QUEUE_MAX = 3;
+const vNow = () => performance.now() / 1000;
+
+let voiceOn = true;
+let vQueue = [];              // [{id, prio, at}] — pending lines
+let vCur = null;              // currently speaking line
+let vLastEnd = -999, vLastId = null;
+const vSaidAt = {};           // id -> last time it was accepted (per-line cooldown)
+const vFiles = new Map();     // url -> HTMLAudioElement cache
+let duck = 1, duckTarget = 1; // music ducking factor (~-8 dB while speaking)
+
+export function voiceBackend() {
+  if (hasAnyVoiceFile()) return 'files';
+  try {
+    if (typeof speechSynthesis !== 'undefined' && speechSynthesis &&
+        typeof SpeechSynthesisUtterance !== 'undefined') return 'speech';
+  } catch (e) {}
+  return 'none';
+}
+export function setVoiceEnabled(v) { voiceOn = !!v; if (!voiceOn) voiceCancel(); }
+export function voiceEnabled() { return voiceOn; }
+export function voiceState() {
+  return {
+    enabled: voiceOn && !muted,
+    backend: (voiceOn && !muted) ? voiceBackend() : 'none',
+    queue: vQueue.map((q) => q.id),
+    speaking: vCur ? vCur.id : null,
+    lastId: vLastId,
+    ducking: +duck.toFixed(2),
+  };
+}
+export function voiceCancel() {
+  vQueue = [];
+  if (vCur) { try { vCur.stop(); } catch (e) {} }
+  vCur = null; duckTarget = 1;
+}
+
+/* say(id, {prio, delay, cooldown}) — returns true when the line was accepted.
+ * prio 3 = show beats (welcome/begin/record/bye), 2 = milestones, 1 = flavour. */
+export function say(id, opts) {
+  const o = opts || {};
+  if (!LINES[id] || !voiceOn || muted) return false;
+  if (voiceBackend() === 'none') return false;
+  const prio = o.prio == null ? 1 : o.prio;
+  const t = vNow();
+  if (o.cooldown && vSaidAt[id] != null && t - vSaidAt[id] < o.cooldown) return false;
+  // anti-duplicate: never two copies of the same line in flight
+  if ((vCur && vCur.id === id) || vQueue.some((q) => q.id === id)) return false;
+  // a higher-priority line drops the lower-priority ones still waiting (never the reverse)
+  if (prio > 1) vQueue = vQueue.filter((q) => q.prio >= prio);
+  if (vCur && prio > vCur.prio) endVoice();
+  vQueue.push({ id, prio, at: t + (o.delay || 0) });
+  vQueue.sort((a, b) => b.prio - a.prio || a.at - b.at);
+  if (vQueue.length > V_QUEUE_MAX) vQueue.length = V_QUEUE_MAX;
+  vSaidAt[id] = t;
+  return true;
+}
+
+function endVoice() {
+  if (vCur) { try { vCur.stop(); } catch (e) {} }
+  vCur = null; vLastEnd = vNow(); duckTarget = 1;
+}
+function voicePump() {
+  const t = vNow();
+  if (vCur) { if (t > vCur.deadline) endVoice(); else return; }
+  if (!vQueue.length) return;
+  if (!voiceOn || muted) { vQueue = []; return; }
+  if (t - vLastEnd < V_GAP) return;
+  if (t < vQueue[0].at) return;
+  startVoice(vQueue.shift());
+}
+function startVoice(item) {
+  const text = LINES[item.id];
+  const est = 0.9 + text.length * 0.055;                 // watchdog: headless/blocked TTS never fires onend
+  vCur = { id: item.id, prio: item.prio, deadline: vNow() + est + 1.6, stop: () => {} };
+  vLastId = item.id;
+  duckTarget = 0.4;                                       // ≈ -8 dB on the music bed
+  const url = voiceURL(item.id);
+  if (url) playVoiceFile(url, text, item, est); else speakLine(text);
+}
+function playVoiceFile(url, text, item, est) {
+  let el = vFiles.get(url);
+  if (!el) {
+    el = new Audio(url);
+    el.preload = 'auto';
+    vFiles.set(url, el);
+  }
+  const cur = vCur;
+  el.onended = () => { if (vCur === cur) endVoice(); };
+  el.onerror = () => { if (vCur === cur) { el.onended = null; speakLine(text); } };   // silent: fall back to TTS
+  cur.stop = () => { try { el.pause(); el.currentTime = 0; } catch (e) {} };
+  try {
+    el.currentTime = 0;
+    const p = el.play();
+    if (p && p.catch) p.catch(() => {});                  // autoplay refused → watchdog closes the line
+  } catch (e) {}
+}
+function speakLine(text) {
+  const cur = vCur;
+  if (!cur) return;
+  try {
+    if (typeof speechSynthesis === 'undefined' || typeof SpeechSynthesisUtterance === 'undefined') {
+      cur.deadline = vNow() + 0.05; return;
+    }
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US'; u.pitch = 1.25; u.rate = 1.03; u.volume = 1;   // bright, quick — a circus MC
+    u.onend = () => { if (vCur === cur) endVoice(); };
+    u.onerror = () => { if (vCur === cur) endVoice(); };
+    cur.stop = () => { try { speechSynthesis.cancel(); } catch (e) {} };
+    speechSynthesis.speak(u);
+  } catch (e) { cur.deadline = vNow() + 0.05; }
+}

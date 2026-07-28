@@ -69,6 +69,18 @@ export function createStage(container) {
 
   // ?lowfx -> skip post-processing (slow GPUs / software rendering fallback)
   const lowfx = new URLSearchParams(location.search).has('lowfx');
-  const render = lowfx ? () => renderer.render(scene, camera) : () => composer.render();
-  return { renderer, scene, camera, composer, key, ambient, rim, fill, render };
+  // Draw-call budget (3D-9A). The composer calls renderer.render() several times per frame,
+  // so auto-reset would only ever report the last pass. Reset once per frame, then snapshot
+  // the counter when the scene itself is done: that gives the SCENE cost (shadow map + main
+  // pass), which is the number the < 120 mobile budget is about. The fixed handful of
+  // fullscreen bloom quads that follow are post-processing, not scene complexity.
+  renderer.info.autoReset = false;
+  let sceneCalls = 0;
+  scene.onAfterRender = () => { sceneCalls = renderer.info.render.calls; };
+  const render = lowfx
+    ? () => { renderer.info.reset(); renderer.render(scene, camera); }
+    : () => { renderer.info.reset(); composer.render(); };
+  const calls = () => sceneCalls;
+  const callsTotal = () => renderer.info.render.calls;
+  return { renderer, scene, camera, composer, key, ambient, rim, fill, render, calls, callsTotal };
 }

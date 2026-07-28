@@ -1,4 +1,219 @@
 import * as THREE from 'three';
+import { artURL, skyURL } from './assets.js';
+
+const makeCanvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+const canvasTex = (c) => { const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
+/* The webfont (Fredoka) usually lands after module init — repaint the texture once it's ready. */
+function repaintOnFontsReady(draw, tex) {
+  try {
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { draw(); tex.needsUpdate = true; }).catch(() => {});
+  } catch (e) {}
+}
+/* Optional AI art (see src/assets.js): swaps in only when the file is declared — never a 404. */
+function optionalArt(file, mat) {
+  const url = artURL(file);
+  if (!url) return;
+  new THREE.TextureLoader().load(url, (tex) => {
+    tex.colorSpace = THREE.SRGBColorSpace;
+    mat.map = tex; mat.needsUpdate = true;
+  }, undefined, () => {});   // silent: keep the procedural texture
+}
+
+function star5(x, cx, cy, r) {
+  x.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? r * 0.44 : r;
+    x[i ? 'lineTo' : 'moveTo'](cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+  }
+  x.closePath();
+}
+
+/* ── Hollywood-Boulevard marquee lettering, circus dress ── */
+function signTexture() {
+  const c = makeCanvas(1024, 288), x = c.getContext('2d');
+  const draw = () => {
+    const g = x.createLinearGradient(0, 0, 0, 288);
+    g.addColorStop(0, '#33081a'); g.addColorStop(0.5, '#590f28'); g.addColorStop(1, '#2a0614');
+    x.fillStyle = g; x.fillRect(0, 0, 1024, 288);
+    for (let i = 0; i < 26; i++) {   // art-deco rays
+      x.fillStyle = i % 2 ? 'rgba(255,207,63,.055)' : 'rgba(255,255,255,.02)';
+      x.fillRect(i * 40, 0, 20, 288);
+    }
+    x.strokeStyle = '#ffcf3f'; x.lineWidth = 12; x.strokeRect(16, 16, 992, 256);
+    x.strokeStyle = '#ffe9a8'; x.lineWidth = 4; x.strokeRect(38, 38, 948, 212);
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.font = '700 128px Fredoka, Impact, "Arial Black", sans-serif';
+    x.lineJoin = 'round'; x.lineWidth = 18; x.strokeStyle = '#4a0a18';
+    x.strokeText('TRAPEZE STARS', 512, 150);
+    const gg = x.createLinearGradient(0, 80, 0, 218);
+    gg.addColorStop(0, '#fffadf'); gg.addColorStop(0.48, '#ffcf3f'); gg.addColorStop(1, '#ff8f18');
+    x.fillStyle = gg; x.fillText('TRAPEZE STARS', 512, 150);
+  };
+  draw();
+  const tex = canvasTex(c);
+  repaintOnFontsReady(draw, tex);
+  return tex;
+}
+function nowShowingTexture() {
+  const c = makeCanvas(1024, 160), x = c.getContext('2d');
+  const draw = () => {
+    x.fillStyle = '#12040f'; x.fillRect(0, 0, 1024, 160);
+    x.strokeStyle = '#ffcf3f'; x.lineWidth = 7; x.strokeRect(8, 8, 1008, 144);
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.font = '700 62px Fredoka, Impact, "Arial Black", sans-serif';
+    x.fillStyle = '#ffe9a8';
+    x.fillText('NOW SHOWING  ·  MARC & CLAIRE', 512, 86);
+  };
+  draw();
+  const tex = canvasTex(c);
+  repaintOnFontsReady(draw, tex);
+  return tex;
+}
+function posterTexture(n) {
+  const c = makeCanvas(384, 576), x = c.getContext('2d');
+  const draw = () => {
+    for (let s = 0; s < 12; s++) { x.fillStyle = s % 2 ? '#f6e9cf' : '#d4293a'; x.fillRect(s * 32, 0, 32, 576); }
+    x.fillStyle = 'rgba(18,4,28,.76)'; x.fillRect(26, 26, 332, 524);
+    x.strokeStyle = '#ffcf3f'; x.lineWidth = 11; x.strokeRect(20, 20, 344, 536);
+    x.strokeStyle = '#ffe9a8'; x.lineWidth = 3; x.strokeRect(40, 40, 304, 496);
+    x.fillStyle = 'rgba(255,207,63,.9)';
+    star5(x, 192, 236, 96); x.fill();
+    x.fillStyle = 'rgba(18,4,28,.85)';
+    star5(x, 192, 236, 62); x.fill();
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillStyle = '#ffe9a8'; x.font = '700 40px Fredoka, Impact, sans-serif';
+    x.fillText(n === 1 ? 'THE FLYING' : 'ONE NIGHT', 192, 108);
+    x.fillText(n === 1 ? 'MARC' : 'CLAIRE', 192, 152);
+    x.fillStyle = '#fff'; x.font = '700 34px Fredoka, Impact, sans-serif';
+    x.fillText(n === 1 ? 'TONIGHT' : 'ON STAGE', 192, 396);
+    x.fillStyle = '#ffcf3f'; x.font = '700 26px Fredoka, sans-serif';
+    x.fillText('★  TRAPEZE STARS  ★', 192, 452);
+  };
+  draw();
+  const tex = canvasTex(c);
+  repaintOnFontsReady(draw, tex);
+  return tex;
+}
+
+/* ══════════════ THEATRE MARQUEE (3D-9A) ══════════════
+ * El Capitan / Hollywood Boulevard silhouette, circus dressing: protruding trapezoid
+ * canopy, art-deco façade, giant lettering, show posters — and the signature detail,
+ * a chasing bulb contour done with a SINGLE InstancedMesh (~82 bulbs, 1 draw call).
+ * Whole structure ≈ 10 draw calls. No new dynamic shadow, no reflector. */
+function buildMarquee(group, mx, mz, ry) {
+  const marquee = new THREE.Group();
+  marquee.position.set(mx, 0, mz);
+  marquee.rotation.y = ry || 0;
+  group.add(marquee);
+
+  const BASE_Y = -3.0;                        // façade centre; the slab sits on the floor (y = -8)
+  const halfW = 8.2, facH = 10;
+  // ---- façade slab ----
+  const facTex = stripeTexture('#4a0c22', '#2a0614', 9);
+  facTex.repeat.set(9, 1);
+  const facade = new THREE.Mesh(
+    new THREE.BoxGeometry(halfW * 2, facH, 0.9),
+    new THREE.MeshStandardMaterial({ map: facTex, roughness: 0.85, emissive: 0x2a0818, emissiveIntensity: 0.9 })
+  );
+  facade.position.set(0, BASE_Y, 0);
+  marquee.add(facade);
+
+  // ---- art-deco crest ----
+  const crest = new THREE.Mesh(
+    new THREE.BoxGeometry(halfW * 2 + 0.7, 0.6, 1.3),
+    new THREE.MeshStandardMaterial({ color: 0xffcf3f, emissive: 0xff9a10, emissiveIntensity: 1.1, roughness: 0.4, metalness: 0.3 })
+  );
+  crest.position.set(0, BASE_Y + facH / 2 + 0.3, 0.2);
+  marquee.add(crest);
+
+  // ---- pilasters ----
+  const pilMat = new THREE.MeshStandardMaterial({ color: 0xf0d9a8, roughness: 0.6, metalness: 0.2, emissive: 0x4a3010, emissiveIntensity: 0.9 });
+  for (const s of [-1, 1]) {
+    const p = new THREE.Mesh(new THREE.BoxGeometry(1.1, facH, 1.2), pilMat);
+    p.position.set(s * (halfW - 0.25), BASE_Y, 0.35);
+    marquee.add(p);
+  }
+
+  // ---- main sign ("TRAPEZE STARS") — a poster/logo file can replace it later ----
+  const signMat = new THREE.MeshBasicMaterial({ map: signTexture(), toneMapped: false });
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(12.4, 3.5), signMat);
+  sign.position.set(0, BASE_Y + 2.7, 0.5);
+  marquee.add(sign);
+  optionalArt('logo.png', signMat);
+
+  // ---- protruding trapezoid canopy ----
+  const backHalf = 6.0, frontHalf = 4.0, depth = 3.4, canY = BASE_Y - 1.2;
+  const shp = new THREE.Shape();
+  shp.moveTo(-backHalf, 0); shp.lineTo(backHalf, 0); shp.lineTo(frontHalf, depth); shp.lineTo(-frontHalf, depth); shp.closePath();
+  const canopy = new THREE.Mesh(
+    new THREE.ExtrudeGeometry(shp, { depth: 0.65, bevelEnabled: false }),
+    new THREE.MeshStandardMaterial({ color: 0xc41f36, emissive: 0x6a0813, emissiveIntensity: 1.0, roughness: 0.65, side: THREE.DoubleSide })
+  );
+  canopy.rotation.x = Math.PI / 2;            // shape XY → world XZ, extrusion becomes thickness
+  canopy.position.set(0, canY, 0.45);
+  marquee.add(canopy);
+
+  // ---- canopy fascia: "NOW SHOWING · MARC & CLAIRE" ----
+  const fascia = new THREE.Mesh(
+    new THREE.PlaneGeometry(frontHalf * 1.9, 1.15),
+    new THREE.MeshBasicMaterial({ map: nowShowingTexture(), toneMapped: false })
+  );
+  fascia.position.set(0, canY - 0.82, 0.45 + depth + 0.03);
+  marquee.add(fascia);
+
+  // ---- show posters (procedural now, AI art later via src/assets.js) ----
+  for (const [s, n] of [[-1, 1], [1, 2]]) {
+    const m = new THREE.MeshBasicMaterial({ map: posterTexture(n), toneMapped: false });
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 3.5), m);
+    p.position.set(s * 7.0, BASE_Y - 3.0, 0.52);
+    marquee.add(p);
+    optionalArt('poster-' + n + '.jpg', m);
+  }
+
+  // ---- CHASING BULBS: one InstancedMesh, colour-animated per instance ----
+  const pts = [];
+  {   // sign frame loop
+    const fw = 6.5, fh = 2.1, cy = BASE_Y + 2.7, cz = 0.62;
+    const nx = 17, ny = 6, path = [];
+    for (let i = 0; i < nx; i++) path.push([-fw + (2 * fw * i) / nx, -fh]);
+    for (let i = 0; i < ny; i++) path.push([fw, -fh + (2 * fh * i) / ny]);
+    for (let i = 0; i < nx; i++) path.push([fw - (2 * fw * i) / nx, fh]);
+    for (let i = 0; i < ny; i++) path.push([-fw, fh - (2 * fh * i) / ny]);
+    path.forEach((p, i) => pts.push({ x: p[0], y: cy + p[1], z: cz, s: i / path.length, loop: 0 }));
+  }
+  {   // canopy edge: left side → front edge → right side
+    const z0 = 0.5, z1 = 0.45 + depth, y = canY - 0.12, path = [];
+    const nS = 6, nF = 19;
+    for (let i = 0; i < nS; i++) { const f = i / nS; path.push([-(backHalf + (frontHalf - backHalf) * f), z0 + (z1 - z0) * f]); }
+    for (let i = 0; i <= nF; i++) { const f = i / nF; path.push([-frontHalf + 2 * frontHalf * f, z1]); }
+    for (let i = 1; i <= nS; i++) { const f = 1 - i / nS; path.push([backHalf + (frontHalf - backHalf) * f, z0 + (z1 - z0) * f]); }
+    path.forEach((p, i) => pts.push({ x: p[0], y, z: p[1], s: i / path.length, loop: 1 }));
+  }
+  const bulbs = new THREE.InstancedMesh(
+    new THREE.SphereGeometry(0.17, 6, 5),
+    new THREE.MeshBasicMaterial({ toneMapped: false }),
+    pts.length
+  );
+  bulbs.frustumCulled = false;
+  const bd = new THREE.Object3D();
+  pts.forEach((p, i) => { bd.position.set(p.x, p.y, p.z); bd.updateMatrix(); bulbs.setMatrixAt(i, bd.matrix); bulbs.setColorAt(i, new THREE.Color(1, 0.85, 0.4)); });
+  bulbs.instanceMatrix.needsUpdate = true;
+  marquee.add(bulbs);
+
+  const _bc = new THREE.Color();
+  const update = (t) => {
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      // two waves running around each contour, offset per loop
+      const w = Math.sin((p.s - t * (p.loop ? 0.22 : 0.3)) * Math.PI * 2 * 3);
+      const v = 0.22 + 0.78 * Math.pow(Math.max(0, w), 2.2);
+      _bc.setRGB(v * 1.6, v * 1.32 + 0.05, v * 0.55);
+      bulbs.setColorAt(i, _bc);
+    }
+    if (bulbs.instanceColor) bulbs.instanceColor.needsUpdate = true;
+  };
+  return { marquee, update, bulbCount: pts.length };
+}
 
 // Red/cream vertical-stripe canvas texture for the big-top canvas.
 function stripeTexture(cRED = '#d4293a', cCREAM = '#f6e9cf', stripes = 2) {
@@ -49,6 +264,13 @@ export function createWorld(scene, segs) {
   const fullX0 = sCirc.x0, fullX1 = sSpace.x1;
   const fullLen = fullX1 - fullX0;
 
+  /* Per-world décor groups (3D-9A budget pass). The camera stares straight down the rail with a
+   * 400-unit far plane, so props from worlds the player left long ago stayed inside the frustum
+   * and cost draw calls while the exponential fog had already erased them. Each world's props
+   * live in their own group, switched off past DECOR_PAD units — invisible change, big saving. */
+  const wg = [0, 1, 2, 3].map(() => { const g = new THREE.Group(); group.add(g); return g; });
+  const DECOR_PAD = 55;
+
   // ---- per-world floor strips ----
   const floorSpecs = [
     { c: 0x1c0a2c, rough: 0.42, metal: 0.45 },  // circus: dark glossy
@@ -79,20 +301,20 @@ export function createWorld(scene, segs) {
   );
   piste.rotation.x = -Math.PI / 2; piste.position.set(cx, -7.97, 0);
   piste.receiveShadow = true;
-  group.add(piste);
+  wg[0].add(piste);
   const pisteRim = new THREE.Mesh(
     new THREE.TorusGeometry(13, 0.28, 8, 64),
     new THREE.MeshStandardMaterial({ color: 0xffcf3f, emissive: 0xff8a00, emissiveIntensity: 1.1, roughness: 0.4 })
   );
   pisteRim.rotation.x = -Math.PI / 2; pisteRim.position.set(cx, -7.9, 0);
-  group.add(pisteRim);
+  wg[0].add(pisteRim);
 
   // glowing edge stripes along the circus runway
   const stripeMat = new THREE.MeshStandardMaterial({ color: 0xffcf3f, emissive: 0xff8a00, emissiveIntensity: 1.2, roughness: 0.5 });
   for (const z of [-9, 9]) {
     const s = new THREE.Mesh(new THREE.BoxGeometry(segLen + 16, 0.25, 0.5), stripeMat);
     s.position.set(cx, -7.9, z);
-    group.add(s);
+    wg[0].add(s);
   }
 
   // big top: striped walls + conical roof, sized to the circus segment only
@@ -105,7 +327,7 @@ export function createWorld(scene, segs) {
     new THREE.MeshStandardMaterial({ map: wallTex, side: THREE.BackSide, roughness: 0.95, emissive: 0x120a14, emissiveIntensity: 0.35 })
   );
   wall.position.set(cx, (wallTop - 8.5) / 2, 0);
-  group.add(wall);
+  wg[0].add(wall);
 
   const roofTex = stripeTexture('#d4293a', '#f6e9cf', 1);
   roofTex.repeat.set(24, 1);
@@ -114,27 +336,27 @@ export function createWorld(scene, segs) {
     new THREE.MeshStandardMaterial({ map: roofTex, side: THREE.DoubleSide, roughness: 0.8, emissive: 0x2a0d10, emissiveIntensity: 0.5 })
   );
   roof.position.set(cx, (wallTop + apexY) / 2, 0);
-  group.add(roof);
+  wg[0].add(roof);
 
   const rim = new THREE.Mesh(
     new THREE.TorusGeometry(6, 0.4, 8, 40),
     new THREE.MeshStandardMaterial({ color: 0xffcf3f, emissive: 0xffab00, emissiveIntensity: 1.3, roughness: 0.4 })
   );
   rim.rotation.x = Math.PI / 2; rim.position.set(cx, apexY, 0);
-  group.add(rim);
+  wg[0].add(rim);
 
   const mast = new THREE.Mesh(
     new THREE.CylinderGeometry(0.3, 0.36, apexY + 12, 10),
     new THREE.MeshStandardMaterial({ color: 0xe8d9b8, roughness: 0.7, metalness: 0.2 })
   );
   mast.position.set(cx, (apexY + 12) / 2 - 8.5, 0);
-  group.add(mast);
+  wg[0].add(mast);
   const pennant = new THREE.Mesh(
     new THREE.ConeGeometry(0.5, 1.6, 3),
     new THREE.MeshStandardMaterial({ color: 0xff5c7a, emissive: 0xff2d55, emissiveIntensity: 0.7, side: THREE.DoubleSide })
   );
   pennant.position.set(cx + 0.8, apexY + 3.2, 0); pennant.rotation.z = -Math.PI / 2;
-  group.add(pennant);
+  wg[0].add(pennant);
 
   // lit archway marking the exit toward the Jungle
   const arch = new THREE.Mesh(
@@ -142,7 +364,11 @@ export function createWorld(scene, segs) {
     new THREE.MeshStandardMaterial({ color: 0xffe08a, emissive: 0xffab30, emissiveIntensity: 1.4, roughness: 0.4 })
   );
   arch.position.set(sCirc.x1, -4.6, 0);
-  group.add(arch);
+  wg[0].add(arch);
+
+  // ---- theatre marquee at the mouth of the circus (visible on the menu & in the intro) ----
+  const marquee = buildMarquee(wg[0], -17, -26, 0.4);
+  updaters.push((t) => marquee.update(t));
 
   // ---- starfield backdrop across the whole run ----
   const starGeo = new THREE.BufferGeometry();
@@ -184,7 +410,7 @@ export function createWorld(scene, segs) {
   }
   crowd.instanceMatrix.needsUpdate = true;
   if (crowd.instanceColor) crowd.instanceColor.needsUpdate = true;
-  group.add(crowd);
+  wg[0].add(crowd);
   updaters.push((t) => {
     for (let i = 0; i < baseY.length; i++) {
       const b = baseY[i];
@@ -213,7 +439,7 @@ export function createWorld(scene, segs) {
   }
   flags.instanceMatrix.needsUpdate = true;
   if (flags.instanceColor) flags.instanceColor.needsUpdate = true;
-  group.add(flags);
+  wg[0].add(flags);
 
   // ---- sweeping circus spotlights (with glowing cone meshes) ----
   const spotDefs = [
@@ -222,15 +448,15 @@ export function createWorld(scene, segs) {
   for (const def of spotDefs) {
     const sp = new THREE.SpotLight(def.col, 120, 60, Math.PI / 9, 0.5, 1.4);
     sp.position.set(def.x, 20, 6);
-    const tgt = new THREE.Object3D(); tgt.position.set(def.x, 0, 0); group.add(tgt);
+    const tgt = new THREE.Object3D(); tgt.position.set(def.x, 0, 0); wg[0].add(tgt);
     sp.target = tgt;
-    group.add(sp);
+    wg[0].add(sp);
     const beam = new THREE.Mesh(
       new THREE.ConeGeometry(2.5, 26, 24, 1, true),
       new THREE.MeshBasicMaterial({ color: def.col, transparent: true, opacity: 0.03, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending })
     );
     beam.position.copy(sp.position);
-    group.add(beam);
+    wg[0].add(beam);
     spots.push({ sp, beam, tgt, x: def.x, phase: Math.random() * 6 });
   }
   updaters.push((t) => {
@@ -254,11 +480,11 @@ export function createWorld(scene, segs) {
       const th = 4 + Math.random() * 3;
       const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, th, 7), trunkMat);
       trunk.position.set(tx, -8 + th / 2, tz);
-      group.add(trunk);
+      wg[1].add(trunk);
       const blob = new THREE.Mesh(new THREE.SphereGeometry(1.6 + Math.random(), 9, 9), i % 2 ? leafMat : leafMat2);
       blob.position.set(tx, -8 + th + 0.8, tz);
       blob.scale.y = 0.8;
-      group.add(blob);
+      wg[1].add(blob);
     }
     // hanging vines from the canopy (off the flight lane)
     const vineMat = new THREE.MeshStandardMaterial({ color: 0x3d8a33, roughness: 0.9 });
@@ -266,7 +492,7 @@ export function createWorld(scene, segs) {
       const vl = 4 + Math.random() * 4;
       const v = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, vl, 5), vineMat);
       v.position.set(sJung.x0 + 2 + Math.random() * (jLen - 4), 13 - vl / 2, (i % 2 ? 1 : -1) * (4 + Math.random() * 3));
-      group.add(v);
+      wg[1].add(v);
     }
     // fireflies — drifting additive points
     const FN = 60;
@@ -278,7 +504,7 @@ export function createWorld(scene, segs) {
     const fGeo = new THREE.BufferGeometry();
     fGeo.setAttribute('position', new THREE.BufferAttribute(fPos, 3));
     const flies = new THREE.Points(fGeo, new THREE.PointsMaterial({ color: 0xd8ff70, size: 0.28, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
-    group.add(flies);
+    wg[1].add(flies);
     updaters.push((t) => {
       for (let i = 0; i < FN; i++) {
         const b = fBase[i];
@@ -300,13 +526,13 @@ export function createWorld(scene, segs) {
       new THREE.MeshBasicMaterial({ color: 0xffa040 })
     );
     sun.position.set(bcx, 9, -38);
-    group.add(sun);
+    wg[2].add(sun);
     const sunHalo = new THREE.Mesh(
       new THREE.CircleGeometry(12, 32),
       new THREE.MeshBasicMaterial({ color: 0xff7030, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false })
     );
     sunHalo.position.set(bcx, 9, -38.5);
-    group.add(sunHalo);
+    wg[2].add(sunHalo);
     // sea — flat glossy plane behind the sand
     const sea = new THREE.Mesh(
       new THREE.PlaneGeometry(bLen + 34, 20),
@@ -314,7 +540,7 @@ export function createWorld(scene, segs) {
     );
     sea.rotation.x = -Math.PI / 2;
     sea.position.set(bcx, -7.95, -22);
-    group.add(sea);
+    wg[2].add(sea);
     // palm trees
     const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8a6034, roughness: 0.9 });
     const frondMat = new THREE.MeshStandardMaterial({ color: 0x2a9a4a, roughness: 0.8, side: THREE.DoubleSide });
@@ -325,13 +551,13 @@ export function createWorld(scene, segs) {
       const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.34, ph, 7), trunkMat);
       trunk.position.set(px, -8 + ph / 2, pz);
       trunk.rotation.z = (Math.random() - 0.5) * 0.25;
-      group.add(trunk);
+      wg[2].add(trunk);
       for (let k = 0; k < 5; k++) {
         const frond = new THREE.Mesh(new THREE.ConeGeometry(0.35, 2.6, 4), frondMat);
         const a = (k / 5) * Math.PI * 2;
         frond.position.set(px + Math.cos(a) * 1.1, -8 + ph + 0.3, pz + Math.sin(a) * 1.1);
         frond.rotation.set(Math.sin(a) * 1.9, 0, -Math.cos(a) * 1.9);
-        group.add(frond);
+        wg[2].add(frond);
       }
     }
     // seagulls — simple flapping wing pairs drifting across the sky
@@ -347,7 +573,7 @@ export function createWorld(scene, segs) {
         wings.push(w);
       }
       gull.position.set(sBeach.x0 + 4 + i * bLen / 3, 8 + i * 2, -12 - i * 4);
-      group.add(gull);
+      wg[2].add(gull);
       gulls.push({ gull, wings, bx: gull.position.x, ph: i * 2.1 });
     }
     updaters.push((t) => {
@@ -373,7 +599,7 @@ export function createWorld(scene, segs) {
     );
     grid.rotation.x = -Math.PI / 2;
     grid.position.set(scx, -7.9, 0);
-    group.add(grid);
+    wg[3].add(grid);
     // neon gates the rail threads through
     for (let i = 0; i < 5; i++) {
       const gate = new THREE.Mesh(
@@ -385,7 +611,7 @@ export function createWorld(scene, segs) {
       );
       gate.rotation.y = Math.PI / 2;
       gate.position.set(sSpace.x0 + 3 + (i + 0.5) * (spLen - 6) / 5, 0, 0);
-      group.add(gate);
+      wg[3].add(gate);
     }
     // distant ringed planet
     const planet = new THREE.Mesh(
@@ -393,14 +619,14 @@ export function createWorld(scene, segs) {
       new THREE.MeshStandardMaterial({ color: 0x9a6aff, emissive: 0x38126a, emissiveIntensity: 0.8, roughness: 0.6 })
     );
     planet.position.set(scx + 10, 20, -34);
-    group.add(planet);
+    wg[3].add(planet);
     const pring = new THREE.Mesh(
       new THREE.TorusGeometry(6, 0.35, 8, 40),
       new THREE.MeshStandardMaterial({ color: 0xffd9a0, emissive: 0xa06a20, emissiveIntensity: 0.9, roughness: 0.5 })
     );
     pring.rotation.x = Math.PI / 2.6;
     pring.position.copy(planet.position);
-    group.add(pring);
+    wg[3].add(pring);
     // shooting stars
     const SN = 6;
     const sPos = new Float32Array(SN * 3);
@@ -414,7 +640,7 @@ export function createWorld(scene, segs) {
     const sGeo = new THREE.BufferGeometry();
     sGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
     const shooting = new THREE.Points(sGeo, new THREE.PointsMaterial({ color: 0xd0f0ff, size: 0.7, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }));
-    group.add(shooting);
+    wg[3].add(shooting);
     let sLast = 0;
     updaters.push((t) => {
       const dt = Math.min(0.05, t - sLast); sLast = t;
@@ -434,7 +660,25 @@ export function createWorld(scene, segs) {
   const bounds = [sJung.x0, sBeach.x0, sSpace.x0];
   const smooth = (v) => { v = Math.max(0, Math.min(1, v)); return v * v * (3 - 2 * v); };
   const _bg = new THREE.Color(), _hs = new THREE.Color(), _hg = new THREE.Color(), _key = new THREE.Color();
+
+  /* Optional per-world skybox (3D-9A). Declared in src/assets.js → zero request when absent,
+   * so the current look is strictly unchanged until phase B drops the files in public/sky/.
+   * Loading is non-blocking and failure is silent; applyMood keeps driving fog & lights. */
+  const WORLD_KEYS = ['circus', 'jungle', 'beach', 'space'];
+  const skyTex = [null, null, null, null];
+  WORLD_KEYS.forEach((k, i) => {
+    const url = skyURL(k);
+    if (!url) return;
+    new THREE.TextureLoader().load(url, (tex) => {
+      tex.mapping = THREE.EquirectangularReflectionMapping;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      skyTex[i] = tex;
+    }, undefined, () => {});
+  });
+  const bgColor = new THREE.Color();
+
   function applyMood(stage, x) {
+    for (let w = 0; w < 4; w++) wg[w].visible = x > segs[w].x0 - DECOR_PAD && x < segs[w].x1 + DECOR_PAD;
     let f = 0;
     for (const b of bounds) f += smooth((x - (b - 4)) / 8);  // blend over 8 units around each border
     const i = Math.min(2, Math.floor(f)), t = f - i;
@@ -443,7 +687,12 @@ export function createWorld(scene, segs) {
     _hs.lerpColors(A.hs, B.hs, t);
     _hg.lerpColors(A.hg, B.hg, t);
     _key.lerpColors(A.key, B.key, t);
-    stage.scene.background.copy(_bg);
+    const dom = t > 0.5 ? Math.min(3, i + 1) : i;
+    if (skyTex[dom]) { if (stage.scene.background !== skyTex[dom]) stage.scene.background = skyTex[dom]; }
+    else {
+      if (stage.scene.background !== bgColor) stage.scene.background = bgColor;
+      bgColor.copy(_bg);
+    }
     stage.scene.fog.color.copy(_bg);
     stage.scene.fog.density = A.fd + (B.fd - A.fd) * t;
     stage.ambient.color.copy(_hs);
@@ -453,5 +702,5 @@ export function createWorld(scene, segs) {
   }
 
   function update(t) { for (const u of updaters) u(t); }
-  return { group, update, applyMood, spots };
+  return { group, update, applyMood, spots, marquee: marquee.marquee, bulbCount: marquee.bulbCount };
 }

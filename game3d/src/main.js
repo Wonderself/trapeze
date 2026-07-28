@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { createStage } from './scene.js';
 import { createWorld } from './world.js';
 import { createHero, poseHero } from './player.js';
-import { initAudio, updateAudio, setWorld as setAudioWorld, setMuted, audioState, sfx } from './audio.js';
+import { initAudio, updateAudio, setWorld as setAudioWorld, setMuted, audioState, sfx,
+         say, setVoiceEnabled, voiceState, voiceCancel } from './audio.js';
 import { netConfigured, netSetConfig, fetchWorldTop, submitWorldScore, netNewRun, SCORE_MAX } from './net.js';
 
 /* ══════════════ TUNING ══════════════ */
@@ -35,8 +36,9 @@ function loadRec() {
       medals: JSON.parse(localStorage.getItem('ts3d_medals') || '[0,0,0,0]'),
       mute: localStorage.getItem('ts3d_mute') === '1',
       reduceFx: localStorage.getItem('ts3d_reducefx') === '1',
+      voice: localStorage.getItem('ts3d_voice') !== '0',   // presenter voice: on by default
     };
-  } catch (e) { return { high: 0, combo: 0, medals: [0, 0, 0, 0], mute: false, reduceFx: false }; }
+  } catch (e) { return { high: 0, combo: 0, medals: [0, 0, 0, 0], mute: false, reduceFx: false, voice: true }; }
 }
 let REC = loadRec();
 function saveRec() {
@@ -46,9 +48,11 @@ function saveRec() {
     localStorage.setItem('ts3d_medals', JSON.stringify(REC.medals));
     localStorage.setItem('ts3d_mute', REC.mute ? '1' : '0');
     localStorage.setItem('ts3d_reducefx', REC.reduceFx ? '1' : '0');
+    localStorage.setItem('ts3d_voice', REC.voice ? '1' : '0');
   } catch (e) {}
 }
 setMuted(REC.mute);
+setVoiceEnabled(REC.voice);
 
 /* ── daily challenge (3D-7): one shared rail per UTC day, best-of-day persisted ── */
 const dailySeed = () => { const d = new Date(); return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); };
@@ -171,33 +175,99 @@ const ropeMats = [
 const barMat = new THREE.MeshStandardMaterial({ color: 0xffcf3f, emissive: 0xff8a00, emissiveIntensity: 0.8, roughness: 0.4, metalness: 0.2 });
 const barReadyMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x8affc1, emissiveIntensity: 1.6, roughness: 0.3 });
 
+/* ── LIVING ROPES (3D-9A) — a swept tube whose spine we rewrite per frame ──
+ * Purely cosmetic: the pendulum (stepBar / releaseBar / timing windows) is untouched.
+ * The rope pulls taut at the bottom of the swing (max centripetal load) and goes soft
+ * and wavy at the top or once the hero has let go, when it also ripples with damping.
+ * Cost: 10 segments × 5 sides = 66 vertices, and only the bars near the camera are
+ * re-shaped each frame — no Verlet solver, no extra draw call (1 mesh per rope, as before). */
+const ROPE_SEG = 10, ROPE_SIDES = 5, ROPE_R = 0.045;
+function makeRopeGeometry() {
+  const g = new THREE.BufferGeometry();
+  const nv = (ROPE_SEG + 1) * (ROPE_SIDES + 1);
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(nv * 3), 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(nv * 3), 3));
+  const idx = [];
+  for (let i = 0; i < ROPE_SEG; i++) {
+    for (let j = 0; j < ROPE_SIDES; j++) {
+      const a = i * (ROPE_SIDES + 1) + j, b = a + 1, c = a + ROPE_SIDES + 1, d = c + 1;
+      idx.push(a, c, b, b, c, d);
+    }
+  }
+  g.setIndex(idx);
+  // vertices are world-space, so the bounds are maintained by hand in updateRope()
+  g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), L * 0.7);
+  return g;
+}
+function updateRope(b, alive) {
+  const pos = b.rope.geometry.attributes.position.array;
+  const nrm = b.rope.geometry.attributes.normal.array;
+  const ex = b.x + L * Math.sin(b.theta), ey = b.py - L * Math.cos(b.theta);
+  const dx = ex - b.x, dy = ey - b.py;
+  const len = Math.hypot(dx, dy) || 1;
+  const nx = -dy / len, ny = dx / len;          // in-plane normal (everything happens at z≈0)
+  let slack = 0, wave = 0;
+  if (alive) {
+    // tension ≈ centripetal + gravity component; ~1 taut at the bottom, ~0 at the top
+    const tension = (b.omega * b.omega * L + GP * Math.cos(b.theta)) / (GP + 3);
+    slack = Math.max(0, Math.min(1, 1.05 - tension));
+    wave = b.ropeAmp;
+  }
+  let k = 0;
+  for (let i = 0; i <= ROPE_SEG; i++) {
+    const s = i / ROPE_SEG, bow = Math.sin(s * Math.PI);
+    const off = bow * (slack * 0.34 + wave * Math.sin(s * 7.2 + b.ropePh));
+    const cx = b.x + dx * s + nx * off;
+    const cy = b.py + dy * s + ny * off - bow * slack * 0.14;   // slight catenary droop
+    for (let j = 0; j <= ROPE_SIDES; j++) {
+      const a = (j / ROPE_SIDES) * Math.PI * 2, ca = Math.cos(a), sa = Math.sin(a);
+      pos[k] = cx + nx * ca * ROPE_R; pos[k + 1] = cy + ny * ca * ROPE_R; pos[k + 2] = sa * ROPE_R;
+      nrm[k] = nx * ca; nrm[k + 1] = ny * ca; nrm[k + 2] = sa;
+      k += 3;
+    }
+  }
+  b.rope.geometry.attributes.position.needsUpdate = true;
+  b.rope.geometry.attributes.normal.needsUpdate = true;
+  // keep frustum culling working (world-space verts ⇒ three.js can't infer these)
+  b.rope.geometry.boundingSphere.center.set((b.x + ex) / 2, (b.py + ey) / 2, 0);
+}
+
 for (let i = 0; i < NBARS; i++) {
   const { x, py, w, mv, mvSpd, mvPh } = barDefs[i];
-  const g = new THREE.Group();
-  const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, L, 6), ropeMats[w]);
-  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 1.5, 10), barMat);
-  bar.rotation.x = Math.PI / 2;
-  bar.castShadow = true;
-  g.add(rope); g.add(bar);
-  barGroup.add(g);
-  const anchor = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), new THREE.MeshStandardMaterial({ color: 0x2a1533 }));
-  anchor.position.set(x, py, 0);
-  barGroup.add(anchor);
-  bars.push({ x, bx: x, py, w, mv, mvSpd, mvPh, theta: (i % 2 ? 1 : -1) * SOLO_AMP * rnd(), omega: 0, g, rope, bar, anchor });
+  const rope = new THREE.Mesh(makeRopeGeometry(), ropeMats[w]);
+  barGroup.add(rope);
+  bars.push({ x, bx: x, py, w, mv, mvSpd, mvPh, theta: (i % 2 ? 1 : -1) * SOLO_AMP * rnd(), omega: 0, rope, p: new THREE.Vector3(), shown: true, ropeAmp: 0, ropePh: rnd() * 6.28 });
 }
+/* Budget pass (3D-9A): the camera looks straight down the rail, so three.js can cull almost
+ * nothing of the 48-bar rig. The identical parts — pivot anchors and bars — become two
+ * InstancedMeshes (2 draw calls instead of 96); the single "next bar" highlight keeps a mesh
+ * of its own so it can wear the bright material. Ropes stay individual (each has its own shape). */
+const _im = new THREE.Object3D();          // scratch transform for the instanced rigs
+const barGeo = new THREE.CylinderGeometry(0.09, 0.09, 1.5, 10);
+const anchorIM = new THREE.InstancedMesh(
+  new THREE.SphereGeometry(0.18, 8, 8),
+  new THREE.MeshStandardMaterial({ color: 0x2a1533 }),
+  NBARS
+);
+anchorIM.frustumCulled = false;
+barGroup.add(anchorIM);
+const barIM = new THREE.InstancedMesh(barGeo, barMat, NBARS);
+barIM.frustumCulled = false; barIM.castShadow = true;
+barGroup.add(barIM);
+const nextBar = new THREE.Mesh(barGeo, barReadyMat);
+nextBar.castShadow = true; nextBar.visible = false;
+barGroup.add(nextBar);
 const bobPos = (b) => new THREE.Vector3(b.x + L * Math.sin(b.theta), b.py - L * Math.cos(b.theta), 0);
 const hangPos = (b) => bobPos(b).add(new THREE.Vector3(0, -HANG, 0));
-function layoutBar(b) {
-  if (b.mv) { b.x = b.bx + Math.sin(G.t * b.mvSpd + b.mvPh) * b.mv; b.anchor.position.x = b.x; }
-  const p = bobPos(b);
-  b.bar.position.copy(p);
-  b.rope.position.set((b.x + p.x) / 2, (b.py + p.y) / 2, 0);
-  b.rope.rotation.z = -b.theta;
+function layoutBar(b, alive) {
+  if (b.mv) b.x = b.bx + Math.sin(G.t * b.mvSpd + b.mvPh) * b.mv;
+  b.p.copy(bobPos(b));
+  updateRope(b, alive);
 }
 
 /* ══════════════ COLLECTIBLES: stars + bonus rings ══════════════ */
-const starGroup = new THREE.Group();
-scene.add(starGroup);
+/* 94 collectible stars — one InstancedMesh instead of 94 meshes (3D-9A budget pass).
+ * `s.p` is the world position the physics reads; the instance matrix is written per frame. */
 const stars = [];
 const starMat = new THREE.MeshStandardMaterial({ color: 0xfff2b0, emissive: 0xffcf3f, emissiveIntensity: 1.8, roughness: 0.3 });
 const starGeo = new THREE.IcosahedronGeometry(0.34, 0);
@@ -207,12 +277,12 @@ for (let i = 0; i < NBARS - 1; i++) {
     const f = (k + 1) / 3;
     const x = A.x + f * (B.x - A.x);
     const y = (A.py + B.py) / 2 - L + 1.4 + Math.sin(f * Math.PI) * 2.2;
-    const m = new THREE.Mesh(starGeo, starMat);
-    m.position.set(x, y, 0);
-    starGroup.add(m);
-    stars.push({ m, got: false });
+    stars.push({ p: new THREE.Vector3(x, y, 0), got: false, rot: rnd() * 6.28 });
   }
 }
+const starIM = new THREE.InstancedMesh(starGeo, starMat, stars.length);
+starIM.frustumCulled = false;
+scene.add(starIM);
 const rings = [];
 {
   const ringMat = new THREE.MeshStandardMaterial({ color: 0xfff2b0, emissive: 0xff6db0, emissiveIntensity: 1.5, roughness: 0.35 });
@@ -272,7 +342,6 @@ function applyLayout(daily) {
       d.py = basePy[i].py; d.mv = basePy[i].mv; d.mvSpd = basePy[i].mvSpd; d.mvPh = basePy[i].mvPh;
     }
     b.py = d.py; b.mv = d.mv; b.mvSpd = d.mvSpd; b.mvPh = d.mvPh;
-    b.anchor.position.y = d.py;
   }
   // stars & rings follow the re-rolled heights (X stays fixed so the 4 worlds' décor is untouched)
   let si = 0;
@@ -280,7 +349,7 @@ function applyLayout(daily) {
     const A = barDefs[i], B = barDefs[i + 1];
     for (let k = 0; k < 2; k++) {
       const f = (k + 1) / 3;
-      stars[si].m.position.y = (A.py + B.py) / 2 - L + 1.4 + Math.sin(f * Math.PI) * 2.2;
+      stars[si].p.y = (A.py + B.py) / 2 - L + 1.4 + Math.sin(f * Math.PI) * 2.2;
       si++;
     }
   }
@@ -447,7 +516,7 @@ const G = {
   score: 0, combo: 0, comboT: 0, lives: 3,
   t: 0, spin: 0,
   pumpAmp: 1.0, holding: false, armed: false,
-  grade: '', lastFlips: 0, lastFlipBonus: 0,
+  grade: '', lastFlips: 0, lastFlipBonus: 0, lastGain: 0,
   trick: false, flipRot: 0, salute: 0,
   world: 0, wind: 0, windOff: 0, netBounce: false, netSaves: 0,
   lap: 0, diffN: 0, wScore: [0, 0, 0, 0], runMedals: [0, 0, 0, 0],
@@ -523,6 +592,7 @@ function playIntro() {
   stage.ambient.intensity = baseLights.amb * 0.25;
   ui.menu.classList.add('hidden');
   ui.introLogo.classList.remove('show');
+  say('welcome', { prio: 3, delay: 0.5 });   // "Ladies and gentlemen..."
 }
 function finishIntro() {
   intro.active = false; intro.done = true;
@@ -573,6 +643,11 @@ function refreshBest() {
   ui.best.classList.remove('hidden');
 }
 function refreshMute() { ui.muteBtn.textContent = REC.mute ? '🔇' : '🔊'; }
+function refreshVoice() {
+  ui.voiceBtn.classList.toggle('off', !REC.voice);
+  ui.voiceBtn.setAttribute('aria-pressed', String(REC.voice));
+  ui.voiceBtn.setAttribute('aria-label', REC.voice ? 'Ringmaster voice on — tap to mute the voice' : 'Ringmaster voice off — tap to bring it back');
+}
 function refreshFx() {
   ui.fxBtn.textContent = REC.reduceFx ? '🌙' : '✨';
   ui.fxBtn.classList.toggle('on', REC.reduceFx);
@@ -683,7 +758,7 @@ function enterMenu() {
     menuShown = true; curtainOpen = 0;
     // first menu ever: cinematic intro (auto-skipped on ?lowfx / reduced motion)
     if (!intro.done && !LOWFX && !reduceMotion()) { playIntro(); }
-    else { intro.done = true; curtainOpening = true; }
+    else { intro.done = true; curtainOpening = true; say('welcome', { prio: 3, delay: 0.6 }); }
   }
   ui.over.classList.add('hidden'); ui.entry.classList.add('hidden');
   if (!intro.active) ui.menu.classList.remove('hidden');
@@ -701,7 +776,7 @@ function vibrate(ms) { if (navigator.vibrate) { try { navigator.vibrate(ms); } c
 
 /* ══════════════ UI ══════════════ */
 const $ = (id) => document.getElementById(id);
-const ui = { menu: $('menu'), over: $('over'), hud: $('hud'), score: $('score'), lives: $('lives'), combo: $('combo'), grade: $('grade'), comboHold: $('comboHold'), comboFill: $('comboFill'), big: $('bigmsg'), bigsub: $('bigsub'), flash: $('flash'), banner: $('banner'), bannerTxt: $('bannerTxt'), worldTag: $('worldTag'), wind: $('windTag'), best: $('best'), newBest: $('newBest'), overStats: $('overStats'), overMedals: $('overMedals'), muteBtn: $('muteBtn'), fxBtn: $('fxBtn'), gpBadge: $('gpBadge'), menuBoard: $('menuBoard'), overBoard: $('overBoard'), entry: $('entry'), entryRank: $('entryRank'), entryScore: $('entryScore'), entryInput: $('entryInput'), photoWrap: $('photoWrap'), photoImg: $('photoImg'), shareBtn: $('shareBtn'), introLogo: $('introLogo'), attractBar: $('attractBar'), dailyBest: $('dailyBest') };
+const ui = { menu: $('menu'), over: $('over'), hud: $('hud'), score: $('score'), lives: $('lives'), combo: $('combo'), grade: $('grade'), comboHold: $('comboHold'), comboFill: $('comboFill'), big: $('bigmsg'), bigsub: $('bigsub'), flash: $('flash'), banner: $('banner'), bannerTxt: $('bannerTxt'), worldTag: $('worldTag'), wind: $('windTag'), best: $('best'), newBest: $('newBest'), overStats: $('overStats'), overMedals: $('overMedals'), muteBtn: $('muteBtn'), fxBtn: $('fxBtn'), voiceBtn: $('voiceBtn'), gpBadge: $('gpBadge'), menuBoard: $('menuBoard'), overBoard: $('overBoard'), entry: $('entry'), entryRank: $('entryRank'), entryScore: $('entryScore'), entryInput: $('entryInput'), photoWrap: $('photoWrap'), photoImg: $('photoImg'), shareBtn: $('shareBtn'), introLogo: $('introLogo'), attractBar: $('attractBar'), dailyBest: $('dailyBest') };
 let lastScore = -1;
 function refreshHUD() {
   if (G.score !== lastScore) {
@@ -735,6 +810,14 @@ ui.fxBtn.addEventListener('click', (e) => {
   REC.reduceFx = !REC.reduceFx; saveRec(); refreshFx(); sfx.click();
 });
 refreshFx();
+// 🎙️ presenter voice — a toggle of its own, next to the sound one (persisted ts3d_voice)
+ui.voiceBtn.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
+ui.voiceBtn.addEventListener('click', (e) => {
+  e.stopPropagation(); initAudio();
+  REC.voice = !REC.voice; setVoiceEnabled(REC.voice); saveRec(); refreshVoice(); sfx.click();
+  if (REC.voice) say('welcome', { prio: 3 });
+});
+refreshVoice();
 function selectChar(c) {
   if (c !== 'marc' && c !== 'claire') return;
   document.querySelectorAll('.pick').forEach((p) => { p.classList.toggle('sel', p.dataset.char === c); p.setAttribute('aria-pressed', String(p.dataset.char === c)); });
@@ -778,7 +861,7 @@ function startGame(daily) {
   ui.wind.style.opacity = '0';
   for (const n of nets) { n.used = false; n.flashT = 0; }
   bars[0].theta = -1.0; bars[0].omega = 0;
-  for (const s of stars) { s.got = false; s.m.visible = true; }
+  for (const s of stars) s.got = false;
   for (const r of rings) { r.got = false; r.m.visible = true; }
   rebuildHero();
   hero.visible = true;
@@ -787,6 +870,8 @@ function startGame(daily) {
   ui.hud.style.display = 'flex';
   tapBtn.classList.add('on');
   refreshHUD();
+  voiceCancel();                                   // a new show starts on a clean mic
+  say('begin', { prio: 3, delay: 0.35 });          // "Let the show begin!"
 }
 function awardMedals() {
   for (let w = 0; w < NWORLDS; w++) {
@@ -834,6 +919,9 @@ function showOver() {
   else { ui.photoWrap.classList.remove('show'); ui.shareBtn.classList.add('hidden'); }
   ui.over.classList.remove('hidden');
   if (_newHigh) sfx.applause(); else sfx.fanfare();
+  // let the applause/fanfare peak land first, then the MC signs off
+  if (_newHigh) say('record', { prio: 3, delay: 1.2 });
+  say('bye', { prio: 2, delay: _newHigh ? 3.4 : 1.0 });
 }
 
 /* ══════════════ INPUT — hold to grip & pump, let go to fly, tap mid-air to flip ══════════════ */
@@ -959,6 +1047,7 @@ function releaseBar() {
     const v = L * b.omega;
     G.vel.set(Math.cos(b.theta) * v * 0.5 + 1.0, Math.sin(b.theta) * v * 0.5, 0);
     G.state = 'fumble'; G.spin = 0; G.grade = 'fumble';
+    b.ropeAmp = 0.26;                       // the empty rope whips and rings down
     trail.visible = true; trailReset(hero.position);
     showGrade('WHOOPS!', '#ff7d7d'); vibrate(20); sfx.fumble();
     return;
@@ -986,6 +1075,7 @@ function releaseBar() {
   if (dist <= reach) { G.flyMode = 'catch'; G.flyTo.copy(targ); G.flyNext = nextI; G.flyDur = flyDur; }
   else { G.flyMode = 'short'; G.flyTo.copy(from.clone().lerp(targ, Math.max(0.55, reach / dist))); G.flyNext = -1; G.flyDur = flyDur * 0.9; }
   G.state = 'fly'; G.spin = 0;
+  b.ropeAmp = 0.30;                         // released rope: brief damped ripple (visual only)
   G.fovKick = 1;
   trail.visible = true; trailReset(from);
   flash(G.grade === 'perfect' ? 0.28 : 0.15); vibrate(12);
@@ -1001,13 +1091,15 @@ function enterWorld(w) {
   ui.worldTag.textContent = WORLD_NAMES[w].toUpperCase() + (G.lap > 0 ? ' · LAP ' + (G.lap + 1) : '');
   flash(0.3); vibrate(18);
   setAudioWorld(w); sfx.fanfare(); sfx.applause();
+  // land the announcement just after the fanfare peak, not on top of it
+  if (w > 0) say('world_' + WORLD_NAMES[w].toLowerCase(), { prio: 2, delay: 0.8 });
 }
 
 /* endless mode: finishing the 4-world tour loops back to bar 0, faster */
 function lapComplete() {
   G.lap++; G.diffN++;
   awardMedals(); G.wScore = [0, 0, 0, 0];
-  for (const s of stars) { s.got = false; s.m.visible = true; }
+  for (const s of stars) s.got = false;
   for (const r of rings) { r.got = false; r.m.visible = true; }
   for (const n of nets) { n.used = false; n.flashT = 0; }
   G.state = 'swing'; G.active = 0; G.armed = false; G.holding = false;
@@ -1021,6 +1113,7 @@ function lapComplete() {
   ui.banner.classList.remove('show'); void ui.banner.offsetWidth; ui.banner.classList.add('show');
   burst(hero.position, 60, true, 8); flash(0.35); vibrate(25);
   setAudioWorld(0); sfx.applause(); sfx.fanfare();
+  if (G.lap === 1) say('endless', { prio: 3, delay: 1.0 });   // "Endless mode! No stopping now!"
 }
 
 function doCatch(ci) {
@@ -1029,19 +1122,24 @@ function doCatch(ci) {
   G.active = ci; G.state = 'swing';
   bars[ci].theta = -0.5;
   bars[ci].omega = G.grade === 'perfect' ? 2.0 : 1.7;
+  bars[ci].ropeAmp = 0.14;                  // impact shiver on the caught rope (visual only)
   hero.rotation.z = 0; G.spin = 0; G.armed = false;
   trail.visible = false;
   G.combo++; G.comboT = COMBO_TIME;
   if (G.combo > G.maxCombo) G.maxCombo = G.combo;
   let gain = (100 + (G.combo - 1) * 25) * (G.grade === 'perfect' ? 2 : 1);
   let flipBonus = flips > 0 ? 50 * flips * Math.max(1, G.combo) : 0;
-  G.lastFlips = flips; G.lastFlipBonus = flipBonus;
+  G.lastFlips = flips; G.lastFlipBonus = flipBonus; G.lastGain = gain;
   G.flipsTot += flips;
   G.score += gain + flipBonus;
   G.wScore[bars[ci].w] += gain + flipBonus;
   showCombo((G.combo > 1 ? `x${G.combo}  ` : '') + `+${gain + flipBonus}`);
   if (flips > 0) setTimeout(() => showGrade(`FLIP +${flipBonus}`, '#ff6db0'), 120);
   burst(hero.position, G.grade === 'perfect' ? 40 : 22, false, G.grade === 'perfect' ? 7 : 5);
+  // presenter milestones — the big ones always, "Perfect!" only now and then
+  if (G.combo === 10) say('combo10', { prio: 2, delay: 0.45 });
+  else if (G.combo === 25) say('combo25', { prio: 2, delay: 0.45 });
+  else if (G.grade === 'perfect' && G.combo >= 4 && G.combo % 5 === 0) say('perfect', { prio: 1, delay: 0.5, cooldown: 20 });
   if (G.grade === 'perfect') {
     G.slowmo = reduceMotion() ? 0.15 : 0.4; G.salute = 0.7; sfx.perfect();
     // photo finish: capture the best (highest-combo) PERFECT catch of the run
@@ -1135,6 +1233,7 @@ function physics(dt) {
       G.vel.y = 9.5; G.vel.x = THREE.MathUtils.clamp(bars[G.active].x - hero.position.x, -3, 3) * 0.6;
       showGrade('SAVED BY THE NET!', '#8affc1');
       burst(hero.position, 26, false, 6); flash(0.2); vibrate(20); sfx.net();
+      say('net', { prio: 1, delay: 0.4 });   // after the net "boing", not on top of it
     } else if (G.netBounce && G.vel.y <= 0) {  // bounce apex → back on the bar
       G.netBounce = false; G.state = 'swing'; G.armed = false; trail.visible = false;
       const b = bars[G.active]; b.theta = -G.pumpAmp * 0.6; b.omega = 0;
@@ -1155,10 +1254,9 @@ function physics(dt) {
   // stars
   for (const s of stars) {
     if (s.got) continue;
-    s.m.rotation.y += dt * 2; s.m.rotation.x += dt * 1.3;
-    if (hero.position.distanceTo(s.m.position) < 1.25) {
-      s.got = true; s.m.visible = false;
-      G.score += 25; G.wScore[G.world] += 25; G.starsGot++; showCombo('+25 ⭐'); burst(s.m.position, 12, true, 4); refreshHUD(); vibrate(8); sfx.star();
+    if (hero.position.distanceTo(s.p) < 1.25) {
+      s.got = true;
+      G.score += 25; G.wScore[G.world] += 25; G.starsGot++; showCombo('+25 ⭐'); burst(s.p, 12, true, 4); refreshHUD(); vibrate(8); sfx.star();
     }
   }
   // rings idle pulse (+ Space rings bob vertically)
@@ -1246,14 +1344,16 @@ window.__game = {
   action: () => { handleDown(); handleUp(); },
   state: () => ({
     mode: G.mode, state: G.state, active: G.active, score: G.score, lives: G.lives,
-    combo: G.combo, grade: G.grade, flips: G.lastFlips, flipBonus: G.lastFlipBonus,
+    combo: G.combo, grade: G.grade, flips: G.lastFlips, flipBonus: G.lastFlipBonus, gain: G.lastGain,
     theta: bars[G.active] ? bars[G.active].theta : 0, omega: bars[G.active] ? bars[G.active].omega : 0,
     amp: G.pumpAmp, timeScale: G.timeScale, hero: hero.position.toArray(),
     world: G.world, worldName: WORLD_NAMES[G.world], netSaves: G.netSaves,
     wind: +G.wind.toFixed(2), windOff: +G.windOff.toFixed(2),
     lap: G.lap, diffN: G.diffN, starsGot: G.starsGot, flipsTot: G.flipsTot, maxCombo: G.maxCombo,
+    // 3D-9A: frame draw-call total (scene + post passes) — the < 120 mobile budget
+    calls: stage.calls(), callsTotal: stage.callsTotal(),
   }),
-  records: () => ({ high: REC.high, bestCombo: REC.combo, medals: [...REC.medals], mute: REC.mute, reduceFx: REC.reduceFx }),
+  records: () => ({ high: REC.high, bestCombo: REC.combo, medals: [...REC.medals], mute: REC.mute, reduceFx: REC.reduceFx, voice: REC.voice }),
   // accessibility (3D-6): OS prefers-reduced-motion + the persisted "reduce flashes" menu option
   a11y: () => ({ osReducedMotion, reduceFx: REC.reduceFx, effective: reduceMotion() }),
   setReduceFx: (v) => { REC.reduceFx = !!v; saveRec(); refreshFx(); },
@@ -1262,8 +1362,9 @@ window.__game = {
   sharePhoto: () => sharePhoto(),
   over: () => { if (G.mode === 'playing') endGame(); },
   wipe: () => {
-    try { ['ts3d_high', 'ts3d_combo', 'ts3d_medals', 'ts3d_mute', 'ts3d_board', 'ts3d_daily'].forEach((k) => localStorage.removeItem(k)); } catch (e) {}
+    try { ['ts3d_high', 'ts3d_combo', 'ts3d_medals', 'ts3d_mute', 'ts3d_board', 'ts3d_daily', 'ts3d_voice'].forEach((k) => localStorage.removeItem(k)); } catch (e) {}
     REC = loadRec(); BOARD = loadBoard(); lastBoardIdx = -1; refreshBest(); refreshDaily();
+    setVoiceEnabled(REC.voice); refreshVoice();
   },
   // leaderboard + name-entry harness (3D-5; text field since the "full name" fix)
   board: () => BOARD.map((e) => ({ ...e })),
@@ -1298,6 +1399,23 @@ window.__game = {
   startDaily: () => startGame(true),
   audio: () => audioState(),
   mute: (m) => { REC.mute = !!m; setMuted(REC.mute); saveRec(); refreshMute(); },
+  // presenter voice (3D-9A)
+  voice: () => voiceState(),
+  setVoice: (v) => { REC.voice = !!v; setVoiceEnabled(REC.voice); saveRec(); refreshVoice(); },
+  sayTest: (id) => say(id, { prio: 1 }),
+  // living ropes (3D-9A): purely visual — checksum of the active rope's vertices
+  ropes: () => {
+    const b = bars[G.active], a = b.rope.geometry.attributes.position.array;
+    let sum = 0;
+    for (let i = 0; i < a.length; i++) sum += a[i];
+    return { segments: ROPE_SEG, sides: ROPE_SIDES, verts: a.length / 3, amp: +b.ropeAmp.toFixed(4), checksum: +sum.toFixed(5) };
+  },
+  // marquee (3D-9A): present in the scene, bulbs instanced into a single draw call
+  marquee: () => ({
+    present: !!(world.marquee && world.marquee.parent),
+    bulbs: world.bulbCount,
+    children: world.marquee ? world.marquee.children.length : 0,
+  }),
   warp: (i) => {  // test helper: jump to bar i (camera snaps along)
     if (G.mode !== 'playing') return;
     i = Math.max(0, Math.min(NBARS - 1, i));
@@ -1337,7 +1455,47 @@ function frame(now) {
 
   world.update(G.t);
   world.applyMood(stage, G.mode === 'playing' ? hero.position.x : PODX);
-  for (const b of bars) layoutBar(b);
+  // ropes: only the bars the camera can actually see are re-shaped, and only the
+  // current bar + its close neighbours get the full living treatment (budget).
+  // Distance culling (3D-9A): the camera looks straight down the rail, so the whole 48-bar
+  // rig sits inside the frustum and three.js can cull none of it — 144 draw calls for
+  // trapezes that the exponential fog has already erased. Hide anything past FAR_BAR
+  // (fully fogged); what stays visible is laid out normally, so nothing ever freezes on screen.
+  const FAR_BAR = G.mode === 'playing' ? 62 : 34;   // the menu frames the podium, not the rail
+  const ropeX = G.mode === 'playing' ? hero.position.x : PODX;
+  for (let i = 0; i < NBARS; i++) {
+    const b = bars[i];
+    if (b.ropeAmp > 0.001) { b.ropeAmp *= Math.exp(-2.6 * dt); b.ropePh += dt * 11; }
+    b.shown = Math.abs(b.x - ropeX) < FAR_BAR;
+    if (b.rope.visible !== b.shown) b.rope.visible = b.shown;
+    if (!b.shown) continue;
+    layoutBar(b, G.mode === 'playing' ? Math.abs(i - G.active) <= 2 : i <= 2);
+  }
+  // stars & pivot anchors: instanced, so "hiding" one means collapsing its matrix
+  for (let i = 0; i < stars.length; i++) {
+    const s = stars[i];
+    if (!s.got && Math.abs(s.p.x - ropeX) < FAR_BAR) {
+      s.rot += dt * 2;
+      _im.position.copy(s.p); _im.rotation.set(s.rot * 0.65, s.rot, 0); _im.scale.setScalar(1);
+    } else { _im.position.set(0, -9999, 0); _im.rotation.set(0, 0, 0); _im.scale.setScalar(0); }
+    _im.updateMatrix(); starIM.setMatrixAt(i, _im.matrix);
+  }
+  starIM.instanceMatrix.needsUpdate = true;
+  const nextI = (G.mode === 'playing' && (G.state === 'swing' || G.state === 'fly')) ? G.active + 1 : -1;
+  nextBar.visible = false;
+  for (let i = 0; i < NBARS; i++) {
+    const b = bars[i];
+    if (b.shown) { _im.position.set(b.x, b.py, 0); _im.rotation.set(0, 0, 0); _im.scale.setScalar(1); }
+    else { _im.position.set(0, -9999, 0); _im.rotation.set(0, 0, 0); _im.scale.setScalar(0); }
+    _im.updateMatrix(); anchorIM.setMatrixAt(i, _im.matrix);
+    if (b.shown && i !== nextI) { _im.position.copy(b.p); _im.rotation.set(Math.PI / 2, 0, 0); _im.scale.setScalar(1); }
+    else { _im.position.set(0, -9999, 0); _im.rotation.set(0, 0, 0); _im.scale.setScalar(0); }
+    _im.updateMatrix(); barIM.setMatrixAt(i, _im.matrix);
+    if (i === nextI && b.shown) { nextBar.visible = true; nextBar.position.copy(b.p); nextBar.rotation.x = Math.PI / 2; }
+  }
+  anchorIM.instanceMatrix.needsUpdate = true;
+  barIM.instanceMatrix.needsUpdate = true;
+  for (const r of rings) r.m.visible = !r.got && Math.abs(r.m.position.x - ropeX) < FAR_BAR;
 
   // safety nets: visible in play only; flash + dip when they catch someone
   netGroup.visible = G.mode === 'playing';
@@ -1368,12 +1526,6 @@ function frame(now) {
   updateFireworks(dt);
   updateWind(dt);
   updateAudio(G.mode);
-
-  // highlight next catchable bar
-  for (let i = 0; i < NBARS; i++) {
-    const isNext = G.mode === 'playing' && (G.state === 'swing' || G.state === 'fly') && i === G.active + 1;
-    bars[i].bar.material = isNext ? barReadyMat : barMat;
-  }
 
   if (comboTimer > 0) { comboTimer -= dt; if (comboTimer <= 0) ui.combo.style.opacity = '0'; }
   if (gradeTimer > 0) { gradeTimer -= dt; if (gradeTimer <= 0) ui.grade.style.opacity = '0'; }

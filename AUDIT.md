@@ -1,16 +1,19 @@
 # 📊 AUDIT — Trapeze Stars (trapeze)
-Dernière mise à jour : 2026-07-23 — Direction active : **Trapeze Stars 3D** (`game3d/`, Three.js + Vite).
+Dernière mise à jour : 2026-07-28 — Direction active : **Trapeze Stars 3D** (`game3d/`, Three.js + Vite).
 
 <!-- ═══ NEXT (lu par CLAUDE.md pour l'auto-avancement) ═══
-AUCUNE SESSION ⬜ RESTANTE — les 8 sessions 3D (3D-1 à 3D-8) sont ✅ Fait.
-Le leaderboard mondial est ENTIÈREMENT CODÉ ET TESTÉ (client REST Supabase zéro dépendance, onglets LOCAL/WORLD,
-envoi à la saisie des initiales, repli local silencieux). Il ne manque que les 2 valeurs publiques d'Emmanuel :
+PROCHAINE SESSION : **3D-9B — Génération des assets IA (fal.ai)**, suite directe de la 3D-9A (code, ✅ 2026-07-28).
+⚠️ NÉCESSITE LA CLÉ API fal.ai D'EMMANUEL — ne pas lancer sans elle. La 3D-9A a posé TOUTE la plomberie :
+emplacements, chargements optionnels, fallbacks silencieux, manifeste `game3d/src/assets.js`. Il ne reste
+qu'à générer les fichiers, les déposer, les déclarer dans le manifeste et rebuild — zéro refactor.
+  - `public/sky/{circus,jungle,beach,space}.jpg` — skyboxes équirectangulaires par monde (brief : sky/README.md)
+  - `public/art/{logo.png,poster-1.jpg,poster-2.jpg}` — lettrage et affiches du marquee (brief : art/README.md)
+  - `public/voice/<id>.mp3` — 12 lignes de présentateur, anglais, ton MC de cirque (brief + textes : voice/README.md)
+  - Trailer vidéo (captures orchestrées via `__game.warp` + attract mode, montage).
+LA BRANCHE `claude/showtime-3d9` PORTE LA 3D-9A — à merger sur `main` après la phase B (demande d'Emmanuel).
+AUTRE PISTE TOUJOURS OUVERTE :
   👉 ACTIVER SUPABASE = suivre game3d/SUPABASE_SETUP.md (5 min, 0 €, sans CB) puis coller URL + clé anon dans
      game3d/src/net-config.js et rebuild. Rien d'autre à coder.
-AUTRES PISTES (à valider avec Emmanuel avant de lancer une nouvelle session) :
-  - Trailer vidéo (captures d'écran orchestrées via le harnais __game.warp + enregistrement d'onglet).
-  - Localisation FR/EN de la page vitrine showcase.html (le jeu reste anglais).
-  - Optimisations bundle (559 kB — code-splitting Vite) si besoin.
 ════════════════════════════════════════════════════════ -->
 
 > 🤖 **Auto-avancement** : ce repo est piloté par `CLAUDE.md`. À l'ouverture, Claude lit ce fichier,
@@ -39,6 +42,8 @@ AUTRES PISTES (à valider avec Emmanuel avant de lancer une nouvelle session) :
 | 3D-6 | Accessibilité & partage | `prefers-reduced-motion`, option « réduire les flashs », contraste HUD, photo finish (Web Share) | 🟢 | ~30-45 min | **Sonnet 5** | ✅ Fait (2026-07-19) |
 | 3D-7 | Premium showcase | Intro cinématique, mode attract/démo, feu d'artifice+ovation, défi quotidien, page vitrine, scaffold leaderboard | 🟡 | ~60-90 min | **Sonnet 5** | ✅ Fait (2026-07-22) |
 | 3D-8 | Leaderboard mondial | Client Supabase REST complet (0 dépendance), onglets LOCAL/WORLD, envoi à la saisie des initiales, guide SUPABASE_SETUP.md prêt-à-coller | 🟡 | ~45-60 min | **Sonnet 5** | ✅ Fait (2026-07-23) |
+| 3D-9A | Showtime — code | Marquee de théâtre à ampoules chenillardes, cordes vivantes, système de voix de présentateur, emplacements+fallbacks des assets IA, passe budget drawcalls | 🔴 | ~90 min | **Opus 5** | ✅ Fait (2026-07-28) |
+| 3D-9B | Showtime — assets IA | Génération fal.ai : skyboxes par monde, affiches/logo du marquee, 12 lignes de voix, trailer | 🟡 | ~45-60 min | **Opus 5** | ⬜ À faire — **nécessite la clé API fal.ai d'Emmanuel** |
 
 Légende coût : 🟢 léger · 🟡 moyen · 🔴 lourd (à faire en début de fenêtre de quota)
 
@@ -126,6 +131,53 @@ Leaderboard mondial complet, budget 0 € (Supabase free tier), il ne manque que
 3. **UI onglets LOCAL / WORLD** sur le panneau HIGH SCORES (menu + écran de fin), WORLD visible seulement si configuré ; « … » pendant le fetch, repli LOCAL silencieux si échec ; entrée du joueur surlignée ; envoi du score au moment de la saisie des initiales existante (les runs DAILY restent hors classement — rail différent). Fetch uniquement au menu/fin de run, jamais en jeu.
 4. **Tests** (smoke3d) : (r) non configuré → onglet WORLD absent + zéro régression sur tout le flux existant ; (s) endpoint Supabase mocké (`page.route`) + `__game.netTest(url,key)` → GET remplit l'onglet WORLD, run terminé → POST vérifié (initiales/score, 1 seul envoi) ; (t) réseau en échec → repli LOCAL sans erreur JS.
 
+### Session 3D-9A — Showtime, partie code (🔴) — ✅ Fait (2026-07-28)
+Phase 1 d'une session en deux temps : tout le code + les emplacements/fallbacks, pour que les assets générés
+par IA en 3D-9B se branchent **sans aucun refactor**.
+1. **Marquee de théâtre** (`world.js`, `buildMarquee`) : silhouette El Capitan habillée cirque à l'entrée du
+   monde Cirque (x −17, z −26, orientée vers le podium — visible au menu, en attract et à la fin de l'intro
+   cinématique). Façade art-déco rayée + crest doré + pilastres, lettrage « TRAPEZE STARS » (CanvasTexture
+   1024×288, repeinte quand la webfont Fredoka arrive), auvent trapézoïdal en saillie (`ExtrudeGeometry`),
+   fascia « NOW SHOWING · MARC & CLAIRE », deux affiches procédurales. **78 ampoules chenillardes** en un seul
+   `InstancedMesh` animé par `setColorAt` (deux vagues qui courent, une par contour) — 1 drawcall, le bloom
+   existant fait le reste. Total ≈ 10 drawcalls, aucune ombre dynamique, aucun Reflector.
+2. **Cordes vivantes** (`main.js`) : le cylindre rigide est remplacé par un tube balayé maison (10 segments ×
+   5 côtés = 66 sommets, géométrie allouée une fois, positions/normales réécrites par frame). Tension
+   ≈ centripète + gravité → corde tendue au point bas, molle et ondulante au point haut ; `ropeAmp` bumpé au
+   lâcher (0.30), au fumble (0.26) et à la reprise (0.14) puis amorti (`exp(−2.6·dt)`) avec une phase qui
+   court à 11 rad/s. Seules les barres proches sont « vivantes » (`|i − active| ≤ 2`) ; **zéro simulation
+   Verlet, zéro drawcall en plus, zéro impact gameplay** (`stepBar`, `releaseBar`, fenêtres PERFECT/GOOD/OK
+   inchangées au pixel près — testé par le gate 33).
+3. **Voix de présentateur** (`audio.js`) : file d'attente à priorités (3 = temps forts, 2 = jalons, 1 = saveur),
+   anti-doublon strict, plancher de 2,5 s entre deux lignes, cooldown par ligne, **ducking** de la musique à
+   ~−8 dB pendant la parole avec retour en douceur, et `delay` par ligne pour tomber **après** le pic de la
+   fanfare/du SFX. Deux backends automatiques et silencieux : fichiers `public/voice/<id>.mp3` (dès qu'un id
+   est déclaré) → sinon `speechSynthesis` en-US (pitch 1.25, rate 1.03) → sinon silence total. Watchdog de
+   durée pour les environnements où `onend` ne part jamais (headless, autoplay refusé). Toggle 🎙️ séparé du
+   🔇, persisté `ts3d_voice`, activé par défaut ; le mute global coupe aussi la voix.
+4. **Emplacements des assets IA** : `public/{art,sky,voice}/` avec un README de brief chacun (noms attendus,
+   tailles, style, textes anglais) + le manifeste `src/assets.js`. **Choix assumé** : un fichier absent n'est
+   *jamais* requêté (un 404 est loggé en erreur console par Chromium, et le critère « zéro erreur console »
+   est un gate du test) — déclarer le nom dans `assets.js` est la seule ligne de bookkeeping à ajouter en
+   phase B. Skybox par monde branchée dans `applyMood` (background remplacé, fog/lumières toujours pilotés
+   par le mood), chargement non bloquant, échec silencieux.
+5. **Passe budget drawcalls** (rendue nécessaire par le critère « < 120 ») : la caméra regarde droit dans l'axe
+   du rail, donc three.js ne cullait **rien** des 48 trapèzes ni du décor des mondes déjà quittés — la scène
+   était à **~250 drawcalls avant cette session**, budget jamais mesuré. Corrigé : ancrages et barres passés en
+   `InstancedMesh` (2 appels au lieu de 96, la barre « suivante » garde son mesh pour le matériau brillant),
+   94 étoiles collectables instanciées, décor rangé en 4 groupes par monde éteints au-delà de 55 unités,
+   barres masquées au-delà de 62 unités (34 au menu) — tout ça sous le brouillard, invisible à l'œil.
+   Résultat mesuré : **≤ 102 drawcalls de scène en jeu, 117 au menu** (+14 fixes de bloom).
+
+**Prompt de lancement de la 3D-9B (modèle : Opus 5) — À NE LANCER QU'AVEC LA CLÉ fal.ai :**
+> Lis CLAUDE.md puis AUDIT.md — ne re-diagnostique pas, applique l'Étape 0 (resync git) et repars de la branche
+> `claude/showtime-3d9`. Exécute la **Session 3D-9B — Showtime, assets IA** : génère via fal.ai les 4 skyboxes
+> (`public/sky/README.md`), le logo + 2 affiches du marquee (`public/art/README.md`) et les 12 lignes de voix
+> (`public/voice/README.md`, textes exacts fournis), dépose les fichiers, déclare-les dans `game3d/src/assets.js`,
+> vérifie visuellement chaque monde et écoute la voix, puis monte un trailer via `__game.warp`/attract.
+> Étends `smoke3d.mjs` (assets présents → toujours zéro erreur console, backend voix `files`). Rebuild → docs/.
+> Mets à jour AUDIT.md, commit, et merge la branche sur `main`. Réponds concis, diffs seulement.
+
 ## 🔍 RÉFÉRENCE TECHNIQUE (game3d/ — pour ne pas relire le code)
 - **Stack** : Three.js 0.160 + Vite 5, modules dans `game3d/src/` : `main.js` (état `G`, physique pendule `stepBar`, `release()`, arc assisté kinématique `flyFrom/flyTo/flyT`, caméra, boucle, UI DOM, **menu podium 3D** `menuGroup`/`turntable`/`menuHeroes`/`curtain`, **filets** `nets[]`, **rafales** `updateWind`, `window.__game` pour tests) ; `scene.js` (renderer, ACES, bloom UnrealBloomPass 0.7/0.85/0.82, rim light froide + fill chaud — expose `ambient/key/rim/fill` pour le mood) ; `world.js` (**4 mondes** : chapiteau complet sur son segment (parois/toit rayés `stripeTexture`, mât, arche de sortie, piste, foule+fanions InstancedMesh, spots), **Jungle** arbres/lianes/lucioles, **Plage** soleil couchant émissif + mer + palmiers + mouettes battantes, **Espace** grille néon additive + 5 portes toriques néon + planète annelée + étoiles filantes ; **`applyMood(stage,x)`** = blend fog/bg/hémisphère/key par smoothstep ±4 autour de chaque frontière ; `update(t)`) ; `player.js` (héros low-poly différenciés, `poseHero` états swing/fly/salute/idle).
 - **Mondes (3D-3)** : `BARS_PER_WORLD=12`, `NWORLDS=4` → `NBARS=48` ; `worldSegs[]` = bornes X à mi-chemin entre mondes ; premier bar de chaque monde à `PY0` (entrée douce). Espacement par monde : Cirque/Espace 4.5–7.5, **Jungle 4.2–5.6** (ses barres dérivent en X : `mv≈±1.0`, suivi de cible en vol → toujours rattrapable), **Plage 4.5–6.5** (rafales `G.wind` sinusoïdales ; en vol `G.windOff` dérive l'arc, vrille = dérive ×0.3, catch raté si `|windOff|>1.35` → « GUSTED! »). **Espace** : `flyDur ×1.25`, `reach ×1.12`, chute `GF×0.8`, anneaux bonus oscillants en Y. **Filet bonus** : 1 par monde à `NET_Y=-3.6`, rebond sans perte de vie (« SAVED BY THE NET! »), opacité 0.1 une fois utilisé. Bannière DOM `#banner` « World N — Nom » au premier catch du monde + `#worldTag` sous le score + `#windTag` 💨.
@@ -140,9 +192,33 @@ Leaderboard mondial complet, budget 0 € (Supabase free tier), il ne manque que
 - **UI** : DOM overlay (`#hud #menu #over #combo #tapBtn #flash`), police Fredoka.
 - **Build/deploy** : `cd game3d && npm install && npm run build` → copier `dist/` → `/docs` (+ `.nojekyll`). GitHub Pages sert `main:/docs` (à activer côté GitHub par Emmanuel : Settings → Pages → main /docs → l'URL sera `https://wonderself.github.io/trapeze/`).
 - **Test headless** : `node game3d/test/smoke3d.mjs` (Chromium swiftshader flags déjà dans le script). **Agnostique env.** : résout Playwright (`PLAYWRIGHT_PATH` ou candidats globaux), `dist/` relatif au script, captures dans `DELIVER_DIR` (défaut `/home/claude/deliver`, fallback `game3d/test/out/`). Vérifie WebGL, menu 3D, progression via `__game`, erreurs console. Critères 3D-1 (a)-(f) + 3D-2 (g) menu + 3D-3 (h) filet 1×/monde, (i) captures des 4 mondes via `warp`, + **3D-4 : (d) tour complet puis mode infini enclenché (lap ≥ 1, diffN ≥ 1), (e) écran de fin enrichi + records écrits (NEW BEST, stats, médailles), (f2) records intacts après reload, (j) contexte WebAudio créé** (flag `--autoplay-policy=no-user-gesture-required`) + **3D-5 : (k1) manette simulée (`navigator.getGamepads` mocké) → badge actif, A démarre la partie, débranchement détecté (code 17), (k2, depuis le correctif nom complet) frappe clavier réelle dans `#entryInput` d'un nom de 21 caractères → tronqué à 20, entrée en tête du board sur l'écran de fin (code 18), top 10 persistant après reload (code 19)** + **3D-8 : (r) non configuré → onglet WORLD absent (code 27), (s) Supabase mocké via `page.route` → GET remplit WORLD (28) + POST du run vérifié avec un nom complet (« SUPER CHAMPION »), 1 seul envoi (29), (t) réseau en échec → repli LOCAL silencieux (30)** → EXIT 0. ⏱ la traversée complète prend plusieurs minutes.
+- **Showtime (3D-9A)** :
+  - `world.js` → `buildMarquee(parent, x, z, ry)` (façade/crest/pilastres/sign/canopy `ExtrudeGeometry`/fascia/
+    2 affiches + `InstancedMesh` de 78 ampoules animées par `setColorAt`), textures procédurales `signTexture()`
+    / `nowShowingTexture()` / `posterTexture(n)` repeintes sur `document.fonts.ready`. Décor rangé dans
+    `wg[0..3]` (un groupe par monde) éteints par `applyMood` au-delà de `DECOR_PAD = 55`.
+  - `main.js` → cordes : `makeRopeGeometry()` (tube 10×5, bounding sphere maintenue à la main car les sommets
+    sont en repère monde) + `updateRope(b, alive)`, état `b.ropeAmp`/`b.ropePh`. Rigs instanciés `anchorIM`,
+    `barIM` (+ `nextBar` seul mesh, matériau brillant) et `starIM` ; `stars[i].p` (Vector3) remplace
+    `stars[i].m.position`. Culling distance `FAR_BAR` (62 en jeu, 34 au menu).
+  - `audio.js` → voix : `LINES` (12 ids stables = futurs noms de fichiers), `say(id,{prio,delay,cooldown})`,
+    `voicePump()` appelé par `updateAudio` (donc même sans AudioContext), `voiceState()`, `setVoiceEnabled()`,
+    `voiceCancel()`, `voiceBackend()` → `'files'|'speech'|'none'`, ducking `duck/duckTarget` appliqué à `musG`.
+    Lignes câblées : `welcome` (intro/1er menu), `begin` (startGame), `perfect` (PERFECT, combo ≥ 4 et multiple
+    de 5, cooldown 20 s), `combo10`/`combo25`, `world_jungle|beach|space` (enterWorld, delay 0.8), `net`,
+    `record` + `bye` (showOver), `endless` (lap 1).
+  - `assets.js` → manifeste `ART`/`SKY`/`VOICE` (vides par défaut) + `artURL`/`skyURL`/`voiceURL`. **Un fichier
+    non déclaré n'est jamais requêté** ⇒ zéro 404, zéro erreur console. READMEs de brief dans `public/{art,sky,voice}/`.
+  - `scene.js` → `renderer.info.autoReset = false` + snapshot dans `scene.onAfterRender` : `stage.calls()` =
+    drawcalls de **scène** (shadow map + passe principale), `stage.callsTotal()` = frame entière (bloom compris,
+    +14). Exposés dans `__game.state()` (`calls`, `callsTotal`).
+  - Harnais ajouté : `voice()`, `setVoice(bool)`, `sayTest(id)`, `ropes()` (segments/verts/amp/checksum de la
+    corde active), `marquee()` (present/bulbs/children), `state().calls|callsTotal|gain`.
+  - **Budget mesuré** (960×560, swiftshader) : jeu 96-102 drawcalls scène selon le monde, menu 117, +14 de bloom.
 - **Jeu 2D** (racine) : intact, PWA propre, ne plus y toucher sauf demande.
 
 ## ✅ HISTORIQUE
+- [2026-07-28] Session 3D-9A ✅ (Opus 5, branche `claude/showtime-3d9`, **non mergée : à merger après la 3D-9B**) — **Showtime, partie code**. **Marquee de théâtre** style Hollywood Boulevard habillé cirque à l'entrée du monde Cirque : façade art-déco, auvent trapézoïdal en saillie, lettrage « TRAPEZE STARS », fascia « NOW SHOWING · MARC & CLAIRE », deux affiches procédurales, et **78 ampoules chenillardes en un seul InstancedMesh** (animation par `setColorAt`, deux vagues qui courent le long des contours) — ≈ 10 drawcalls, zéro ombre nouvelle. Placement et cadrage validés à l'œil sur captures (menu avec et sans HUD, avec et sans bloom) : le marquee est entièrement lisible en fond du podium, à gauche du titre. **Cordes vivantes** : tube balayé maison (10×5 = 66 sommets, réécrit par frame) tendu au point bas du balancer, mou et ondulant au point haut, avec ondulation amortie après le lâcher/le fumble/la reprise ; seules la barre courante et 2 voisines sont animées ; **aucun changement de gameplay** (gate 33 : un catch PERFECT au combo 1 paie toujours exactement 200). **Système de voix de présentateur** : file à priorités + anti-doublon + plancher de 2,5 s + cooldown par ligne, ducking musique −8 dB, `delay` par ligne pour passer après le pic de fanfare ; backends `files` (public/voice/*.mp3) → `speechSynthesis` en-US → silence, bascule automatique et silencieuse ; toggle 🎙️ séparé du 🔇, persisté `ts3d_voice` ; 12 lignes câblées (welcome/begin/perfect/combo10/combo25/world_*/net/record/endless/bye). **Emplacements assets IA** : `public/{art,sky,voice}/` + READMEs de brief + manifeste `src/assets.js` — un fichier non déclaré n'est jamais requêté, donc **zéro 404 et zéro erreur console** quand les dossiers sont vides (critère x) ; skybox optionnelle par monde branchée dans `applyMood`. **Passe budget drawcalls** (découverte du jour : la caméra regarde dans l'axe du rail, three.js ne cullait ni les 48 trapèzes ni le décor des mondes déjà quittés — la scène était à **~250 drawcalls avant la session**, budget jamais mesuré) : ancrages + barres + étoiles passés en InstancedMesh, décor rangé en 4 groupes par monde éteints à 55 unités, barres masquées à 62 (34 au menu) → **96-102 drawcalls de scène en jeu, 117 au menu** (+14 de bloom). Smoke test étendu (u marquee + budget, v cordes vivantes + non-régression du score, w voix backend/anti-doublon/persistance, x zéro erreur console sans assets) : **EXIT 0** ×3 — endless lap 1, score 54 125, combo x47, médailles [🥈,💎,💎,💎], 0 erreur JS hors fonts sandbox et mock volontairement coupé. Build déployé dans `docs/`. Reste : **3D-9B** (génération fal.ai des skyboxes/affiches/voix/trailer), qui **nécessite la clé API d'Emmanuel**.
 - [2026-07-23] Fix ✅ (Sonnet 5) — **saisie du nom complet (20 caractères) au lieu des 3 initiales arcade**, demande directe d'Emmanuel. Remplacé la molette 3-lettres (`LETTERS`, `entryChars[3]`, `entrySlot`, `entrySpin/entryMove`) par un vrai `<input id="entryInput" maxlength="20">` dans `#entry` : focus auto (clavier virtuel mobile natif), Enter ou bouton ✔ OK confirment, `sanitizeName()` filtre lettres/chiffres/espace/apostrophe/tiret + trim + cap 20 + fallback `PLAYER` si vide. Piège corrigé au passage : le listener global Space (contrôle de vol) interceptait la barre d'espace même quand le champ avait le focus, empêchant de taper des espaces dans un nom — ajout d'un garde `typingTarget()` (ignore Space si un `<input>`/`<textarea>` est actif). Manette : ne peut pas taper, donc le bouton A valide un nom déjà saisi (clavier/tactile) si le champ n'est pas vide, sinon refocus + shake visuel `.needsName` (`gpA`), et le d-pad ne fait plus rien sur cet écran (plus de molette à piloter). `renderBoard`/CSS `.bIn` passés en `flex:1;text-overflow:ellipsis` (au lieu d'une colonne fixe 3 caractères) pour des noms jusqu'à 20 caractères sans dépasser le panneau, ni au menu (rail étroit, ellipsis vérifiée visuellement : « Marc-An… ») ni à l'écran de fin (plus large, nom complet affiché). **`net.js`** (leaderboard mondial 3D-8, toujours inactif par défaut) : `submitWorldScore({name,...})` + `cleanName()` élargi au même filtre (20 car.), colonne SQL/wire laissée `initials` pour compat avec un projet déjà déployé. **Rétrocompatibilité locale** : `BOARD`/`ts3d_board` ne change pas de forme (`{i,s,m,l}`), les anciennes entrées 3-lettres s'affichent normalement, aucune migration nécessaire. `window.__game` : `entry()` → `{open, value}`, `setEntry(str)` tape le nom (tronqué 20), `entryConfirm()` inchangé ; `entrySpin/entryMove` retirés (n'ont plus de sens sans molette). Smoke test réécrit (k2 : frappe clavier réelle de « MARC THE GREAT WONDER » (21 car.) → vérifié tronqué à 20 exactement dans le champ, sur le board et après reload ; s : soumission monde avec « SUPER CHAMPION ») : **EXIT 0** — 0 erreur JS hors fonts sandbox + mock volontairement coupé, captures vérifiées (aucun dépassement visuel, ni au menu ni à l'écran de fin). Build déployé dans `docs/`.
 - [2026-07-23] Session 3D-8 ✅ (Sonnet 5, session lancée en Fable 5) — **leaderboard mondial (Supabase, 0 €)**. **Client complet** : `net-config.js` (seul fichier à éditer, URL + clé anon vides par défaut) + `net.js` réécrit en client REST PostgREST par `fetch` pur (zéro dépendance npm) : GET top-10 `?select=initials,score,world,lap&order=score.desc&limit=10`, POST du score, timeout 3,5 s, 1 retry sur les GET, échec toujours silencieux (repli local), anti-abus client (initiales A-Z0-9, score clampé 0..500 000, 1 envoi/run). **UI** : onglets LOCAL/WORLD sur le panneau HIGH SCORES (menu + fin), WORLD seulement si configuré (ou via le hook de test `__game.netTest`), « … » pendant le fetch, entrée du joueur surlignée, envoi au moment de la saisie d'initiales existante, daily hors classement, fetch jamais en jeu. **Guide** `game3d/SUPABASE_SETUP.md` : pas-à-pas FR (compte gratuit sans CB, SQL table `scores` + RLS INSERT/SELECT anonymes bornés sans UPDATE/DELETE, récupérer URL/clé anon, coller, rebuild) + pourquoi la clé anon est publique. Smoke test étendu (r absent si non configuré / s mock `page.route` GET+POST vérifiés / t échec réseau → repli silencieux) : **EXIT 0** — flux 3D-1→3D-7 inchangé (zéro régression), POST unique {initials:"SUP", score:100, world:0, lap:0} capturé, 0 erreur JS hors fonts sandbox et mock volontairement coupé. Build déployé dans `docs/`. Reste pour allumer : suivre SUPABASE_SETUP.md (5 min) et coller 2 valeurs dans `net-config.js`.
 - [2026-07-22] Session 3D-7 ✅ (Sonnet 5, session lancée en Fable 5) — **premium showcase**. **Intro cinématique** (dolly aérien 3,6 s + spots séquencés + logo CSS animé, skippable au 1er input, auto-skip `?lowfx`/reduced-motion, rejouable 🎬, harnais `intro/skipIntro/playIntro`). **Mode attract** (bot autonome après 20 s d'inactivité menu, bandeau « DEMO — press any key to play », tout input rend la main, aucune écriture de records ; auto-déclenchement coupé sous `navigator.webdriver`, harnais `attract/startAttract/toMenu`). **Feu d'artifice + ovation** (un pool `THREE.Points` additif 260 pts, 2-4 salves, SFX `firework`/`ovation`/`spot` ajoutés à `audio.js`) sur tour complet, top-1 ou best daily. **Daily challenge** (bouton 📅, LCG seedé date UTC re-tirant hauteurs+dérives Jungle, X/décor inchangés, `ts3d_daily`, « Today's best » au menu, hors board principal, harnais `daily/startDaily`). **Page vitrine** `docs/showcase.html` + 3 captures compressées `docs/shots/*.jpg`. **Scaffold leaderboard mondial** `game3d/src/net.js` (Local+Supabase, inactif, mode d'emploi 0 € en commentaire). Smoke test étendu (n intro skippable, o attract start/stop, p daily déterministe sur 2 loads + distinct du rail de base, q showcase dans dist avec CTA) : **EXIT 0** ×2 — endless lap 1 score 57 125, combo x47, « ACE » en tête, 0 erreur JS hors 4× `ERR_CONNECTION_RESET` fonts sandbox. Build déployé dans `docs/`. Aucune session ⬜ restante — suite proposée dans le bloc NEXT (activer Supabase, trailer, vitrine FR/EN).

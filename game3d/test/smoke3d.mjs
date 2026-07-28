@@ -1,7 +1,9 @@
 // Headless WebGL smoke test — Session 3D-1 criteria (a)-(f), 3D-2 (g) 3D menu,
 // 3D-3 (h) 4 worlds + safety net + full traversal, 3D-4 (d/e/f/j) endless+records+audio,
 // 3D-5 (k) gamepad mapping + full-name entry (up to 20 chars, real text field) + persistent top-10 leaderboard,
-// 3D-8 (r/s/t) world leaderboard: inert when unconfigured, mocked Supabase GET/POST, silent fallback.
+// 3D-8 (r/s/t) world leaderboard: inert when unconfigured, mocked Supabase GET/POST, silent fallback,
+// 3D-9A (u/v/w/x) theatre marquee + draw-call budget, living ropes with untouched gameplay,
+//        presenter voice (backend / queue / persistence), and ZERO console error with no AI assets.
 // Environment-agnostic: resolves playwright + paths so it runs anywhere.
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -141,6 +143,26 @@ try {
     }; chk();
   }));
 
+  // ---- (w) presenter voice (3D-9A): backend, anti-duplicate queue, toggle persistence ----
+  results.w_voice = await page.evaluate(() => {
+    const v0 = window.__game.voice();
+    const first = window.__game.sayTest('welcome');
+    const dup = window.__game.sayTest('welcome');        // same line twice must NOT stack
+    const v1 = window.__game.voice();
+    return {
+      backend: v0.backend, enabledDefault: v0.enabled,
+      first, dup,
+      // exactly one 'welcome' in flight even though it was requested twice
+      welcomeInFlight: v1.queue.filter((i) => i === 'welcome').length + (v1.speaking === 'welcome' ? 1 : 0),
+      ids: v1.queue, speaking: v1.speaking,
+    };
+  });
+  results.w_voiceOff = await page.evaluate(() => {
+    window.__game.setVoice(false);
+    const off = window.__game.voice();
+    return { enabled: off.enabled, backend: off.backend, saidWhileOff: window.__game.sayTest('begin') };
+  });
+
   // ---- (a) release at the ideal moment -> PERFECT ----
   await page.evaluate(() => window.__game.start('claire'));
   await page.waitForTimeout(300);
@@ -165,11 +187,25 @@ try {
     const t0 = performance.now();
     const chk = () => {
       const s = window.__game.state();
-      if (s.state === 'swing') return res({ flips: s.flips, bonus: s.flipBonus, grade: s.grade, timeScale: +s.timeScale.toFixed(2) });
+      if (s.state === 'swing') return res({ flips: s.flips, bonus: s.flipBonus, grade: s.grade, timeScale: +s.timeScale.toFixed(2), gain: s.gain, combo: s.combo });
       if (performance.now() - t0 > 5000) return res({ timeout: true, state: s.state });
       requestAnimationFrame(chk);
     }; chk();
   }));
+
+  // ---- (v) living ropes: the active rope is re-shaped every frame and rings after a
+  //      release/catch — while the scoring & physics contract is untouched (see the
+  //      gate below: a PERFECT catch at combo 1 still pays exactly (100)×2 = 200) ----
+  results.v_ropes = await page.evaluate(() => new Promise((res) => {
+    const a = window.__game.ropes();
+    setTimeout(() => {
+      const b = window.__game.ropes();
+      res({ seg: a.segments, verts: a.verts, moved: a.checksum !== b.checksum, ring: Math.max(a.amp, b.amp) });
+    }, 250);
+  }));
+
+  // ---- (u) marquee in the scene + per-frame draw-call budget (scene + post passes) ----
+  results.u_marquee = await page.evaluate(() => ({ ...window.__game.marquee(), calls: window.__game.state().calls }));
 
   // ---- (b) release on the backward swing -> fumble... ----
   results.b_early = await page.evaluate(() => new Promise((res) => {
@@ -286,7 +322,9 @@ try {
   results.m_photo = await page.evaluate(() => window.__game.photo());
   results.m_shareVisible = await page.evaluate(() => !document.getElementById('shareBtn').classList.contains('hidden'));
 
-  // ---- (f) persistence: records survive a full page reload, incl. the "reduce flashes" a11y option ----
+  // ---- (f) persistence: records survive a full page reload, incl. the "reduce flashes" a11y
+  //      option and (3D-9A) the separate ringmaster-voice toggle ----
+  await page.evaluate(() => window.__game.setVoice(false));   // wipe() earlier reset it to the default
   await page.goto('http://localhost:8130/index.html?lowfx', { waitUntil: 'load' });
   await page.waitForTimeout(900);
   results.f_persist = await page.evaluate(() => ({
@@ -295,7 +333,9 @@ try {
     board: window.__game.board(),
     boardRows: document.getElementById('menuBoard').querySelectorAll('.bRow').length,
     a11y: window.__game.a11y(),
+    voiceState: window.__game.voice(),
   }));
+  await page.evaluate(() => window.__game.setVoice(true));    // back to the shipped default
 
   // ---- (p) daily challenge: date-seeded rail is deterministic across two fresh loads ----
   results.p_daily1 = await page.evaluate(() => { window.__game.startDaily(); return window.__game.daily(); });
@@ -448,7 +488,21 @@ try {
   else if (!(results.t_fail && results.t_fail.configured && results.t_fail.tab === 'local'
              && results.t_fail.rows === null && results.t_fail.localRows >= 1
              && results.t_fail.tabSel === 'LOCAL')) code = 30;  // network failure: silent LOCAL fallback
-  else if (realErrors.length) code = 2;
+  // ---- 3D-9A gates ----
+  else if (!(results.u_marquee && results.u_marquee.present && results.u_marquee.bulbs >= 60
+             && results.u_marquee.bulbs <= 120 && results.u_marquee.children >= 8
+             && results.u_marquee.calls > 0 && results.u_marquee.calls < 120)) code = 31;  // marquee in scene + draw-call budget
+  else if (!(results.v_ropes && results.v_ropes.seg >= 6 && results.v_ropes.verts > 20
+             && results.v_ropes.moved && results.v_ropes.ring > 0)) code = 32;             // ropes live, and ring after a release
+  else if (!(results.c_flip && results.c_flip.combo === 1 && results.c_flip.gain === 200)) code = 33;  // gameplay non-regression: PERFECT @combo1 still pays 200
+  else if (!(results.w_voice && ['speech', 'none'].includes(results.w_voice.backend)
+             && results.w_voice.enabledDefault === true && results.w_voice.first === true
+             && results.w_voice.dup === false && results.w_voice.welcomeInFlight === 1)) code = 34;  // voice backend + anti-duplicate queue
+  else if (!(results.w_voiceOff && results.w_voiceOff.enabled === false
+             && results.w_voiceOff.backend === 'none' && results.w_voiceOff.saidWhileOff === false)) code = 35;  // voice off = total silence
+  else if (!(results.f_persist.voice === false && results.f_persist.voiceState
+             && results.f_persist.voiceState.enabled === false)) code = 36;                 // voice toggle survives reload
+  else if (realErrors.length) code = 2;   // (x) empty art/sky/voice folders must produce ZERO console error
   await browser.close();
 } catch (e) {
   console.log('HARNESS ERROR:', e.message); code = 4;
