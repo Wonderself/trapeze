@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#05010f" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<link rel="manifest" href="./manifest.json" />
+<link rel="apple-touch-icon" href="./icon-192.png" />
+<link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="./icon-192.png" type="image/png" />
+<title>Trapeze Stars 3D ✨ — a circus gift for Marc &amp; Claire</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{ --gold:#ffcf3f; --pink:#ff6db0; --blue:#54c8ff; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:#05010f;font-family:'Fredoka',system-ui,Arial,sans-serif;color:#fff;user-select:none;-webkit-user-select:none;overscroll-behavior:none;touch-action:none}
+  #app{position:fixed;inset:0}
+  canvas{display:block;width:100%;height:100%}
+
+  /* ---- HUD (contrast pass: semi-opaque plate behind the thin/small text) ---- */
+  #hud{position:fixed;top:0;left:0;right:0;padding:14px 18px;display:none;justify-content:space-between;align-items:flex-start;pointer-events:none;z-index:5;text-shadow:0 2px 10px rgba(0,0,0,.7)}
+  #hud>div{background:rgba(8,3,20,.4);padding:6px 14px;border-radius:14px;backdrop-filter:blur(3px)}
+  #score{font-size:30px;font-weight:700;color:var(--gold);letter-spacing:.5px;transition:transform .16s cubic-bezier(.2,2,.4,1)}
+  #score.pop{transform:scale(1.28)}
+  #score small{display:block;font-size:12px;color:#cbb2ff;font-weight:500;letter-spacing:2px}
+  #lives{font-size:24px;letter-spacing:2px}
+  #combo{position:fixed;top:70px;left:50%;transform:translateX(-50%);font-size:22px;font-weight:700;color:#fff;opacity:0;transition:opacity .2s;z-index:5;pointer-events:none;text-shadow:0 2px 12px rgba(255,120,220,.8);background:rgba(8,3,20,.35);padding:3px 14px;border-radius:20px}
+  #grade{position:fixed;top:32%;left:50%;transform:translate(-50%,-50%);font-size:clamp(30px,8vw,58px);font-weight:700;opacity:0;transition:opacity .15s;z-index:6;pointer-events:none;letter-spacing:2px;text-shadow:0 4px 24px rgba(0,0,0,.6)}
+  #grade.zoom{animation:gradeZoom .5s cubic-bezier(.2,2.2,.4,1)}
+  @keyframes gradeZoom{0%{transform:translate(-50%,-50%) scale(.4)}60%{transform:translate(-50%,-50%) scale(1.15)}100%{transform:translate(-50%,-50%) scale(1)}}
+  #comboHold{position:fixed;top:14px;left:50%;transform:translateX(-50%);text-align:center;z-index:5;pointer-events:none;opacity:0;transition:opacity .25s;font-size:16px;font-weight:700;color:#ffb2dd;text-shadow:0 2px 8px rgba(0,0,0,.7);background:rgba(8,3,20,.4);padding:4px 16px 6px;border-radius:16px}
+  #comboBar{width:110px;height:4px;margin:4px auto 0;border-radius:3px;background:rgba(255,255,255,.15);overflow:hidden}
+  #comboFill{height:100%;width:100%;border-radius:3px;background:linear-gradient(90deg,#ff6db0,#ffcf3f)}
+
+  /* ---- overlays ---- */
+  .screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;text-align:center;padding:24px;background:radial-gradient(ellipse at 50% 38%,rgba(40,10,70,.35),rgba(3,0,12,.86) 78%)}
+  /* menu: leave the centre clear so the 3D podium characters are the stars */
+  #menu{justify-content:space-between;padding:30px 24px 26px;background:radial-gradient(ellipse at 50% 52%,rgba(3,0,12,0) 26%,rgba(3,0,12,.5) 72%,rgba(3,0,12,.82) 100%)}
+  .menuTop,.menuBottom{display:flex;flex-direction:column;align-items:center;width:100%}
+  .hidden{display:none!important}
+  #title{font-size:clamp(38px,11vw,86px);font-weight:700;line-height:.95;background:linear-gradient(180deg,#fff2b0,#ffb43c);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 22px rgba(255,180,40,.55));letter-spacing:1px}
+  #subtitle{margin-top:10px;font-size:clamp(14px,4vw,20px);color:#ffd7ef;font-weight:600;letter-spacing:1px}
+  #dedication{margin-top:6px;font-size:clamp(11px,3vw,14px);color:#b79bff;font-weight:500;letter-spacing:3px;text-transform:uppercase}
+  .pickRow{display:flex;gap:110px;margin:0 0 16px;flex-wrap:nowrap;justify-content:center}
+  .pick{padding:9px 8px 7px;min-width:104px;border-radius:16px;background:rgba(14,5,32,.42);border:2px solid rgba(255,255,255,.16);cursor:pointer;transition:transform .12s,border-color .12s,background .12s;backdrop-filter:blur(4px)}
+  .pick:hover{transform:translateY(-3px)}
+  .pick.sel{border-color:var(--gold);background:rgba(60,30,90,.6);box-shadow:0 0 24px rgba(255,200,60,.4)}
+  .pick .nm{font-weight:700;font-size:16px;letter-spacing:1px}
+  .pick .tag{display:block;font-size:10px;letter-spacing:2px;margin-top:1px;color:#9a8fc5;opacity:0;transition:opacity .12s}
+  .pick.sel .tag{opacity:1;color:var(--gold)}
+  .btn{margin-top:4px;padding:14px 40px;border:none;border-radius:40px;font-family:inherit;font-size:20px;font-weight:700;color:#3a1500;cursor:pointer;background:linear-gradient(180deg,#ffe08a,#ffb028);box-shadow:0 8px 26px rgba(255,170,30,.4);transition:transform .1s}
+  .btn:active{transform:scale(.95)}
+
+  /* ---- accessibility: cursors + keyboard focus (3D-6) ---- */
+  button,.pick,.letter .lch{cursor:pointer}
+  button:focus-visible,.pick:focus-visible,#playBtn:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+  .pick{outline-offset:4px}
+  @media (prefers-reduced-motion: reduce){
+    #grade.zoom{animation:none}
+    #banner.show{animation:bannerIn 2.6s linear forwards}
+    #newBest{animation:none}
+  }
+  #hint{margin-top:16px;font-size:12px;color:#7d6bb0;line-height:1.7}
+  #bigmsg{font-size:clamp(30px,9vw,60px);font-weight:700;color:#fff}
+  #bigsub{margin-top:10px;font-size:clamp(15px,4vw,20px);color:var(--gold)}
+
+  /* ---- records & end-screen stats (3D-4) ---- */
+  #best{margin-top:14px;padding:8px 20px;border-radius:30px;background:rgba(14,5,32,.5);border:1px solid rgba(255,207,63,.35);font-size:clamp(12px,3.4vw,15px);color:#ffe9a8;font-weight:600;letter-spacing:1px;backdrop-filter:blur(4px)}
+  #best .medals{display:block;margin-top:3px;font-size:clamp(11px,3vw,14px);letter-spacing:2px;color:#cbb2ff}
+  #newBest{margin-top:8px;font-size:clamp(15px,4.5vw,22px);font-weight:700;color:#8affc1;letter-spacing:2px;text-shadow:0 0 18px rgba(120,255,190,.8);animation:bestPulse .7s ease-in-out infinite alternate}
+  @keyframes bestPulse{from{transform:scale(1)}to{transform:scale(1.08)}}
+  #overStats{display:grid;grid-template-columns:repeat(2,minmax(120px,150px));gap:8px 14px;margin-top:18px}
+  #overStats div{padding:8px 6px;border-radius:12px;background:rgba(14,5,32,.5);border:1px solid rgba(255,255,255,.12);font-size:13px;color:#e8dcff}
+  #overStats b{display:block;font-size:19px;color:#fff}
+  #overMedals{margin-top:12px;font-size:clamp(13px,3.6vw,17px);letter-spacing:3px;color:#ffe9a8}
+  .btnRow{display:flex;gap:12px;margin-top:24px;flex-wrap:wrap;justify-content:center}
+  .btn.ghost{background:rgba(14,5,32,.55);color:#e8dcff;border:2px solid rgba(255,255,255,.25);box-shadow:none;font-size:16px;padding:12px 26px}
+  #muteBtn{position:fixed;left:16px;bottom:18px;z-index:12;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(14,5,32,.55);color:#fff;font-size:19px;cursor:pointer;backdrop-filter:blur(4px)}
+  #muteBtn:active{transform:scale(.9)}
+  #fxBtn{position:fixed;left:68px;bottom:18px;z-index:12;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(14,5,32,.55);color:#fff;font-size:18px;cursor:pointer;backdrop-filter:blur(4px)}
+  #fxBtn:active{transform:scale(.9)}
+  #fxBtn.on{border-color:var(--gold);box-shadow:0 0 12px rgba(255,207,63,.5)}
+
+  /* ---- photo finish (3D-6) ---- */
+  #photoWrap{margin-top:14px;display:none}
+  #photoWrap.show{display:block}
+  #photoImg{width:min(260px,72vw);border-radius:14px;border:2px solid rgba(255,207,63,.45);box-shadow:0 8px 26px rgba(0,0,0,.5)}
+  #photoCap{margin-top:4px;font-size:11px;letter-spacing:2px;color:#b79bff;text-transform:uppercase}
+
+  /* ---- mobile action button ---- */
+  #tapBtn{position:fixed;right:22px;bottom:26px;width:96px;height:96px;border-radius:50%;border:3px solid rgba(255,215,60,.85);background:radial-gradient(circle at 38% 32%,rgba(255,235,120,.55),rgba(255,140,0,.5));color:#fff;font-size:15px;font-weight:700;display:none;align-items:center;justify-content:center;z-index:6;box-shadow:0 0 34px rgba(255,180,20,.6);touch-action:manipulation}
+  #tapBtn:active{transform:scale(.9)}
+  @media (hover:none),(pointer:coarse){ #tapBtn.on{display:flex} }
+  #flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:8}
+
+  /* ---- worlds ---- */
+  #worldTag{font-size:11px;color:#8fd0ff;letter-spacing:3px;font-weight:600;margin-top:2px}
+  #windTag{position:fixed;top:60px;right:20px;font-size:18px;font-weight:700;color:#bfe9ff;opacity:0;transition:opacity .35s;z-index:5;pointer-events:none;text-shadow:0 2px 10px rgba(0,0,0,.7);background:rgba(8,3,20,.35);padding:2px 10px;border-radius:12px}
+  #banner{position:fixed;top:36%;left:0;right:0;text-align:center;z-index:7;pointer-events:none;opacity:0}
+  #banner.show{animation:bannerIn 2.6s ease forwards}
+  @keyframes bannerIn{0%{opacity:0;transform:scale(.7)}15%{opacity:1;transform:scale(1.06)}25%{transform:scale(1)}75%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
+  #banner div{display:inline-block;padding:10px 34px;border-radius:40px;background:rgba(10,4,26,.55);border:2px solid var(--gold);font-size:clamp(20px,5vw,34px);font-weight:700;color:#ffe9a8;letter-spacing:2px;backdrop-filter:blur(3px)}
+
+  /* ---- gamepad badge (3D-5) ---- */
+  #gpBadge{position:fixed;top:48px;right:18px;z-index:6;font-size:19px;display:none;pointer-events:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));animation:gpIn .3s ease}
+  @keyframes gpIn{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:scale(1)}}
+
+  /* ---- leaderboard panel (3D-5) ---- */
+  .board{background:rgba(10,4,26,.62);border:1px solid rgba(255,207,63,.32);border-radius:14px;padding:10px 12px;backdrop-filter:blur(6px)}
+  #menuBoard{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:clamp(148px,42vw,208px);z-index:4;max-height:74vh;overflow:hidden}
+  .bTitle{font-size:13px;font-weight:700;color:var(--gold);letter-spacing:2px;text-align:center;margin-bottom:6px}
+  .bRow{display:flex;align-items:center;gap:6px;padding:2px 3px;border-radius:6px;line-height:1.55}
+  .bRow.hl{background:rgba(255,207,63,.22);box-shadow:0 0 0 1px rgba(255,207,63,.45)}
+  .bRk{width:16px;flex:none;text-align:right;font-size:12px;font-weight:700;color:#9a8fc5}
+  .bIn{flex:1 1 auto;min-width:0;text-align:left;font-weight:700;letter-spacing:.2px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bMe{width:16px;flex:none;text-align:center;font-size:13px}
+  .bSc{flex:none;text-align:right;font-size:13px;color:#ffe9a8;font-weight:600;font-variant-numeric:tabular-nums}
+  .bEmpty{color:#8f82bd;font-size:11px;text-align:center;padding:4px 0;line-height:1.5}
+  /* ---- LOCAL / WORLD tabs (3D-8) ---- */
+  .bTabs{display:flex;gap:6px;justify-content:center;margin-bottom:6px}
+  .bTab{font-size:10px;font-weight:700;letter-spacing:1px;color:#8f82bd;padding:2px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);cursor:pointer;transition:color .12s,border-color .12s}
+  .bTab.sel{color:var(--gold);border-color:rgba(255,207,63,.5);background:rgba(255,207,63,.12)}
+  #overBoard{width:min(320px,86vw);margin-top:16px}
+
+  /* ---- name entry (full name, up to 20 chars — replaces the 3-letter arcade wheel) ---- */
+  #entryTitle{font-size:clamp(24px,7vw,44px);font-weight:700;color:var(--gold);letter-spacing:2px;text-shadow:0 0 22px rgba(255,200,60,.6)}
+  #entryRank{margin-top:4px;font-size:clamp(13px,4vw,18px);color:#8affc1;font-weight:600;letter-spacing:2px}
+  #entryScore{margin-top:2px;font-size:clamp(14px,4vw,20px);color:#ffe9a8;font-weight:600}
+  #entryInput{margin:26px 0 8px;width:min(340px,88vw);max-width:100%;padding:14px 18px;font-size:clamp(20px,6vw,28px);font-weight:700;text-align:center;color:#fff;background:rgba(14,5,32,.55);border:2px solid rgba(255,255,255,.18);border-radius:14px;font-family:inherit;letter-spacing:.5px;box-sizing:border-box}
+  #entryInput:focus{outline:none;border-color:var(--gold);color:var(--gold);box-shadow:0 0 22px rgba(255,200,60,.45)}
+  #entryInput::placeholder{color:#7d6bb0;font-weight:600}
+  #entryInput.needsName{animation:needsName .35s}
+  @keyframes needsName{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+  #entryHint{margin-top:10px;font-size:12px;color:#7d6bb0;line-height:1.7}
+
+  /* ---- cinematic intro (3D-7) ---- */
+  #introLogo{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:20;pointer-events:none;opacity:0;transition:opacity .3s}
+  #introLogo.show{opacity:1}
+  #introLogo div{font-size:clamp(46px,14vw,116px);font-weight:700;text-align:center;line-height:.92;letter-spacing:2px;background:linear-gradient(180deg,#fff2b0,#ffb43c);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 6px 34px rgba(255,180,40,.8));animation:logoIn 1.1s cubic-bezier(.2,1.8,.4,1)}
+  @keyframes logoIn{0%{transform:scale(.22);opacity:0}55%{transform:scale(1.12);opacity:1}100%{transform:scale(1)}}
+  @media (prefers-reduced-motion: reduce){ #introLogo div{animation:none} }
+  #introBtn{position:fixed;left:120px;bottom:18px;z-index:12;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(14,5,32,.55);color:#fff;font-size:18px;cursor:pointer;backdrop-filter:blur(4px)}
+  #introBtn:active{transform:scale(.9)}
+
+  /* ---- attract / demo mode (3D-7) ---- */
+  #attractBar{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9;display:none;background:rgba(10,4,26,.72);border:2px solid var(--gold);border-radius:30px;padding:8px 26px;font-weight:700;font-size:clamp(13px,3.6vw,17px);letter-spacing:2px;color:#ffe9a8;pointer-events:none;animation:attractPulse 1.5s ease-in-out infinite alternate}
+  #attractBar.show{display:block}
+  @keyframes attractPulse{from{opacity:.72}to{opacity:1}}
+
+  /* ---- daily challenge (3D-7) ---- */
+  #dailyBtn{margin-top:10px;font-size:15px;padding:10px 26px}
+  #dailyBest{margin-top:5px;font-size:11px;color:#8fd0ff;letter-spacing:1px}
+</style>
+  <script type="module" crossorigin src="./assets/index-xUpFyqD-.js"></script>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="hud">
+  <div><div id="score">0<small>SCORE</small></div><div id="worldTag">CIRCUS</div></div>
+  <div id="lives">❤❤❤</div>
+</div>
+<div id="gpBadge" title="Gamepad connected">🎮</div>
+<div id="banner"><div id="bannerTxt">World 2 — Jungle</div></div>
+<div id="windTag">💨</div>
+<div id="combo"></div>
+<div id="grade"></div>
+<div id="comboHold"><span>COMBO x2</span><div id="comboBar"><div id="comboFill"></div></div></div>
+<div id="flash"></div>
+<button id="tapBtn">✊</button>
+
+<div id="menu" class="screen">
+  <div class="menuTop">
+    <div id="title">TRAPEZE<br>STARS</div>
+    <div id="subtitle">Starring&nbsp; MARC &amp; CLAIRE</div>
+    <div id="dedication">★ young champions ★</div>
+    <div id="best" class="hidden"></div>
+  </div>
+  <div class="menuBottom">
+    <div class="pickRow">
+      <div class="pick marc sel" data-char="marc" tabindex="0" role="button" aria-pressed="true" aria-label="Play as Marc"><div class="nm">MARC</div><span class="tag">▲ PICKED</span></div>
+      <div class="pick claire" data-char="claire" tabindex="0" role="button" aria-pressed="false" aria-label="Play as Claire"><div class="nm">CLAIRE</div><span class="tag">▲ PICKED</span></div>
+    </div>
+    <button class="btn" id="playBtn">▶ PLAY</button>
+    <button class="btn ghost" id="dailyBtn">📅 DAILY</button>
+    <div id="dailyBest"></div>
+    <div id="hint"><b>Hold</b> to grip &amp; pump your swing — <b>let go</b> at the top to fly!<br>Tap in the air for a <b>FLIP</b> bonus. Space / gamepad <b>A</b> also work.</div>
+  </div>
+  <div id="menuBoard" class="board"></div>
+</div>
+
+<div id="over" class="screen hidden">
+  <div id="bigmsg">Nice flying!</div>
+  <div id="bigsub">Score 0</div>
+  <div id="newBest" class="hidden">★ NEW BEST! ★</div>
+  <div id="overStats"></div>
+  <div id="overMedals"></div>
+  <div id="photoWrap"><img id="photoImg" alt="Your best PERFECT catch this run" /><div id="photoCap">📸 Photo finish</div></div>
+  <div id="overBoard" class="board hidden"></div>
+  <div class="btnRow">
+    <button class="btn" id="replayBtn">↻ REPLAY</button>
+    <button class="btn ghost hidden" id="shareBtn">📤 SHARE</button>
+    <button class="btn ghost" id="againBtn">MENU</button>
+  </div>
+  <div id="hint">Made with ❤ for Marc &amp; Claire</div>
+</div>
+
+<div id="entry" class="screen hidden">
+  <div id="entryTitle">★ NEW HIGH SCORE ★</div>
+  <div id="entryRank">#1 place</div>
+  <div id="entryScore">Score 0</div>
+  <input id="entryInput" type="text" inputmode="text" maxlength="20" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" placeholder="Your name" aria-label="Your name">
+  <button class="btn" id="entryOk">✔ OK</button>
+  <div id="entryHint">Type your name (up to 20 characters) · Enter or gamepad A to confirm</div>
+</div>
+
+<div id="introLogo"><div>TRAPEZE<br>STARS</div></div>
+<div id="attractBar">DEMO — press any key to play</div>
+
+<button id="muteBtn" aria-label="Sound on/off">🔊</button>
+<button id="fxBtn" aria-label="Reduce flashes" aria-pressed="false">✨</button>
+<button id="introBtn" aria-label="Replay intro">🎬</button>
+
+</body>
+</html>

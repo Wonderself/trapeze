@@ -1,6 +1,6 @@
 # 🎪 Trapeze Stars — Game Design Document (version 2D)
 
-Ce document décrit **toutes les mécaniques du jeu 2D** (racine, `index.html`) et son **pipeline graphique**. Il sert de référence pour toute évolution : chaque nouveauté doit renforcer la boucle « voler → attraper → enchaîner les figures → faire vibrer le public ».
+Ce document décrit **toutes les mécaniques du jeu 2D** (`2d/index.html`) et son **pipeline graphique**. Il sert de référence pour toute évolution : chaque nouveauté doit renforcer la boucle « voler → attraper → enchaîner les figures → faire vibrer le public ».
 
 > 🚀 **Le jeu 3D** (`game3d/`, direction active) a son propre design piloté par sessions dans **`AUDIT.md`** : le skill y est le **timing du lâcher** (PERFECT/GOOD/OK sur la phase du pendule), le pompage en maintenant l'appui, et les vrilles bonus en vol. Les piliers ci-dessous (flow, spectacle, générosité, surprise) s'appliquent aux deux versions.
 

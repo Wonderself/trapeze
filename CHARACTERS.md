@@ -1,6 +1,6 @@
 # 🎭 Trapeze Stars — Fiches personnages
 
-Référence canonique de l'apparence et de l'animation des personnages, **valable pour les deux versions** (2D racine et 3D `game3d/`). **Toute évolution graphique doit respecter ces fiches.**
+Référence canonique de l'apparence et de l'animation des personnages, **valable pour les deux versions** (2D `2d/` et 3D `game3d/`). **Toute évolution graphique doit respecter ces fiches.**
 
 ## Identité en une phrase
 

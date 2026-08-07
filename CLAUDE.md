@@ -6,8 +6,10 @@
 
 ## 🎮 Le projet en une phrase
 « Trapeze Stars » — jeu de trapèze offert en cadeau à **Marc & Claire** (des enfants : générosité > punition).
-Deux versions coexistent : le **canvas 2D** historique (racine, ✅ terminé, ne plus y toucher) et la direction
+Deux versions coexistent : le **canvas 2D** historique (`2d/`, ✅ terminé, ne plus y toucher) et la direction
 active **Trapeze Stars 3D** (`game3d/`, Three.js + Vite), qu'on fait monter en gamme session par session.
+La racine (`index.html`) est une page de choix statique qui renvoie vers `2d/` ou `3d/` — ne pas y remettre
+de logique de jeu.
 
 ## 🤖 Protocole d'auto-avancement (à exécuter à chaque session, sans attendre d'instruction)
 0. **Resync git AVANT toute analyse** (leçon du 2026-07-19 : un clone de session peut être périmé et mono-branche, et t'envoyer travailler sur une base morte) :
@@ -16,7 +18,7 @@ active **Trapeze Stars 3D** (`game3d/`, Three.js + Vite), qu'on fait monter en g
 2. Repère dans le **TABLEAU DES SESSIONS** la **première ligne `⬜ À faire`** = la prochaine session. La colonne **« Modèle conseillé »** dit quel modèle Emmanuel doit choisir en ouvrant la session (Fable 5 pour le lourd/délicat, Opus 4.8 pour le moyen bien spécifié, Sonnet 5 pour le léger). Si le modèle courant ne correspond pas, le signaler en une ligne mais **faire la session quand même**.
 3. **Exécute-la exactement** comme décrite dans « DÉTAIL DES SESSIONS » (le « Prompt de lancement » est ta feuille de route).
 4. **Teste** : `node game3d/test/smoke3d.mjs` (étends-le si la session ajoute des mécaniques) + captures visuelles à vérifier toi-même. Zéro erreur JS tolérée (l'`ERR_CONNECTION_RESET` de la font Google en sandbox est le seul bruit accepté).
-5. **Rebuild & deploy** : `cd game3d && npm run build`, puis remplace le contenu de `/docs` par celui de `game3d/dist/` (garde `docs/.nojekyll`).
+5. **Rebuild & deploy** : `cd game3d && npm run build`, puis remplace le contenu de **`/docs`** (GitHub Pages, garde `docs/.nojekyll`) **et de `/3d`** (Coolify — même contenu, pas de `.nojekyll` nécessaire) par celui de `game3d/dist/`. Les deux dossiers doivent toujours être identiques.
 6. **Mets à jour `AUDIT.md`** : statut de la session → `✅ Fait (AAAA-MM-JJ)`, ligne d'historique, pointeur `NEXT` vers la suite.
 7. **Commit + push sur `main`**, puis compte-rendu concis (diffs, pas de fichiers entiers).
 8. S'il ne reste aucune session `⬜` : ne rien coder d'office, proposer la suite et attendre validation.
@@ -28,7 +30,7 @@ active **Trapeze Stars 3D** (`game3d/`, Three.js + Vite), qu'on fait monter en g
 - **C'est un cadeau pour des enfants** : difficulté généreuse, échec jamais punitif (filet, respawn doux), lisibilité avant réalisme. La dédicace « Marc & Claire » reste centrale.
 - **Le skill = le timing** : toute nouvelle mécanique doit renforcer la boucle balancer → lâcher → voler → rattraper, pas la diluer.
 - **Anglais uniquement** dans l'UI du jeu.
-- **Ne pas casser** : `window.__game` (harnais de test), la boucle rAF à `dt` clampé, l'architecture modules de `game3d/src/`, le jeu 2D à la racine.
+- **Ne pas casser** : `window.__game` (harnais de test), la boucle rAF à `dt` clampé, l'architecture modules de `game3d/src/`, le jeu 2D dans `2d/`, la page de choix à la racine.
 - **Réponses concises** : montre des **diffs**, pas des fichiers entiers.
 
 ## ▶️ Commandes
@@ -50,8 +52,10 @@ Contrôles : **Space** (desktop) / **tap** (mobile) = lâcher, vrille en vol, po
 | Chemin | Rôle |
 |---|---|
 | `game3d/` | 🚀 **Direction active** : Trapeze Stars 3D. Source `game3d/src/` (`main.js` jeu/état, `scene.js` rendu/bloom, `world.js` décor, `player.js` héros). |
-| `docs/` | Build de prod servi par GitHub Pages (`main:/docs`). Régénéré à chaque session (étape 5 du protocole). |
-| `index.html` (+ `manifest.json`, `sw.js`, `icon-*.png`) | Jeu canvas 2D original, ✅ terminé, conservé tel quel. |
+| `docs/` | Build de prod du 3D servi par GitHub Pages (`main:/docs`). Régénéré à chaque session (étape 5 du protocole). |
+| `3d/` | Build de prod du 3D servi par Coolify — copie identique de `docs/`, régénérée en même temps (étape 5). |
+| `2d/` (`index.html` + `manifest.json`, `sw.js`, `icon-*.png`) | Jeu canvas 2D original, ✅ terminé, conservé tel quel. |
+| `index.html` (racine) | Page de choix statique 2D/3D — page d'accueil servie par Coolify/GitHub Pages/tout hébergeur statique. |
 | `AUDIT.md` | **Le plan** : état, roadmap 3D, détail des sessions, référence technique, historique. |
 | `CLAUDE.md` | Ce fichier : le protocole d'auto-avancement. |
 | `game3d/test/smoke3d.mjs` | Test headless WebGL (progression via `window.__game`, captures). |

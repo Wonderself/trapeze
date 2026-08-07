@@ -19,7 +19,7 @@ try {
   page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
 
-  await page.goto('http://localhost:8123/index.html', { waitUntil: 'load' });
+  await page.goto('http://localhost:8123/2d/index.html', { waitUntil: 'load' });
   await page.waitForTimeout(3200);
   await page.screenshot({ path: `${OUT}/s2-title.png` });
 

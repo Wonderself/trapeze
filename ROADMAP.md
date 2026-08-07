@@ -14,12 +14,12 @@ Règle d'or du projet : **tout doit rester gratuit, hors-ligne et sans dépendan
 - [x] Identité personnages (2026-07-19) : **Marc petit, blond, natte animée** (vole en vrille, traîne en swing) ; **Claire plus grande, blond clair, cheveux longs + étoile d'or** — tailles compensées au point de prise (les mains restent sur la barre)
 - [x] PWA (manifest + service worker), test smoke headless WebGL avec captures
 
-### Jeu 2D (racine — terminé, conservé)
+### Jeu 2D (`2d/` — terminé, conservé)
 - [x] 4 mondes × 3 niveaux + cérémonie + finale, musique 100 % procédurale
 - [x] Marc (jeune, blond, natte animée) et Claire (blonde, plus grande) — refonte 2026-07
 - [x] Bloom, grain, vignette, **spotlight suiveur**, squash & stretch, trails
 - [x] Difficulté adaptative, buffers d'input, prévisualisation de trajectoire
-- [x] Mobile complet + **Vibration API** + **Screen Wake Lock** + PWA racine
+- [x] Mobile complet + **Vibration API** + **Screen Wake Lock** + PWA (`2d/`)
 - [x] Record persistant (`localStorage`)
 
 ## 🎯 Prochaines étapes (dans l'ordre — une session par conversation, modèle conseillé entre parenthèses)
