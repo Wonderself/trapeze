@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08021a">
+<title>Trapeze Stars — Deux versions à essayer</title>
+<meta name="description" content="Trapeze Stars en deux versions jouables : Classic, un platformer 2D, et Deluxe, une refonte en perspective 3D. Jouable au clavier et au tactile, sans installation.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Trapeze Stars — Deux versions à essayer">
+<meta property="og:description" content="Classic, le platformer 2D. Deluxe, la refonte en perspective 3D. Deux jeux jouables dans le navigateur, sans installation.">
+<meta property="og:image" content="assets/og-cover.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Trapeze Stars — Deux versions à essayer">
+<meta name="twitter:description" content="Classic, le platformer 2D. Deluxe, la refonte en perspective 3D.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎪</text></svg>">
+<style>
+:root{
+  --bg:#08021a; --bg2:#0E0430; --card:#140833; --card2:#1B0A44;
+  --ink:#F4EEFF; --ink2:#B9A8DC; --ink3:#8877AE;
+  --line:rgba(255,255,255,.10);
+  --gold:#FFC53D; --pink:#FF6B9D; --cyan:#4DD2FF; --green:#5FE3A1;
+  --r:18px; --maxw:1120px;
+  --sp:clamp(16px,4vw,28px);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:'Trebuchet MS',Avenir,'Segoe UI',system-ui,-apple-system,sans-serif;
+  line-height:1.6; overflow-x:hidden;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+img,canvas{max-width:100%;display:block}
+a{color:inherit}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 var(--sp)}
+
+/* ── Fond animé, discret et peu coûteux ─────────────────── */
+.bgfx{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.beam{
+  position:absolute;top:-30%;left:50%;width:38vmax;height:150vmax;
+  background:linear-gradient(180deg,rgba(255,197,61,.11),rgba(255,197,61,0) 62%);
+  transform-origin:50% 0;filter:blur(6px);
+}
+.beam:nth-child(1){transform:translateX(-50%) rotate(-19deg);animation:sweep 15s ease-in-out infinite}
+.beam:nth-child(2){transform:translateX(-50%) rotate(13deg);
+  background:linear-gradient(180deg,rgba(255,107,157,.10),rgba(255,107,157,0) 62%);
+  animation:sweep 19s ease-in-out infinite reverse}
+.beam:nth-child(3){transform:translateX(-50%) rotate(4deg);
+  background:linear-gradient(180deg,rgba(77,210,255,.09),rgba(77,210,255,0) 62%);
+  animation:sweep 23s ease-in-out infinite}
+@keyframes sweep{0%,100%{transform:translateX(-50%) rotate(-17deg)}50%{transform:translateX(-50%) rotate(17deg)}}
+.glow{position:absolute;border-radius:50%;filter:blur(90px);opacity:.5}
+.g1{width:44vmax;height:44vmax;top:-16vmax;left:-14vmax;background:#4a1080}
+.g2{width:38vmax;height:38vmax;bottom:-16vmax;right:-12vmax;background:#0d3f6b}
+
+/* ── En-tête ─────────────────────────────────────────────── */
+header{padding:clamp(40px,10vh,88px) 0 clamp(24px,5vh,40px);text-align:center}
+.kicker{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;
+  color:var(--gold);background:rgba(255,197,61,.10);
+  border:1px solid rgba(255,197,61,.28);border-radius:999px;
+  padding:7px 15px;margin-bottom:20px;
+}
+h1{
+  font-size:clamp(38px,10.5vw,76px);line-height:.98;font-weight:900;
+  letter-spacing:-.02em;margin-bottom:6px;
+}
+h1 .l2{display:block;
+  background:linear-gradient(94deg,var(--gold),var(--pink) 55%,var(--cyan));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.sub{color:var(--ink2);font-size:clamp(15px,4vw,19px);max-width:56ch;margin:16px auto 0}
+
+/* ── Cartes de version ───────────────────────────────────── */
+.cards{
+  display:grid;gap:clamp(18px,4vw,26px);
+  grid-template-columns:1fr;
+  padding-bottom:clamp(32px,8vh,64px);
+}
+@media(min-width:820px){.cards{grid-template-columns:1fr 1fr;align-items:start}}
+
+.card{
+  background:linear-gradient(168deg,var(--card2),var(--card));
+  border:1px solid var(--line);border-radius:var(--r);
+  overflow:hidden;position:relative;
+  display:flex;flex-direction:column;
+  transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease;
+}
+@media(hover:hover){.card:hover{transform:translateY(-4px);box-shadow:0 20px 50px rgba(0,0,0,.45)}}
+.card.v1{border-color:rgba(255,197,61,.24)}
+.card.v2{border-color:rgba(77,210,255,.30)}
+@media(hover:hover){
+  .card.v1:hover{border-color:rgba(255,197,61,.5)}
+  .card.v2:hover{border-color:rgba(77,210,255,.62)}
+}
+.card.v2::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(120% 60% at 50% 0%,rgba(77,210,255,.13),transparent 62%);
+}
+.shot{
+  position:relative;aspect-ratio:16/9;background:#05010f;
+  border-bottom:1px solid var(--line);
+}
+.shot canvas{width:100%;height:100%}
+.tag{
+  position:absolute;top:12px;left:12px;z-index:2;
+  font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  padding:5px 11px;border-radius:999px;backdrop-filter:blur(8px);
+}
+.tag.a{background:rgba(255,197,61,.18);color:var(--gold);border:1px solid rgba(255,197,61,.4)}
+.tag.b{background:rgba(77,210,255,.18);color:var(--cyan);border:1px solid rgba(77,210,255,.45)}
+.body{padding:clamp(18px,4.5vw,26px);display:flex;flex-direction:column;flex:1;gap:14px}
+.card h2{font-size:clamp(22px,5.6vw,28px);font-weight:900;letter-spacing:-.01em;line-height:1.15}
+.card h2 small{display:block;font-size:13px;font-weight:700;color:var(--ink3);letter-spacing:.05em;margin-top:4px}
+.desc{color:var(--ink2);font-size:15px}
+ul.feat{list-style:none;display:flex;flex-direction:column;gap:8px;font-size:14.5px}
+ul.feat li{display:flex;gap:10px;align-items:flex-start;color:var(--ink2)}
+ul.feat li b{color:var(--ink);font-weight:700}
+.chk{flex:0 0 auto;width:17px;height:17px;margin-top:3px}
+.cta{
+  margin-top:auto;display:flex;align-items:center;justify-content:center;gap:9px;
+  min-height:56px;padding:0 22px;border-radius:14px;
+  font-size:17px;font-weight:900;letter-spacing:.02em;text-decoration:none;
+  transition:filter .16s ease,transform .1s ease;
+}
+.cta:active{transform:scale(.98)}
+@media(hover:hover){.cta:hover{filter:brightness(1.1)}}
+.cta.a{background:linear-gradient(96deg,#FFC53D,#FF8A3D);color:#2A1000}
+.cta.b{background:linear-gradient(96deg,#4DD2FF,#9B6BFF);color:#04101F}
+.cta:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+
+/* ── Comparatif ──────────────────────────────────────────── */
+section{padding:clamp(30px,8vh,58px) 0}
+h3{font-size:clamp(21px,5.2vw,28px);font-weight:900;margin-bottom:8px;letter-spacing:-.01em}
+.lead{color:var(--ink2);margin-bottom:22px;max-width:62ch;font-size:15.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;
+  border:1px solid var(--line);border-radius:var(--r);background:rgba(255,255,255,.022)}
+table{border-collapse:collapse;width:100%;min-width:540px;font-size:14.5px}
+th,td{padding:13px 16px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+thead th{
+  font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink3);font-weight:800;background:rgba(255,255,255,.03);
+  position:sticky;top:0;backdrop-filter:blur(6px);
+}
+tbody tr:last-child td{border-bottom:0}
+td:first-child{color:var(--ink2);font-weight:700;width:30%}
+.yes{color:var(--green);font-weight:700}
+.no{color:var(--ink3)}
+
+/* ── Bloc technique ──────────────────────────────────────── */
+.specs{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,215px),1fr))}
+.spec{border:1px solid var(--line);border-radius:14px;padding:17px;background:rgba(255,255,255,.022)}
+.spec b{display:block;font-size:24px;font-weight:900;color:var(--gold);line-height:1.1}
+.spec.c b{color:var(--cyan)} .spec.p b{color:var(--pink)} .spec.g b{color:var(--green)}
+.spec span{font-size:13.5px;color:var(--ink2);display:block;margin-top:4px}
+
+details{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.022);margin-top:12px}
+summary{padding:15px 18px;cursor:pointer;font-weight:700;font-size:15px;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::after{content:'+';float:right;color:var(--ink3);font-weight:900;font-size:19px;line-height:1}
+details[open] summary::after{content:'−'}
+details .in{padding:0 18px 17px;color:var(--ink2);font-size:14.5px}
+kbd{
+  display:inline-block;background:rgba(255,255,255,.09);border:1px solid var(--line);
+  border-bottom-width:2px;border-radius:6px;padding:1px 7px;font-size:12.5px;
+  font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--ink);
+}
+footer{padding:34px 0 46px;border-top:1px solid var(--line);color:var(--ink3);font-size:13.5px;text-align:center}
+footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
+
+@media(prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+
+<div class="bgfx" aria-hidden="true">
+  <div class="glow g1"></div><div class="glow g2"></div>
+  <div class="beam"></div><div class="beam"></div><div class="beam"></div>
+</div>
+
+<div class="wrap">
+
+<header>
+  <div class="kicker">🎪 Deux versions jouables</div>
+  <h1>TRAPEZE<span class="l2">STARS</span></h1>
+  <p class="sub">
+    Le même cirque, deux jeux différents. <b>Classic</b> est un platformer en vue de côté.
+    <b>Deluxe</b> est une refonte complète en perspective, où l’on s’élance vers le fond du chapiteau.
+    Rien à installer&nbsp;: ça se joue dans le navigateur, au clavier comme au doigt.
+  </p>
+</header>
+
+<main>
+<div class="cards">
+
+  <!-- ── V1 ─────────────────────────────────────────────── -->
+  <article class="card v1">
+    <div class="shot">
+      <span class="tag a">Version 1 · 2D</span>
+      <canvas id="pv1" width="480" height="270" role="img"
+        aria-label="Aperçu animé : un artiste court et saute de plateforme en plateforme, vu de côté."></canvas>
+    </div>
+    <div class="body">
+      <h2>Classic<small>PLATEFORMER EN VUE DE CÔTÉ</small></h2>
+      <p class="desc">
+        Le jeu d’origine, entièrement débogué et resserré. On court, on saute,
+        on rebondit sur les trampolines et on écrase les fâcheux d’un saut sur la tête.
+      </p>
+      <ul class="feat">
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FFC53D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>12 niveaux</b>, 4 mondes, score continu sur toute la partie</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FFC53D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Saut à hauteur variable</b> et écrasement d’ennemis en chaîne</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FFC53D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span>Trapèze, cerceaux, trampolines et <b>porteur</b></span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FFC53D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span>Pause, barre de progression, difficulté adaptative</span></li>
+      </ul>
+      <a class="cta a" href="trapeze-stars-v1.html">▶ Jouer à Classic</a>
+    </div>
+  </article>
+
+  <!-- ── V2 ─────────────────────────────────────────────── -->
+  <article class="card v2">
+    <div class="shot">
+      <span class="tag b">Version 2 · Perspective 3D</span>
+      <canvas id="pv2" width="480" height="270" role="img"
+        aria-label="Aperçu animé : vue en perspective vers le fond du chapiteau, des trapèzes et des cerceaux défilent en profondeur."></canvas>
+    </div>
+    <div class="body">
+      <h2>Deluxe<small>REFONTE EN PERSPECTIVE</small></h2>
+      <p class="desc">
+        Un autre jeu. La caméra passe derrière l’artiste, le chapiteau s’ouvre en profondeur,
+        et le trapèze devient le cœur des mécaniques&nbsp;: on pompe pour prendre de l’ampleur,
+        on enchaîne les figures, on vise les mains du porteur.
+      </p>
+      <ul class="feat">
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#4DD2FF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Pompage et grand soleil</b>&nbsp;: le momentum se gagne, il ne se donne pas</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#4DD2FF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Cagnotte de figures</b> encaissée seulement si la réception passe</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#4DD2FF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Chaleur du public</b> à trois paliers, jusqu’à l’ovation</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#4DD2FF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Filet de sécurité</b>&nbsp;: tomber coûte le score, jamais la partie</span></li>
+      </ul>
+      <a class="cta b" href="trapeze-stars-v2.html">▶ Jouer à Deluxe</a>
+    </div>
+  </article>
+
+</div>
+
+<section id="compare">
+  <h3>Ce qui change entre les deux</h3>
+  <p class="lead">
+    Deluxe n’est pas Classic avec de meilleurs graphismes&nbsp;: les règles elles-mêmes sont différentes.
+  </p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th scope="col">&nbsp;</th><th scope="col">Classic</th><th scope="col">Deluxe</th></tr></thead>
+      <tbody>
+        <tr><td>Point de vue</td><td>Vue de côté, défilement horizontal</td><td>Perspective, progression en profondeur</td></tr>
+        <tr><td>Saisie du trapèze</td><td>Assistée, à proximité</td><td class="yes">Toujours volontaire, avec trois qualités de prise</td></tr>
+        <tr><td>Ampleur du balancé</td><td class="no">Subie</td><td class="yes">Se construit au pompage, jusqu’au grand soleil</td></tr>
+        <tr><td>Figures</td><td>Salto simple</td><td class="yes">Cagnotte perdue si la réception échoue</td></tr>
+        <tr><td>Porteur</td><td>Réception simple</td><td class="yes">Fenêtre annoncée, suspension, relance</td></tr>
+        <tr><td>Public</td><td>Applaudissements décoratifs</td><td class="yes">Jauge à trois paliers, multiplicateur jusqu’à ×3</td></tr>
+        <tr><td>En cas de chute</td><td>Une vie en moins</td><td class="yes">Le filet rattrape&nbsp;: on perd le score, pas la partie</td></tr>
+        <tr><td>Rendu</td><td>Canvas fixe 800×450</td><td class="yes">Plein écran, portrait et paysage, densité d’écran gérée</td></tr>
+        <tr><td>Écrans 120&nbsp;Hz</td><td class="no">Le jeu accélère</td><td class="yes">Pas de temps fixe, vitesse identique</td></tr>
+        <tr><td>Qualité graphique</td><td>Fixe</td><td class="yes">Trois profils, ajustés automatiquement</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="tech">
+  <h3>Sous le capot</h3>
+  <p class="lead">Deux fichiers HTML autonomes. Pas de moteur, pas de bibliothèque, pas de build.</p>
+  <div class="specs">
+    <div class="spec"><b>0</b><span>dépendance externe</span></div>
+    <div class="spec c"><b>1</b><span>fichier par version</span></div>
+    <div class="spec p"><b>2D + 3D</b><span>Canvas 2D uniquement</span></div>
+    <div class="spec g"><b>60 fps</b><span>mobile et ordinateur</span></div>
+  </div>
+
+  <details>
+    <summary>Commandes</summary>
+    <div class="in">
+      <p><b>Ordinateur</b> — <kbd>←</kbd> <kbd>→</kbd> se déplacer,
+        <kbd>Espace</kbd> sauter, saisir ou lâcher,
+        <kbd>Maj</kbd> figure et pompage,
+        <kbd>P</kbd> pause, <kbd>M</kbd> couper la musique.</p>
+      <p style="margin-top:9px"><b>Tactile</b> — deux palettes sous le pouce gauche pour se déplacer,
+        deux boutons sous le pouce droit pour agir. Le libellé du bouton principal change
+        selon la situation&nbsp;: sauter, saisir, puis lâcher.</p>
+    </div>
+  </details>
+  <details>
+    <summary>Accessibilité et confort</summary>
+    <div class="in">
+      Le jeu respecte <code>prefers-reduced-motion</code>, plafonne l’opacité des flashs,
+      donne aux dangers une forme reconnaissable en plus de leur couleur, et se met en pause
+      tout seul quand l’onglet passe en arrière-plan ou qu’un appel arrive.
+      Les zones tactiles font au moins 56&nbsp;px et respectent les encoches.
+    </div>
+  </details>
+</section>
+</main>
+
+<footer>
+  <p>Trapeze Stars — Classic &amp; Deluxe.
+     <a href="docs/MEGA-PLAN.md">Plan de développement</a></p>
+</footer>
+
+</div>
+
+<script>
+/* Aperçus animés. Deux petites boucles indépendantes, volontairement
+   frugales : elles s'arrêtent hors écran et ne démarrent pas du tout
+   si l'utilisateur a demandé moins d'animations. */
+(function(){
+  'use strict';
+  const still=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function setup(id,draw){
+    const cv=document.getElementById(id);
+    if(!cv)return;
+    const cx=cv.getContext('2d');
+    const W=cv.width,H=cv.height;
+    let t=0,vis=false,raf=0;
+    function frame(){
+      raf=0;
+      if(!vis)return;
+      t++;draw(cx,W,H,t);
+      raf=requestAnimationFrame(frame);
+    }
+    if('IntersectionObserver' in window){
+      new IntersectionObserver(es=>{
+        vis=es[0].isIntersecting&&!still;
+        if(vis&&!raf)raf=requestAnimationFrame(frame);
+      },{threshold:.12}).observe(cv);
+    } else {vis=!still;if(vis)raf=requestAnimationFrame(frame);}
+    draw(cx,W,H,0);            // première image, même sans animation
+  }
+
+  /* ── V1 : vue de côté ─────────────────────────────────── */
+  setup('pv1',function(cx,W,H,t){
+    const g=cx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#2A0B4E');g.addColorStop(1,'#0A0220');
+    cx.fillStyle=g;cx.fillRect(0,0,W,H);
+    // Gradins
+    for(let i=0;i<42;i++){
+      const x=(i*37)%W, y=54+((i*23)%26);
+      cx.globalAlpha=.4;
+      cx.fillStyle=['#FF6B8A','#FFC53D','#6BC5FF','#B084FF'][i%4];
+      cx.beginPath();cx.arc(x,y,4,0,6.283);cx.fill();
+    }
+    cx.globalAlpha=1;
+    const sc=t*1.5;
+    // Sol et plateformes
+    const gy=H-46;
+    cx.fillStyle='#6A1A42';cx.fillRect(0,gy,W,H-gy);
+    cx.fillStyle='#D4A03C';cx.fillRect(0,gy,W,4);
+    for(let i=0;i<4;i++){
+      const x=((i*168-sc)%(W+180))-90;
+      cx.fillStyle='#7A1E46';cx.fillRect(x,gy-64,84,10);
+      cx.fillStyle='#E0B24E';cx.fillRect(x,gy-64,84,3);
+    }
+    // Trapèze
+    for(let i=0;i<3;i++){
+      const x=((i*220-sc*.85)%(W+240))-120;
+      const a=Math.sin(t*.03+i)*.42;
+      const ax=x, ay=34;
+      const bx=ax+Math.sin(a)*88, by=ay+Math.cos(a)*88;
+      cx.strokeStyle='#E8C86A';cx.lineWidth=2;
+      cx.beginPath();cx.moveTo(ax-14,ay);cx.lineTo(bx-14,by);
+      cx.moveTo(ax+14,ay);cx.lineTo(bx+14,by);cx.stroke();
+      cx.fillStyle='#C8922B';cx.fillRect(bx-17,by-2,34,4);
+    }
+    // Artiste : course et saut
+    const ph=(t*.05)%1;
+    const px=W*.32, py=gy-26-Math.abs(Math.sin(t*.055))*54;
+    const air=py<gy-30;
+    cx.save();cx.translate(px,py);
+    const sw=Math.sin(t*.3)*7;
+    cx.strokeStyle='#0C2E72';cx.lineWidth=6;cx.lineCap='round';
+    cx.beginPath();cx.moveTo(-3,4);cx.lineTo(-5+(air?7:sw),22);
+    cx.moveTo(3,4);cx.lineTo(5-(air?7:sw),22);cx.stroke();
+    cx.fillStyle='#2E7BE8';
+    cx.beginPath();cx.roundRect(-9,-14,18,20,5);cx.fill();
+    cx.fillStyle='#FFD24D';cx.fillRect(-8,2,16,3);
+    cx.strokeStyle='#2E7BE8';cx.lineWidth=5;
+    cx.beginPath();cx.moveTo(-8,-10);cx.lineTo(-15,air?-22:-2+sw);
+    cx.moveTo(8,-10);cx.lineTo(15,air?-22:-2-sw);cx.stroke();
+    cx.fillStyle='#F2C79A';cx.beginPath();cx.arc(0,-22,9,0,6.283);cx.fill();
+    cx.fillStyle='#E8C040';cx.beginPath();cx.arc(0,-24,9,Math.PI,6.283);cx.fill();
+    cx.fillStyle='#20161C';
+    cx.beginPath();cx.arc(3,-22,1.5,0,6.283);cx.fill();
+    cx.restore();
+    // Étoiles à ramasser
+    for(let i=0;i<5;i++){
+      const x=((i*96-sc)%(W+110))-55, y=gy-96+Math.sin(t*.06+i)*7;
+      cx.fillStyle='#FFD700';cx.globalAlpha=.85;
+      cx.beginPath();
+      for(let k=0;k<10;k++){const a=k*.6283-1.5708,r=k%2?3:7.5;
+        k?cx.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r):cx.moveTo(x+Math.cos(a)*r,y+Math.sin(a)*r);}
+      cx.closePath();cx.fill();cx.globalAlpha=1;
+    }
+    cx.fillStyle='rgba(0,0,0,.28)';cx.fillRect(0,0,W,3);cx.fillRect(0,H-3,W,3);
+  });
+
+  /* ── V2 : perspective ─────────────────────────────────── */
+  setup('pv2',function(cx,W,H,t){
+    const hy=H*.42, F=300;
+    const g=cx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#2A0B4E');g.addColorStop(.5,'#12042A');g.addColorStop(1,'#05010F');
+    cx.fillStyle=g;cx.fillRect(0,0,W,H);
+    const rg=cx.createRadialGradient(W/2,hy-24,6,W/2,hy,W*.62);
+    rg.addColorStop(0,'rgba(255,240,200,.22)');rg.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=rg;cx.fillRect(0,0,W,H);
+    // Gradins en arc
+    for(let r=0;r<4;r++)for(let c=0;c<26;c++){
+      const u=(c+.5)/26, x=W/2+(u-.5)*W*(1.25+r*.15), y=hy-26+r*11;
+      cx.globalAlpha=.30+r*.05;
+      cx.fillStyle=['#FF6B8A','#FFC53D','#6BC5FF','#B084FF','#7DE0A8'][(c+r)%5];
+      cx.beginPath();cx.arc(x,y,2.6,0,6.283);cx.fill();
+    }
+    cx.globalAlpha=1;
+    const camZ=t*3.4;
+    const proj=(x,y,z)=>{const dz=z-camZ;if(dz<28)return null;
+      const s=F/dz;return{x:W/2+x*s,y:hy+(150-y)*s,s};};
+    // Piste en damier : c'est elle qui donne la vitesse
+    for(let i=0;i<16;i++){
+      const zA=Math.floor(camZ/120)*120+i*120, zB=zA+120;
+      const a=proj(0,0,zA), b=proj(0,0,zB);
+      if(!a||!b)continue;
+      const wA=330*a.s, wB=330*b.s;
+      cx.fillStyle=(Math.floor(zA/120)%2)?'#8A2140':'#1A0636';
+      cx.beginPath();cx.moveTo(W/2-wA,a.y);cx.lineTo(W/2+wA,a.y);
+      cx.lineTo(W/2+wB,b.y);cx.lineTo(W/2-wB,b.y);cx.closePath();cx.fill();
+    }
+    // Arceaux du chapiteau
+    for(let i=0;i<8;i++){
+      const z=Math.floor(camZ/240)*240+i*240;
+      const top=proj(0,330,z), l=proj(-330,0,z), r=proj(330,0,z);
+      if(!top||!l||!r)continue;
+      cx.globalAlpha=.10+top.s*.9;
+      cx.strokeStyle='#C8922B';cx.lineWidth=Math.max(1,2.4*top.s*6);
+      cx.beginPath();cx.moveTo(l.x,l.y);cx.quadraticCurveTo(top.x,top.y-14,r.x,r.y);cx.stroke();
+      cx.globalAlpha=1;
+    }
+    // Trapèzes et cerceaux, du plus loin au plus près
+    const items=[];
+    for(let i=0;i<7;i++){
+      const z=Math.floor(camZ/300)*300+i*300;
+      items.push({z,x:Math.sin(i*1.7)*70,kind:i%3===1?'hoop':'bar',i});
+    }
+    items.sort((a,b)=>b.z-a.z);
+    for(const it of items){
+      const p=proj(it.x,205,it.z);
+      if(!p)continue;
+      if(it.kind==='hoop'){
+        const R=58*p.s;
+        cx.globalAlpha=.25;cx.strokeStyle='#FF6B9D';cx.lineWidth=Math.max(1,15*p.s);
+        cx.beginPath();cx.arc(p.x,p.y,R,0,6.283);cx.stroke();
+        cx.globalAlpha=1;cx.lineWidth=Math.max(1,6*p.s);
+        cx.beginPath();cx.arc(p.x,p.y,R,0,6.283);cx.stroke();
+      } else {
+        const an=proj(it.x,320,it.z);
+        if(!an)continue;
+        const hw=62*p.s;
+        cx.strokeStyle='#E8C86A';cx.lineWidth=Math.max(.8,2*p.s*4);
+        cx.beginPath();cx.moveTo(an.x-hw*.85,an.y);cx.lineTo(p.x-hw,p.y);
+        cx.moveTo(an.x+hw*.85,an.y);cx.lineTo(p.x+hw,p.y);cx.stroke();
+        cx.fillStyle='#FFC53D';
+        cx.fillRect(p.x-hw,p.y-Math.max(1,3*p.s*4)/2,hw*2,Math.max(1.5,3*p.s*4));
+      }
+    }
+    // L'artiste, en vol vers le fond
+    const az=camZ+215;
+    const ay=205+Math.sin(t*.045)*54;
+    const ap=proj(Math.sin(t*.03)*40,ay,az);
+    if(ap){
+      const s=ap.s*7;
+      // Traînée
+      for(let k=6;k>0;k--){
+        const q=proj(Math.sin((t-k*3)*.03)*40,205+Math.sin((t-k*3)*.045)*54,az-k*7);
+        if(!q)continue;
+        cx.globalAlpha=(1-k/7)*.34;cx.strokeStyle='#FFC53D';
+        cx.lineWidth=Math.max(1,5*q.s*4);
+        cx.beginPath();cx.moveTo(q.x,q.y);cx.lineTo(ap.x,ap.y);cx.stroke();
+      }
+      cx.globalAlpha=1;
+      cx.save();cx.translate(ap.x,ap.y);cx.scale(s,s);cx.rotate(Math.sin(t*.04)*.5);
+      cx.strokeStyle='#0C2E72';cx.lineWidth=2.4;cx.lineCap='round';
+      cx.beginPath();cx.moveTo(-1.4,1.6);cx.lineTo(-3,6);cx.moveTo(1.4,1.6);cx.lineTo(3,6);cx.stroke();
+      cx.fillStyle='#2E7BE8';cx.beginPath();cx.roundRect(-3.4,-5,6.8,7.4,2);cx.fill();
+      cx.strokeStyle='#2E7BE8';cx.lineWidth=2;
+      cx.beginPath();cx.moveTo(-3,-3.6);cx.lineTo(-6.4,-7);cx.moveTo(3,-3.6);cx.lineTo(6.4,-7);cx.stroke();
+      cx.fillStyle='#F2C79A';cx.beginPath();cx.arc(0,-7.6,3.2,0,6.283);cx.fill();
+      cx.restore();
+    }
+    // Filet, en bas
+    cx.strokeStyle='#F0E6D2';cx.globalAlpha=.13;
+    for(let i=0;i<7;i++){
+      const z=Math.floor(camZ/170)*170+i*170;
+      const a=proj(-260,70,z), b=proj(260,70,z);
+      if(!a||!b)continue;
+      cx.lineWidth=Math.max(.6,1.4*a.s*4);
+      cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.stroke();
+    }
+    cx.globalAlpha=1;
+    const vg=cx.createRadialGradient(W/2,H/2,H*.3,W/2,H/2,W*.75);
+    vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.5)');
+    cx.fillStyle=vg;cx.fillRect(0,0,W,H);
+    cx.fillStyle='rgba(0,0,0,.28)';cx.fillRect(0,0,W,3);cx.fillRect(0,H-3,W,3);
+  });
+})();
+</script>
+</body>
+</html>
