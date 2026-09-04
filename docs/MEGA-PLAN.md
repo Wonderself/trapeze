@@ -9,6 +9,16 @@ Ce document est le contrat d'exécution. Il est découpé en lots (WP) autonomes
 chacun avec son périmètre, ses fichiers, et ses critères d'acceptation.
 Un lot peut être confié à une session séparée sans contexte supplémentaire.
 
+> **État d'avancement.** WP-0, WP-B, WP-A, WP-C et WP-H sont réalisés.
+> WP-D, WP-E, WP-F, WP-G et WP-I sont partiels.
+> L'état détaillé et les lots restants, découpés pour une exécution séparée,
+> sont dans [`RESTE-A-FAIRE.md`](RESTE-A-FAIRE.md).
+>
+> Deux décisions ont changé depuis la rédaction : **V1 assume son identité de
+> platformer en vue de côté** (saut à hauteur variable, écrasement d'ennemis),
+> et **V2 est passée en perspective 3D** plutôt qu'en 2D améliorée. Les
+> objectifs de gameplay de WP-C restent ceux appliqués.
+
 ---
 
 ## 0. Carte d'exécution rapide
