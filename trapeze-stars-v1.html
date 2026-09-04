@@ -31,9 +31,16 @@ canvas{display:block;width:100%;aspect-ratio:800/450;border-radius:10px;box-shad
 #bJ{background:radial-gradient(circle at 38% 32%,rgba(255,235,80,0.65),rgba(255,120,0,0.5));border-color:rgba(255,210,0,0.9);color:#FFD700;box-shadow:0 0 28px rgba(255,200,0,0.6),0 3px 14px rgba(0,0,0,0.6);width:clamp(76px,20vw,90px);height:clamp(76px,20vw,90px);font-size:clamp(30px,8vw,38px);}
 @keyframes gpulse{from{transform:scale(1)}to{transform:scale(1.1)}}
 .legready #bJ{animation:gpulse .45s ease-in-out infinite alternate;}
+#rotate{position:fixed;inset:0;z-index:9998;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#04000e;text-align:center;padding:24px;}
+#rotate.on{display:flex;}
+#rotate .g{font-size:54px;animation:rot 2.2s ease-in-out infinite;filter:drop-shadow(0 0 18px rgba(255,215,0,0.35));}
+#rotate p{color:#CCDDFF;font-size:15px;max-width:280px;line-height:1.5;font-family:Avenir,Verdana,sans-serif;}
+@keyframes rot{0%,45%{transform:rotate(0)}55%,100%{transform:rotate(-90deg)}}
+@media(prefers-reduced-motion:reduce){#rotate .g{animation:none;}}
 </style>
 </head>
 <body>
+<div id="rotate"><div class="g">📱</div><p>Tournez votre appareil pour jouer&nbsp;: le jeu a besoin de plus de largeur que de hauteur.</p></div>
 <div id="wrap">
   <canvas id="c"></canvas>
   <button id="btnFs" title="Plein écran / מסך מלא" aria-label="Plein écran">⛶</button>
@@ -1669,6 +1676,7 @@ function startGame(){
   initWorld();
   stopMusic();
   playMusic(0,1);
+  if(typeof checkRotate==='function')checkRotate();
 }
 
 /* ─── KEYBOARD INPUT ─── */
@@ -1772,6 +1780,33 @@ document.addEventListener('visibilitychange',()=>{
   if(document.hidden&&gs==='playing'&&!paused)togglePause();
 });
 window.addEventListener('blur',()=>{if(gs==='playing'&&!paused)togglePause();});
+
+/* ─── ROTATION REQUISE ───
+   Le canvas garde le ratio 800/450 : sur un telephone en portrait, la
+   largeur reste le facteur limitant meme en plein ecran (Safari iOS
+   n'expose pas l'API de verrouillage d'orientation). En dessous d'un
+   seuil de hauteur rendue, mieux vaut le dire clairement que laisser
+   un jeu minuscule avec des boutons qui debordent du cadre. */
+const rotateEl=document.getElementById('rotate');
+let autoPausedByRotate=false;
+function checkRotate(){
+  if(!rotateEl)return;
+  const vw=window.innerWidth,vh=window.innerHeight;
+  const fitW=Math.min(800,vw,vh*(800/450));
+  const fitH=fitW*(450/800);
+  const need=isMobile&&vh>vw&&fitH<260;
+  rotateEl.classList.toggle('on',need);
+  if(need){
+    if(gs==='playing'&&!paused){togglePause();autoPausedByRotate=true;}
+  } else if(autoPausedByRotate){
+    autoPausedByRotate=false;
+    if(gs==='playing'&&paused)togglePause();
+  }
+}
+window.addEventListener('resize',checkRotate);
+window.addEventListener('orientationchange',()=>setTimeout(checkRotate,150));
+checkRotate();
+
 loop();
 
 </script>
