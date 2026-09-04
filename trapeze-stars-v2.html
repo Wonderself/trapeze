@@ -2405,6 +2405,15 @@ function outlineText(txt,x,y,size,col,weight,align){
   CX.strokeStyle='rgba(0,0,0,0.7)';CX.strokeText(txt,x,y);
   CX.fillStyle=col;CX.fillText(txt,x,y);
 }
+// Comme outlineText, mais réduit la taille si le texte dépasserait maxW —
+// pour une valeur de réglage dont la longueur varie avec la langue
+// ("Moyenne" contre "60%") sans jamais chevaucher ce qui l'entoure.
+function fitText(txt,x,y,maxW,size,col,weight){
+  uiFont(size,weight);
+  const w=CX.measureText(txt).width;
+  const s=w>maxW?Math.max(9,size*maxW/w):size;
+  outlineText(txt,x,y,s,col,weight);
+}
 
 function drawHUD(){
   const top=safeTop();
@@ -2664,12 +2673,15 @@ function drawSettingsScreen(){
     }
     outlineText(rows[i].label,cx-rw*0.5+18*uiScale,y,15,
       sel?'#FFF':'rgba(255,255,255,0.7)',sel?800:700,'left');
-    outlineText('◀',cx+rw*0.5-92*uiScale,y,15,'rgba(255,255,255,0.4)',700);
-    outlineText(rows[i].val(),cx+rw*0.5-48*uiScale,y,16,sel?TH.accent:'#FFF',800);
+    // Grappe ◀ valeur ▶ : espacement symétrique et généreux, pour qu'une
+    // valeur longue ("Moyenne") ait la place de respirer sans jamais
+    // chevaucher les chevrons — pas seulement rétrécir jusqu'à y entrer.
+    outlineText('◀',cx+rw*0.5-130*uiScale,y,15,'rgba(255,255,255,0.4)',700);
+    fitText(rows[i].val(),cx+rw*0.5-70*uiScale,y,92*uiScale,16,sel?TH.accent:'#FFF',800);
     outlineText('▶',cx+rw*0.5-10*uiScale,y,15,'rgba(255,255,255,0.4)',700);
     // Toute la ligne cycle en avant au tap ; les chevrons affinent au clic précis.
     zone(cx-rw/2,y-rh*0.42,rw,rh*0.84,(idx=>()=>{settingsSel=idx;rows[idx].right();})(i));
-    zone(cx+rw*0.5-104*uiScale,y-rh*0.42,36*uiScale,rh*0.84,(idx=>()=>{settingsSel=idx;rows[idx].left();})(i));
+    zone(cx+rw*0.5-146*uiScale,y-rh*0.42,36*uiScale,rh*0.84,(idx=>()=>{settingsSel=idx;rows[idx].left();})(i));
   }
 
   const by=top+rows.length*rh+34*uiScale;
