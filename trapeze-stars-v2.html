@@ -647,12 +647,12 @@ function levelParams(world,lv){
 }
 
 // Objets du monde. Chaque tableau est trié par Z croissant.
-let bars=[], catchers=[], hoops=[], stars=[], plats=[], hazards=[], props=[];
+let bars=[], catchers=[], hoops=[], stars=[], plats=[], hazards=[], props=[], gravZones=[];
 let goalZ=0, levelLen=0;
 
 function resetWorld(){
   bars.length=0;catchers.length=0;hoops.length=0;stars.length=0;
-  plats.length=0;hazards.length=0;props.length=0;
+  plats.length=0;hazards.length=0;props.length=0;gravZones.length=0;
   clearParts();
   for(let i=0;i<FTMAX;i++)FT[i].live=false;
 }
@@ -679,7 +679,7 @@ function addPlat(z,x,y,len,w){
   plats.push({z,x,y:(y===undefined?CFG.PEDESTAL:y),len:len||230,w:w||190});
 }
 function addHazard(z,x,y,kind){
-  hazards.push({z,x,y,kind:kind||0,af:Math.random()*100,base:y,r:34});
+  hazards.push({z,x,y,kind:kind||0,af:Math.random()*100,base:y,base2:x,r:34,stolen:false});
 }
 
 // ── Banque de blocs. Chacun retourne la longueur en Z qu'il occupe. ──
@@ -772,6 +772,9 @@ function buildLevel(world,lv){
     z+=blk.build(z,p);
     // Récompense optionnelle, hors trajectoire directe
     if(Math.random()<0.34)addStars(z-190,rnd(-100,100),p.barY+rnd(30,90),4,40);
+    // Mécanique propre à chaque monde, introduite en douceur
+    if(world===1&&Math.random()<0.4)addHazard(z-170,rnd(-70,70),p.barY+10,2);
+    if(world===3&&Math.random()<0.35)gravZones.push({z:z-170,r:120});
   }
 
   // ── Acte 3 : final écrit. Le morceau de bravoure. ──
@@ -880,6 +883,16 @@ function cashBank(mult,x,y,z){
   sfx('cash');confetti(x,y+30,z,Math.min(30,10+bankTricks*4));
   bank=0;bankTricks=0;bankNames.length=0;
   return total;
+}
+function stealBank(hz){
+  hz.stolen=true;
+  if(bank>0){
+    ftext(hz.x,hz.y+30,hz.z,'−'+Math.round(bank),'rgba(255,200,120,0.85)',20);
+    sfx('fail');
+  }
+  bank=0;bankTricks=0;bankNames.length=0;
+  heat=Math.max(0,heat-4);
+  burst(hz.x,hz.y,hz.z,'#C89050',10,2.2,0);
 }
 function dropBank(){
   if(bank>0){
@@ -1497,9 +1510,29 @@ function step(){
     if(hz.z<P.z-200)continue;
     if(hz.z>P.z+800)break;
     hz.af++;
+    if(hz.kind===2){
+      // Singe voleur (jungle) : dérive latéralement plutôt que de
+      // rebondir verticalement, et ne fait perdre que la cagnotte.
+      hz.x=hz.base2+Math.sin(hz.af*0.02)*70;
+      if(hz.stolen)continue;
+      if(P.inv>0||P.state==='caught')continue;
+      if(Math.hypot(P.x-hz.x,P.y-hz.y,(P.z-hz.z)*1.2)<hz.r+20)stealBank(hz);
+      continue;
+    }
     hz.y=hz.base+Math.sin(hz.af*0.024)*54;
     if(P.inv>0||P.state==='caught')continue;
     if(Math.hypot(P.x-hz.x,P.y-hz.y,(P.z-hz.z)*1.2)<hz.r+22)hurt();
+  }
+
+  // Vent latéral (plage) : pousse doucement pendant le vol, jamais au
+  // sol ni en suspension, pour ne pas fausser le pendule.
+  if(world===2&&P.state==='air')P.vx+=Math.sin(frame*0.008)*0.05;
+
+  // Poches de gravité réduite (futur) : la chute ralentit brièvement.
+  if(world===3&&P.state==='air'){
+    for(const gz of gravZones){
+      if(Math.abs(P.z-gz.z)<gz.r){P.vy+=CFG.GRAV*0.55;break;}   // compense une partie de la gravité déjà appliquée
+    }
   }
 
   // Limites latérales : bordure souple plutôt que mur sec
@@ -2062,12 +2095,32 @@ function drawPlatObj(pl){
 }
 
 function drawHazardObj(hz){
+  if(hz.kind===2&&hz.stolen)return;
   const c=project(hz.x,hz.y,hz.z,pr1);
   if(!c)return;
   const fade=nearFade(c.dz);
   if(fade<=0)return;
   CX.save();CX.globalAlpha=fade;
   const R=Math.max(2,hz.r*c.s);
+  if(hz.kind===2){
+    // Singe voleur : silhouette ronde et chaude, pas de pointes — il ne
+    // fait pas mal, il joue un tour. La forme suffit à le distinguer
+    // d'un danger mortel même sans lire la couleur.
+    const bob=Math.sin(hz.af*0.1)*R*0.18;
+    CX.globalAlpha=0.28*fade;CX.fillStyle='#C89050';
+    CX.beginPath();CX.arc(c.x,c.y+bob,R*1.5,0,6.283);CX.fill();
+    CX.globalAlpha=fade;
+    const g2=CX.createRadialGradient(c.x-R*0.3,c.y+bob-R*0.3,0,c.x,c.y+bob,R);
+    g2.addColorStop(0,'#E8B878');g2.addColorStop(0.65,'#8B5A2B');g2.addColorStop(1,'#4A2E10');
+    CX.fillStyle=g2;CX.beginPath();CX.arc(c.x,c.y+bob,R*0.85,0,6.283);CX.fill();
+    CX.fillStyle='#3A2410';
+    CX.beginPath();CX.arc(c.x-R*0.28,c.y+bob-R*0.12,R*0.14,0,6.283);CX.fill();
+    CX.beginPath();CX.arc(c.x+R*0.28,c.y+bob-R*0.12,R*0.14,0,6.283);CX.fill();
+    CX.strokeStyle='#8B5A2B';CX.lineWidth=Math.max(1,R*0.14);
+    CX.beginPath();CX.arc(c.x,c.y+bob+R*0.5,R*0.6,0.2,Math.PI-0.2);CX.stroke();
+    CX.restore();
+    return;
+  }
   const warn=0.4+0.4*Math.sin(frame*0.18);
   // Aura d'avertissement : un danger doit s'annoncer avant d'être là
   CX.globalAlpha=warn*0.3;CX.fillStyle=TH.danger;
@@ -2210,11 +2263,31 @@ function drawTrajectoryPreview(){
   CX.restore();
 }
 
+// Poches de gravite reduite (futur) : un voile translucide les annonce,
+// pour qu'elles se lisent avant d'y entrer, pas seulement en les traversant.
+function drawGravZones(){
+  if(!gravZones.length)return;
+  for(const gz of gravZones){
+    const dz=gz.z-CAM.z;
+    if(dz<CFG.NEAR||dz>CFG.FAR)continue;
+    const a=project(0,CFG.RIG_Y*0.5,gz.z,pr1);
+    if(!a)continue;
+    const pulse=0.10+0.05*Math.sin(frame*0.05+gz.z*0.01);
+    CX.globalAlpha=pulse;
+    CX.fillStyle=TH.accent;
+    const hw=(CFG.LANE+80)*a.s;
+    const hh=CFG.RIG_Y*0.5*a.s*1.4;
+    CX.fillRect(a.x-hw,a.y-hh,hw*2,hh*2);
+    CX.globalAlpha=1;
+  }
+}
+
 function renderWorld(){
   drawSky();
   drawCrowd();
   drawGround();
   drawProps();
+  drawGravZones();
   drawNet();
 
   computeNear();
