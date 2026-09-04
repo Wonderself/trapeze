@@ -965,8 +965,8 @@ addEventListener('keydown',e=>{
     return;
   }
   if(gs==='menu'){
-    if(k==='s')openSettings();
-    if(k==='l'&&SV.unlocked>1)openLevelSelect();
+    if(k==='s'){openSettings();return;}
+    if(k==='l'&&SV.unlocked>1){openLevelSelect();return;}
   }
   if(gs==='pause'&&k==='s'){openSettings();return;}
 
@@ -3027,10 +3027,8 @@ window.addEventListener('resize',onResize);
 addEventListener('keydown',e=>{
   if(gs!=='menu')return;
   const k=e.key.length===1?e.key.toLowerCase():e.key;
-  if(k==='arrowleft'||k==='a'||k==='q')menuSel=0;
-  if(k==='ArrowLeft')menuSel=0;
-  if(k==='ArrowRight')menuSel=1;
-  if(k==='d')menuSel=1;
+  if(k==='ArrowLeft'||k==='a'||k==='q')menuSel=0;
+  if(k==='ArrowRight'||k==='d')menuSel=1;
   P.char=menuSel===0?'marc':'claire';
 });
 
