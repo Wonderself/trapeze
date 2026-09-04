@@ -178,7 +178,8 @@ function TC(){return THEMES[TH];}
 
 /* ─── GAME STATE ─── */
 let gs='menu',score=0,lives=3,mult=1,multTimer=0,scrollX=0,scrollSpd=1.8,frameN=0;
-let highScore=+(localStorage.getItem('tse5_hs')||0),lastHoop=0,hoopStreak=0;
+function _readHighScore(){try{return +(localStorage.getItem('tse5_hs')||0);}catch(e){return 0;}}
+let highScore=_readHighScore(),lastHoop=0,hoopStreak=0;
 let medalShow='',medalTimer=0,menuAnim=0,charChoice='marc',menuChar='marc',menuWorld='cirque';
 let flashTimer=0,shakeX=0,shakeY=0,shakeDur=0;
 let olaActive=false,olaFrame=0,clapActive=false,clapTimer=0,ovationActive=false,ovationTimer=0;
@@ -394,7 +395,7 @@ function spawnPts(x,y,col,n,fast){const sp=fast?5.5:3;for(let i=0;i<n&&parts.len
 function spawnStarPts(x,y,col){for(let i=0;i<12&&parts.length<420;i++){const a=(i/12)*Math.PI*2;parts.push({x,y,vx:Math.cos(a)*4,vy:Math.sin(a)*4,life:1,dec:0.018,col,r:3,type:'star'});}}
 function spawnConfetti(x,y,n){n=n||32;const c=['#e74c3c','#3498db','#f39c12','#9b59b6','#27ae60','#fff','#e91e63','#FFD700','#00ffcc'];for(let i=0;i<n&&parts.length<420;i++){const a=-Math.PI/2+(Math.random()-0.5)*Math.PI*1.4,s=3+Math.random()*6;parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,dec:0.01,col:c[Math.floor(Math.random()*c.length)],r:3+Math.random()*5,w:5+Math.random()*9,rotA:Math.random()*Math.PI,rotSp:(Math.random()-0.5)*0.3,type:'rect'});}}
 function ftext(x,y,t,col,sz){ftexts.push({x,y,text:t,col:col||'#FFD700',sz:sz||22,life:1,vy:-1.1});}
-function addScore(pts,x,y){score+=pts;ftext(x,y-22,'+'+pts,pts>=800?'#FF69B4':pts>=200?'#FFD700':'#fff',pts>=800?34:pts>=200?26:16);if(score>highScore){highScore=score;localStorage.setItem('tse5_hs',highScore);}const lv=[{s:10000,t:'💎 Diamant'},{s:5000,t:'🥇 Or'},{s:2000,t:'🥈 Argent'},{s:500,t:'🥉 Bronze'}];for(const m of lv){if(score>=m.s&&score-pts<m.s){medalShow=m.t;medalTimer=240;spawnConfetti(W/2,H/2,60);sfxMedal();}}}
+function addScore(pts,x,y){score+=pts;ftext(x,y-22,'+'+pts,pts>=800?'#FF69B4':pts>=200?'#FFD700':'#fff',pts>=800?34:pts>=200?26:16);if(score>highScore){highScore=score;try{localStorage.setItem('tse5_hs',highScore);}catch(e){/* navigation privee : le score du run reste correct, seule la persistance echoue */}}const lv=[{s:10000,t:'💎 Diamant'},{s:5000,t:'🥇 Or'},{s:2000,t:'🥈 Argent'},{s:500,t:'🥉 Bronze'}];for(const m of lv){if(score>=m.s&&score-pts<m.s){medalShow=m.t;medalTimer=240;spawnConfetti(W/2,H/2,60);sfxMedal();}}}
 let flashCol='#FFFFFF';
 function doFlash(v,col){flashTimer=v||8;flashCol=col||'#FFFFFF';}
 function doShake(i,d){if(reducedMotion)return;shakeX=(Math.random()-0.5)*i;shakeY=(Math.random()-0.5)*i;shakeDur=d||10;}

@@ -1,0 +1,8 @@
+{
+  "name": "trapeze-stars-tools",
+  "private": true,
+  "description": "Outils de verification pour trapeze-stars-v1.html et v2.html",
+  "devDependencies": {
+    "playwright-core": "^1.62.1"
+  }
+}

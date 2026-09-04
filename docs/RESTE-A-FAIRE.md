@@ -32,62 +32,108 @@ plusieurs fois : la génération de niveau est aléatoire).
 | S6 Lisibilité du personnage V1 | ✅ | halo de contraste derrière le joueur |
 | S7 Accessibilité | ✅ | `prefers-reduced-motion` (les deux versions), vitesse globale (V2) |
 | S8 Décors par monde | ✅ (version légère) | décor latéral par monde, sans mise en cache hors écran |
+| S9 Tests appareils réels | ◐ | tout ce qui est vérifiable sans matériel est fait — voir ci-dessous |
+| Limitation V1 portrait | ✅ | écran « tournez votre appareil », pause automatique |
 
-Tout ce qui était planifié dans la session précédente est fait. Ce qui suit
-est nouveau : des raffinements identifiés en cours de route, plus le travail
-qui exige un vrai appareil et ne peut pas être fait ici.
-
----
-
-## Limitation connue — V1 en portrait mobile, hors plein écran
-
-Le canvas de V1 est fixe (800×450, ratio préservé par CSS `aspect-ratio`).
-Sur un écran haut en portrait, avant de passer en plein écran, le jeu occupe
-une bande étroite au centre de l'écran — comportement d'origine, pas une
-régression de cette session (voir défaut D5 du `MEGA-PLAN.md`). Le bouton
-plein écran (⛶) corrige l'affichage en occupant tout l'écran disponible ;
-c'est l'usage prévu sur mobile.
-
-Ce n'est **pas** à corriger sans décision explicite : le plan cadrait V1 comme
-« le build actuel, débogué et fiabilisé, gameplay inchangé », pas comme une
-refonte responsive. Une refonte du rendu de V1 pour qu'il remplisse l'écran
-même hors plein écran est possible (reprendre le principe de `updateView()`
-de V2 : résolution logique + `viewScale` dérivé), mais c'est un changement
-d'architecture, pas une retouche — à traiter comme un lot à part si demandé.
+Tout ce qui était planifié dans les deux sessions précédentes est fait,
+y compris la limitation V1 explicitement mise de côté la fois d'avant.
+Ce qui suit est nouveau : des raffinements identifiés en cours de route,
+plus le travail qui exige vraiment un appareil physique.
 
 ---
 
-## Lot S9 — Matrice de tests sur appareils réels
+## V1 en portrait mobile — corrigé
 
-`tools/shots.js` (scratchpad, non commité — à recréer si besoin) couvre trois
-formats dans Chromium/SwiftShader logiciel. Cela ne remplace pas de vrais
-appareils : SwiftShader n'a pas les mêmes limites mémoire/GPU qu'un téléphone,
-et Safari a son propre moteur de rendu Canvas 2D. Reste à couvrir :
+Le canvas de V1 garde un ratio fixe 800/450 (platformer en vue de côté,
+gameplay volontairement inchangé — pas de refonte de l'architecture de
+rendu). Sur un téléphone tenu en portrait, ce ratio ne peut remplir l'écran
+par **aucune** méthode, pas même le plein écran : la largeur reste toujours
+le facteur limitant, et l'API de verrouillage d'orientation n'existe pas sur
+Safari iOS. Le jeu se serait retrouvé, plein écran ou pas, dans une bande
+étroite avec des boutons qui débordent visuellement du cadre.
 
-- Safari iOS, portrait et paysage, avec encoche (iPhone récent).
-- Un Android de milieu de gamme (pas un flagship — c'est là que `QUAL_PRESETS`
-  et `autoQuality()` sont vraiment mis à l'épreuve).
-- Un écran 120 Hz, pour confirmer que le pas fixe (`STEP=1000/60`) tient et
-  que rien n'accélère.
-- Mode privé Safari, où `localStorage` échoue à l'écriture — `loadSave()` et
-  `persist()` ont un `try/catch`, mais jamais vérifié sur le vrai moteur qui
-  lève cette erreur.
-- Session de trente minutes, à la recherche d'une fuite mémoire (le pool de
-  particules et `hitZones.length=0` par frame sont conçus pour ne pas fuir,
-  mais seul un profileur réel le confirme).
-- Multi-touch réel (déplacement + action simultanés) sur un écran tactile
-  physique — le clavier/souris de test ne l'exerce pas complètement.
+**Correction appliquée** : un écran « Tournez votre appareil » s'affiche dès
+que le rendu résultant serait trop petit pour être jouable (seuil calculé
+sur la taille réelle, pas un test d'appareil en dur — une tablette en
+portrait passe au travers et joue normalement, vérifié à 768×1024). Le jeu
+se met en pause automatiquement si l'écran de rotation apparaît en cours de
+partie, et reprend à la rotation inverse. Une fois en paysage, le jeu remplit
+déjà tout l'écran nativement (vérifié à 844×390), sans avoir besoin du
+bouton plein écran.
+
+## S9 — Tests sur appareils réels : ce qui a pu être vérifié sans matériel
+
+Aucun appareil physique n'était disponible dans cette session. WebKit a été
+tenté (`npx playwright-core install webkit`) : le binaire télécharge, mais
+ne peut pas s'exécuter dans ce conteneur (bibliothèques système manquantes —
+libmanette, libenchant, libsecret, libGLESv2, libx264...). Plutôt que de
+forcer l'installation de ces dépendances système ou de prétendre qu'un test
+WebKit a eu lieu, le travail s'est concentré sur ce qui est réellement
+vérifiable sans le moteur réel — et sur un audit de code ciblé pour les
+incompatibilités Safari qui n'ont pas besoin d'être exécutées pour être
+confirmées (des absences d'API stables et documentées, pas des nuances de
+comportement).
+
+**Deux vrais bugs trouvés et corrigés par cette méthode :**
+
+- **`localStorage` non protégé en V1.** Simulé un `localStorage` hostile
+  (comme en navigation privée Safari, où `setItem` lève une exception) :
+  V1 plantait. `addScore()` appelait `localStorage.setItem` sans
+  `try/catch`, dans le chemin de code exécuté à chaque nouveau record —
+  c'est-à-dire quasi systématiquement en jeu normal. Une exception non
+  rattrapée là tue `requestAnimationFrame` exactement comme le bug `flashN`
+  d'origine (B1) : le jeu se serait figé, en navigation privée réelle, dès
+  qu'un joueur dépasserait son record. Corrigé ; revérifié en forçant un
+  nouveau record sous stockage hostile — la boucle continue de tourner
+  (confirmé par le compteur de frames, pas seulement l'absence d'erreur).
+- **Bouton plein écran mort sur iOS Safari en V2.** `Element.requestFullscreen`
+  n'existe pas du tout sur iOS Safari (aucune version ne le supporte, y
+  compris en PWA installée) — fait stable, pas besoin de l'exécuter pour le
+  confirmer. Le bouton restait affiché et ne faisait rien au toucher, sans
+  retour visuel, et pouvait même rester bloqué affichant l'icône « quitter »
+  après un appui sans effet (l'icône était mise à jour de façon optimiste au
+  clic plutôt que sur l'état réel du navigateur). Corrigé par détection de
+  fonctionnalité (masque le bouton si l'API n'existe pas — plus fiable
+  qu'un test d'user-agent, y compris sur iPadOS qui se fait souvent passer
+  pour macOS Safari) et par un écouteur `fullscreenchange` qui garde
+  l'icône honnête même si le plein écran est quitté par un geste du
+  navigateur plutôt que par ce bouton. V1 n'a pas ce problème : son propre
+  repli CSS pour iOS gérait déjà ce cas.
+
+**Vérifié sain, sans modification nécessaire :**
+
+- **Session de 30 minutes.** Simulé directement dans Chromium (108 000 pas
+  de simulation, joueur automatique) plutôt qu'attendu en temps réel : le
+  tas JS reste stable à 9,5 Mo sur toute la session, le compteur de
+  particules vivantes ne dérive pas au-delà de son plafond. Aucun signe de
+  fuite.
+- **Multi-touch réel.** Testé avec deux points de contact simultanés via le
+  protocole tactile bas niveau (CDP `Input.dispatchTouchEvent`), pas deux
+  appuis séquentiels : déplacement et action s'enregistrent bien en même
+  temps dans les deux versions, et se relâchent correctement.
+- **Indépendance au taux de rafraîchissement.** Sans écran 120 Hz réel, testé
+  ce qui compte vraiment : la logique de l'accumulateur à pas fixe. Fait
+  tourner la simulation avec des timestamps espacés de 8,33 ms (120 Hz) et
+  de 16,67 ms (60 Hz) sur une durée d'horloge murale identique : écart de
+  progression de 0,12 % entre les deux, dans le bruit d'arrondi. La vitesse
+  du jeu ne dépend pas du taux de rafraîchissement.
+
+**Reste réellement hors de portée sans matériel physique :**
+
+- Safari iOS en conditions réelles (le moteur JavaScriptCore et le Canvas 2D
+  de WebKit ont leurs propres particularités qu'aucune simulation ne
+  reproduit fidèlement).
+- Un Android de milieu de gamme réel, pour éprouver `QUAL_PRESETS` et
+  `autoQuality()` sous une vraie contrainte mémoire/GPU (SwiftShader dans ce
+  conteneur n'a pas les mêmes limites qu'un GPU mobile réel).
+- Le ressenti tactile réel (latence, taille des doigts) au-delà de ce que la
+  géométrie des zones peut garantir.
 
 ## Lot S10 — Petits raffinements identifiés en cours de route
 
-Rien de bloquant, remarqué pendant le travail sur S1–S8 :
+Rien de bloquant, remarqué pendant le travail sur S1–S8 (le conflit entre
+`setVol` et le ducking musical, noté ici la dernière fois, est déjà corrigé) :
 
-- **Ducking musical et `setVol` en conflit.** `setVol('music', v)` écrit
-  `AU.music.gain.value=v` directement ; si un temps d'arrêt est en cours
-  (`duckMusic(true)` a lancé une rampe `setTargetAtTime`), régler le volume
-  pendant ce court instant peut être écrasé par la rampe en cours. Effet
-  inaudible en pratique (les temps d'arrêt durent moins de 15 frames), mais
-  propre à corriger : faire passer `setVol` par la même logique de cible.
 - **`SV.guide` et la prévisualisation.** Le réglage coupe la prévisualisation
   de trajectoire, mais rien n'indique au joueur qu'elle existe avant qu'il
   ne la voie une fois. Un indice dans le tutoriel (`tutStep`) le

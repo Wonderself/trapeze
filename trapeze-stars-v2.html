@@ -2983,6 +2983,8 @@ btnBack.addEventListener('click',e=>{
   else toMenu();
 });
 btnPause.addEventListener('click',e=>{e.preventDefault();sfx('ui');togglePause();});
+const _hasFullscreen=!!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen);
+if(!_hasFullscreen)btnFull.style.display='none';   // iOS Safari notamment : l'API n'existe pas
 btnFull.addEventListener('click',e=>{
   e.preventDefault();sfx('ui');
   const d=document,el=d.documentElement;
@@ -2990,13 +2992,20 @@ btnFull.addEventListener('click',e=>{
   if(!isFull){
     const fn=el.requestFullscreen||el.webkitRequestFullscreen;
     if(fn)fn.call(el).catch(()=>{});
-    btnFull.textContent='✕';
   } else {
     const fn=d.exitFullscreen||d.webkitExitFullscreen;
     if(fn)fn.call(d).catch(()=>{});
-    btnFull.textContent='⛶';
   }
 });
+// L'icone suit l'etat reel plutot qu'une supposition optimiste au clic :
+// elle reste juste meme si le plein ecran est quitte par un geste du
+// navigateur (Echap, glissement) plutot que par ce bouton.
+function _syncFsIcon(){
+  const isFull=document.fullscreenElement||document.webkitFullscreenElement;
+  btnFull.textContent=isFull?'✕':'⛶';
+}
+document.addEventListener('fullscreenchange',_syncFsIcon);
+document.addEventListener('webkitfullscreenchange',_syncFsIcon);
 
 // Mise en pause automatique : appel entrant, changement d'onglet.
 document.addEventListener('visibilitychange',()=>{
