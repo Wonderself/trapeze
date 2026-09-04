@@ -7,12 +7,22 @@ Deux familles d'outils, avec des besoins différents.
 ```
 node tools/check.js <fichier.html>     # syntaxe, chargement, parcours des états, régression flashN
 node tools/play_v2.js                  # joueur automatique, doit franchir les 12 niveaux de V2
+node tools/monkey_v1.js                # 8000 entrées aléatoires (clavier, tap, transitions brutales)
+node tools/monkey_v2.js                # même principe pour V2, y compris réglages et sélection de niveau
 ```
 
 N'utilisent que `fs`/`vm` de Node, via un DOM et un audio simulés
 (`sandbox.js`). Rien à installer. À lancer après **toute** modification de
-`trapeze-stars-v1.html` ou `trapeze-stars-v2.html` — `play_v2.js` plusieurs
-fois de suite (la génération de niveau est aléatoire).
+`trapeze-stars-v1.html` ou `trapeze-stars-v2.html` — `play_v2.js` et les
+`monkey_*.js` plusieurs fois de suite (aléatoires par construction).
+
+`monkey_v1.js`/`monkey_v2.js` ne jouent pas intelligemment comme `play_v2.js` :
+ils mitraillent des touches, des taps à des coordonnées aléatoires, et forcent
+des transitions d'état brutales (game over en pleine figure, retour menu en
+plein saut) pour attraper les crashs qu'un joueur raisonnable ou une lecture
+manuelle du code ne provoquerait pas. C'est ce type de test qui a débusqué
+qu'un bloc du gestionnaire clavier de V2 ouvrait les réglages sans `return`,
+fragile même s'il ne causait pas encore de bug observable.
 
 ## Avec Chromium réel — nécessitent `npm install`
 

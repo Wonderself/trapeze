@@ -149,19 +149,48 @@ Les trois notés la dernière fois sont réglés :
   aurait réintroduit exactement le risque que ce choix évite, pour un
   effet que le jeu normal ne rend même pas perceptible.
 
+## Audit manuel du clavier et des transitions d'état — deux défauts corrigés
+
+Le `code-review` automatisé n'a rien trouvé : lancé après un commit, il ne
+voit que le diff non commité (vide). Un audit manuel ciblé sur la gestion
+clavier — la zone la plus retouchée au fil des sessions, patchée par petits
+bouts successifs — a trouvé deux défauts réels, tous deux en V2 :
+
+- Le bloc `gs==='menu'` du gestionnaire `keydown` ouvrait réglages ou
+  sélection de niveau (touches `s`/`l`) sans `return`, contrairement aux
+  blocs équivalents pause/settings/levelselect. Sans effet observable par
+  pure coïncidence (ni `s` ni `l` ne correspondaient aux tests plus bas dans
+  la même fonction), mais fragile — le genre d'incohérence qui devient un
+  vrai bug au prochain remappage de touche. Corrigé.
+- Code mort dans la sélection de personnage au clavier : une comparaison en
+  minuscule contre `'arrowleft'` ne pouvait jamais correspondre (`e.key` pour
+  la flèche gauche vaut `'ArrowLeft'`, jamais mis en minuscule puisque
+  seules les touches à un caractère le sont). La ligne suivante, avec la
+  bonne casse, faisait déjà le travail. Nettoyé.
+
+Ces deux défauts ont ensuite motivé un test plus dur que le joueur
+automatique : `tools/monkey_v1.js` et `tools/monkey_v2.js` mitraillent des
+touches, des taps à des coordonnées aléatoires, et forcent des transitions
+d'état brutales (game over en pleine figure, retour menu en plein saut) —
+8000 itérations par exécution, trois exécutions consécutives sur chaque
+version, zéro crash. C'est ce type de test qui a débusqué le premier des deux
+défauts ci-dessus ; le garder dans la routine de vérification.
+
 ## Outils
 
 | Fichier | Rôle |
 |---|---|
 | `tools/check.js` | Syntaxe, chargement, et parcours de tous les états de jeu. Contient le test de non-régression du bug `flashN`. |
-| `tools/play_v2.js` | Joueur automatique qui passe par les mêmes entrées qu'un humain, esquive les dangers, et doit franchir les 12 niveaux. Vérifié stable sur au moins 8 exécutions consécutives à seed aléatoire. |
-| `tools/sandbox.js` | DOM et audio simulés, partagés par les deux. |
+| `tools/play_v2.js` | Joueur automatique qui passe par les mêmes entrées qu'un humain, esquive les dangers, et doit franchir les 12 niveaux. |
+| `tools/monkey_v1.js`, `tools/monkey_v2.js` | Entrées aléatoires et transitions d'état brutales, 8000 itérations. Cherchent les crashs qu'un joueur raisonnable ne provoquerait pas. |
+| `tools/sandbox.js` | DOM et audio simulés, partagés par tous les scripts ci-dessus. |
 
 Le joueur automatique de `play_v2.js` reste la meilleure protection contre
-les régressions de gameplay. Il a trouvé, au fil des deux sessions : les
-barres hors d'atteinte, le trapèze impossible à relancer depuis l'arrêt, et
-plus récemment rien de neuf — signe que S1–S8 n'ont pas cassé le cœur du jeu,
-seulement ajouté autour. Le garder vert à chaque changement.
+les régressions de *gameplay* — il a trouvé, au fil des sessions, les barres
+hors d'atteinte et le trapèze impossible à relancer depuis l'arrêt. Les
+scripts `monkey_*.js` couvrent un angle différent : la robustesse de la
+*machine à états* face à des entrées désordonnées. Lancer les trois après
+toute modification.
 
 Les captures Chromium (via `playwright-core` + le binaire préinstallé
 `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`) ont trouvé, cette
