@@ -205,7 +205,8 @@ const I18N={
     heat:'Public', bank:'Cagnotte', tricks:'Figures', newBest:'Nouveau record !',
     tapStart:'Touchez pour commencer', pressStart:'Espace pour commencer',
     tapCont:'Touchez pour continuer', pressCont:'Espace pour continuer',
-    chooseChar:'Choisissez votre artiste', settings:'Réglages',
+    chooseChar:'Choisissez votre artiste', settings:'Réglages', levels:'Niveaux',
+    selectLevel:'Choisir un niveau', locked:'Verrouillé',
     jump:'SAUTER', release:'LÂCHER', grab:'SAISIR', pump:'POMPER',
     trick:'FIGURE', catcher:'PORTEUR !', giant:'GRAND SOLEIL !',
     perfect:'PARFAIT !', good:'BIEN', net:'FILET', ovation:'OVATION !',
@@ -225,7 +226,8 @@ const I18N={
     heat:'Crowd', bank:'Bank', tricks:'Tricks', newBest:'New best!',
     tapStart:'Tap to start', pressStart:'Press Space to start',
     tapCont:'Tap to continue', pressCont:'Press Space to continue',
-    chooseChar:'Choose your artist', settings:'Settings',
+    chooseChar:'Choose your artist', settings:'Settings', levels:'Levels',
+    selectLevel:'Select a level', locked:'Locked',
     jump:'JUMP', release:'RELEASE', grab:'GRAB', pump:'PUMP',
     trick:'TRICK', catcher:'CAUGHT!', giant:'GIANT SWING!',
     perfect:'PERFECT!', good:'GOOD', net:'NET', ovation:'OVATION!',
@@ -248,7 +250,7 @@ function t(k){const d=I18N[LANG]||I18N.fr;return d[k]!==undefined?d[k]:(I18N.fr[
    ───────────────────────────────────────────────────────────── */
 const SAVE_KEY='trapeze.v2.save';
 const DEFAULT_SAVE={
-  schema:1, best:0, bestLevel:{}, unlocked:1, char:'marc',
+  schema:1, best:0, bestLevel:{}, bestStars:{}, unlocked:1, char:'marc',
   lang:null, quality:null, music:0.6, sfx:0.75, vibrate:true, guide:true, seen:{},
 };
 let SV=Object.assign({},DEFAULT_SAVE);
@@ -256,7 +258,8 @@ function loadSave(){
   try{
     const raw=localStorage.getItem(SAVE_KEY);
     if(raw){const o=JSON.parse(raw);
-      if(o&&o.schema===1)SV=Object.assign({},DEFAULT_SAVE,o,{bestLevel:o.bestLevel||{},seen:o.seen||{}});}
+      if(o&&o.schema===1)SV=Object.assign({},DEFAULT_SAVE,o,
+        {bestLevel:o.bestLevel||{},bestStars:o.bestStars||{},seen:o.seen||{}});}
   }catch(e){/* stockage indisponible : on garde les valeurs par défaut */}
 }
 let saveQueued=false;
@@ -783,7 +786,7 @@ let hitStop=0, flash=0, flashCol='#fff';
 let frame=0, tutStep=0, tutTimer=0;
 let camShakeAmp=0, camShakeT=0;
 let endTimer=0, endStars=0;
-let menuSel=0;
+let menuSel=0, levelSelIdx=0;
 let bestRun=SV.best|0;
 
 const P={
@@ -877,6 +880,11 @@ function pressAction(){
   if(gs==='levelend'){nextLevel();return;}
   if(gs==='gameover'||gs==='finale'){toMenu();return;}
   if(gs==='pause'){togglePause();return;}
+  if(gs==='settings'){settingsRows()[settingsSel].right();return;}
+  if(gs==='levelselect'){
+    if(levelSelIdx+1<=SV.unlocked)startAtLevel(levelSelIdx);
+    return;
+  }
   if(gs==='play')P.jumpBuf=CFG.JUMP_BUF;
 }
 function releaseAction(){P.jumpHeld=false;}
@@ -892,8 +900,35 @@ addEventListener('keydown',e=>{
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();
   if(e.repeat)return;
   KEY[k]=true;
+
+  // Écrans de navigation : réglages et sélection de niveau ont leurs
+  // propres flèches, distinctes du déplacement en jeu.
+  if(gs==='settings'){
+    if(k==='ArrowUp')settingsSel=(settingsSel+settingsRows().length-1)%settingsRows().length;
+    else if(k==='ArrowDown')settingsSel=(settingsSel+1)%settingsRows().length;
+    else if(k==='ArrowLeft')settingsRows()[settingsSel].left();
+    else if(k==='ArrowRight'||k===' '||k==='Enter')settingsRows()[settingsSel].right();
+    else if(k==='Escape')closeSettings();
+    return;
+  }
+  if(gs==='levelselect'){
+    const cols=portrait?3:4;
+    if(k==='ArrowLeft')levelSelIdx=Math.max(0,levelSelIdx-1);
+    else if(k==='ArrowRight')levelSelIdx=Math.min(11,levelSelIdx+1);
+    else if(k==='ArrowUp')levelSelIdx=Math.max(0,levelSelIdx-cols);
+    else if(k==='ArrowDown')levelSelIdx=Math.min(11,levelSelIdx+cols);
+    else if(k===' '||k==='Enter'){if(levelSelIdx+1<=SV.unlocked)startAtLevel(levelSelIdx);}
+    else if(k==='Escape')closeLevelSelect();
+    return;
+  }
+  if(gs==='menu'){
+    if(k==='s')openSettings();
+    if(k==='l'&&SV.unlocked>1)openLevelSelect();
+  }
+  if(gs==='pause'&&k==='s'){openSettings();return;}
+
   if(k===' '||k==='ArrowUp'||k==='w'||k==='z'){P.jumpHeld=true;pressAction();}
-  if(k==='Shift'||k==='f'||k==='ArrowDown'||k==='s'){P.trickHeld=true;pressTrick();}
+  if(k==='Shift'||k==='f'||k==='ArrowDown'||k==='x'){P.trickHeld=true;pressTrick();}
   if(k==='p'){togglePause();}
   if(k==='Escape'){if(gs==='play'||gs==='pause')togglePause();}
   if(k==='m'){setVol('music',SV.music>0?0:0.6);}
@@ -902,7 +937,7 @@ addEventListener('keyup',e=>{
   const k=e.key.length===1?e.key.toLowerCase():e.key;
   KEY[k]=false;
   if(k===' '||k==='ArrowUp'||k==='w'||k==='z')releaseAction();
-  if(k==='Shift'||k==='f'||k==='ArrowDown'||k==='s')releaseTrick();
+  if(k==='Shift'||k==='f'||k==='ArrowDown'||k==='x')releaseTrick();
 });
 
 let mLeft=false,mRight=false;
@@ -925,6 +960,15 @@ const elTrick=bindBtn('bTrick',()=>{P.trickHeld=true;pressTrick();},releaseTrick
 // (c'est le conflit d'entrées qui gâchait la version précédente).
 CV.addEventListener('pointerdown',e=>{
   audioResume();
+  if(gs==='menu'||gs==='pause'||gs==='settings'||gs==='levelselect'){
+    const r=CV.getBoundingClientRect();
+    const px=(e.clientX-r.left)/Math.max(1,r.width)*SW;
+    const py=(e.clientY-r.top)/Math.max(1,r.height)*SH;
+    const fn=hitTest(px,py);
+    if(fn){fn();return;}
+    if(gs==='pause')togglePause();     // tap hors zone : reprendre
+    return;
+  }
   if(gs!=='play'){pressAction();}
 });
 
@@ -1122,6 +1166,7 @@ function levelComplete(){
   endStars=1+(runDeaths===0?1:0)+(score>=(level+1)*2200?1:0);
   const key='L'+level;
   if(!SV.bestLevel[key]||SV.bestLevel[key]<score)SV.bestLevel[key]=score;
+  if(!SV.bestStars[key]||SV.bestStars[key]<endStars)SV.bestStars[key]=endStars;
   SV.unlocked=Math.max(SV.unlocked,level+2);
   persist();
   sfx('cash');confetti(P.x,P.y+60,P.z,50);
@@ -1157,6 +1202,63 @@ function toMenu(){
 function togglePause(){
   if(gs==='play'){gs='pause';musicStop();}
   else if(gs==='pause'){gs='play';audioResume();musicPlay(world);}
+}
+
+/* ─────────────────────────────────────────────────────────────
+   RÉGLAGES ET SÉLECTION DE NIVEAU
+   Deux écrans supplémentaires, accessibles depuis le menu (et les
+   réglages, depuis la pause aussi). Chacun retient l'écran d'où il
+   vient pour y revenir proprement — jamais de cul-de-sac.
+   ───────────────────────────────────────────────────────────── */
+let settingsFrom='menu';
+function openSettings(){audioResume();sfx('ui');settingsFrom=gs;gs='settings';settingsSel=0;}
+function closeSettings(){sfx('ui');gs=settingsFrom;}
+function openLevelSelect(){audioResume();sfx('ui');gs='levelselect';}
+function closeLevelSelect(){sfx('ui');gs='menu';}
+
+function startAtLevel(lv){
+  audioResume();sfx('ui');
+  level=lv;world=Math.floor(level/3);sub=(level%3)+1;
+  score=0;lives=3;
+  heat=0;heatTier=0;ovation=0;bank=0;bankTricks=0;bankNames.length=0;
+  dda=0;deaths=0;runDeaths=0;netFalls=0;
+  TH=THEMES[world];
+  buildLevel(world,sub);
+  spawnPlayer();
+  tutStep=0;tutTimer=0;              // pas de tutoriel en accès direct
+  gs='play';
+  musicPlay(world);
+}
+
+const QUAL_ORDER=['low','med','high'];
+function cycleQuality(dir){
+  const i=clamp(QUAL_ORDER.indexOf(QUAL.name)+dir,0,QUAL_ORDER.length-1);
+  setQuality(QUAL_ORDER[i]);sfx('ui');
+}
+function setLang(l){LANG=l;SV.lang=l;persist();sfx('ui');}
+function stepVol(bus,d){
+  const cur=bus==='music'?SV.music:SV.sfx;
+  setVol(bus,clamp(Math.round((cur+d)*20)/20,0,1));sfx('ui');
+}
+function toggleVibrate(){SV.vibrate=!SV.vibrate;persist();sfx('ui');}
+function toggleGuide(){SV.guide=!SV.guide;persist();sfx('ui');}
+
+let settingsSel=0;
+function settingsRows(){
+  return[
+    {label:t('music'),val:()=>Math.round(SV.music*100)+'%',
+     left:()=>stepVol('music',-0.15),right:()=>stepVol('music',0.15)},
+    {label:t('sfx'),val:()=>Math.round(SV.sfx*100)+'%',
+     left:()=>stepVol('sfx',-0.15),right:()=>stepVol('sfx',0.15)},
+    {label:t('lang'),val:()=>LANG.toUpperCase(),
+     left:()=>setLang(LANG==='fr'?'en':'fr'),right:()=>setLang(LANG==='fr'?'en':'fr')},
+    {label:t('quality'),val:()=>t(QUAL.name==='med'?'med':QUAL.name),
+     left:()=>cycleQuality(-1),right:()=>cycleQuality(1)},
+    {label:t('vibrate'),val:()=>SV.vibrate?t('on'):t('off'),
+     left:toggleVibrate,right:toggleVibrate},
+    {label:t('guide'),val:()=>SV.guide?t('on'):t('off'),
+     left:toggleGuide,right:toggleGuide},
+  ];
 }
 function spawnPlayer(){
   P.x=0;P.y=CFG.PEDESTAL;P.z=-120;
@@ -2190,7 +2292,7 @@ function drawHUD(){
    Aucun écran n'est un cul-de-sac : tous offrent une sortie.
    ───────────────────────────────────────────────────────────── */
 let menuT=0;
-function drawMenu(){
+function drawMenuBackdrop(){
   menuT++;
   const g=CX.createLinearGradient(0,0,0,SH);
   g.addColorStop(0,'#1B0640');g.addColorStop(0.55,'#0C0224');g.addColorStop(1,'#04010E');
@@ -2217,7 +2319,11 @@ function drawMenu(){
     CX.beginPath();CX.arc(x,y,1.6*uiScale,0,6.283);CX.fill();
   }
   CX.globalAlpha=1;
+}
 
+function drawMenu(){
+  hitZones.length=0;
+  drawMenuBackdrop();
   const cx=SW*0.5;
   const titleY=SH*(portrait?0.16:0.18);
   CX.save();
@@ -2243,6 +2349,10 @@ function drawMenu(){
     }
     drawArtist(x,y,uiScale*(sel?1.35:1.0),'run',0,1,ids[i],sel?1:0.5,1,1);
     outlineText(CHARS[ids[i]].name,x,y+30*uiScale,15,sel?'#FFF':'rgba(255,255,255,0.45)',800);
+    const zw=90*uiScale;
+    zone(x-zw*0.5,y-100*uiScale,zw,140*uiScale,(idx=>()=>{
+      menuSel=idx;P.char=ids[idx];SV.char=P.char;persist();
+    })(i));
   }
 
   // Appel à l'action
@@ -2256,9 +2366,22 @@ function drawMenu(){
   CX.beginPath();CX.roundRect(cx-bw/2,by-bh/2,bw,bh,bh*0.5);CX.fill();
   CX.globalAlpha=1;
   outlineText('▶  '+t('play'),cx,by,21,'#2A0B00',900);
+  zone(cx-bw/2,by-bh/2,bw,bh,startRun);
 
   outlineText(isTouch?t('tapStart'):t('pressStart'),
     cx,by+40*uiScale,12,'rgba(255,255,255,0.5)',600);
+
+  // Réglages et sélection de niveau : deux liens discrets, jamais un
+  // écran séparé qu'il faudrait chercher.
+  const linkY=by+68*uiScale;
+  const hasLevels=SV.unlocked>1;
+  outlineText('⚙ '+t('settings'),hasLevels?cx-70*uiScale:cx,linkY,12.5,'rgba(255,255,255,0.55)',700);
+  zone((hasLevels?cx-70*uiScale:cx)-60*uiScale,linkY-14*uiScale,120*uiScale,28*uiScale,openSettings);
+  if(hasLevels){
+    outlineText('🗺 '+t('levels'),cx+70*uiScale,linkY,12.5,'rgba(255,255,255,0.55)',700);
+    zone(cx+70*uiScale-60*uiScale,linkY-14*uiScale,120*uiScale,28*uiScale,openLevelSelect);
+  }
+
   if(bestRun>0)
     outlineText('🏆 '+t('best')+' : '+bestRun,cx,SH-24*uiScale,14,TH.reward,800);
 }
@@ -2267,7 +2390,21 @@ function overlay(alpha){
   CX.fillStyle='rgba(4,1,14,'+alpha+')';CX.fillRect(0,0,SW,SH);
 }
 
+/* ── Zones tactiles des écrans de menu ──
+   Repeuplées à chaque image par l'écran actif ; le pointeur les
+   consulte plutôt que deviner des coordonnées à l'aveugle. */
+let hitZones=[];
+function zone(x,y,w,h,fn){hitZones.push({x,y,w,h,fn});}
+function hitTest(px,py){
+  for(let i=hitZones.length-1;i>=0;i--){
+    const z=hitZones[i];
+    if(px>=z.x&&px<=z.x+z.w&&py>=z.y&&py<=z.y+z.h)return z.fn;
+  }
+  return null;
+}
+
 function drawPauseScreen(){
+  hitZones.length=0;
   overlay(0.76);
   const cx=SW*0.5;
   outlineText(t('paused'),cx,SH*0.36,40,TH.reward,900);
@@ -2277,7 +2414,108 @@ function drawPauseScreen(){
   CX.globalAlpha=pulse;
   outlineText(isTouch?t('tapCont'):t('pressCont'),cx,SH*0.64,16,TH.accent,800);
   CX.globalAlpha=1;
+  // Bouton réglages : la pause est le seul autre point d'entrée.
+  const sw2=130*uiScale,sh2=38*uiScale,sy=SH*0.72;
+  CX.strokeStyle='rgba(255,255,255,0.35)';CX.lineWidth=1.6;
+  CX.beginPath();CX.roundRect(cx-sw2/2,sy-sh2/2,sw2,sh2,sh2*0.5);CX.stroke();
+  outlineText('⚙ '+t('settings'),cx,sy,14,'rgba(255,255,255,0.75)',700);
+  zone(cx-sw2/2,sy-sh2/2,sw2,sh2,openSettings);
   outlineText('M · '+t('music')+'   ·   P · '+t('paused'),cx,SH-30*uiScale,12,'rgba(255,255,255,0.4)',600);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ÉCRAN DES RÉGLAGES
+   ───────────────────────────────────────────────────────────── */
+function drawSettingsScreen(){
+  hitZones.length=0;
+  if(settingsFrom==='pause'){overlay(0.8);}
+  else{drawMenuBackdrop();}
+  const cx=SW*0.5;
+  outlineText(t('settings'),cx,SH*0.14,28,TH.reward,900);
+
+  const rows=settingsRows();
+  const rh=Math.min(64*uiScale,SH*0.09);
+  const rw=Math.min(SW*0.82,420*uiScale);
+  const top=SH*0.24;
+  for(let i=0;i<rows.length;i++){
+    const y=top+i*rh;
+    const sel=settingsSel===i;
+    if(sel){
+      CX.fillStyle='rgba(255,255,255,0.08)';
+      CX.beginPath();CX.roundRect(cx-rw/2,y-rh*0.38,rw,rh*0.76,12*uiScale);CX.fill();
+    }
+    outlineText(rows[i].label,cx-rw*0.5+18*uiScale,y,15,
+      sel?'#FFF':'rgba(255,255,255,0.7)',sel?800:700,'left');
+    outlineText('◀',cx+rw*0.5-92*uiScale,y,15,'rgba(255,255,255,0.4)',700);
+    outlineText(rows[i].val(),cx+rw*0.5-48*uiScale,y,16,sel?TH.accent:'#FFF',800);
+    outlineText('▶',cx+rw*0.5-10*uiScale,y,15,'rgba(255,255,255,0.4)',700);
+    // Toute la ligne cycle en avant au tap ; les chevrons affinent au clic précis.
+    zone(cx-rw/2,y-rh*0.42,rw,rh*0.84,(idx=>()=>{settingsSel=idx;rows[idx].right();})(i));
+    zone(cx+rw*0.5-104*uiScale,y-rh*0.42,36*uiScale,rh*0.84,(idx=>()=>{settingsSel=idx;rows[idx].left();})(i));
+  }
+
+  const by=top+rows.length*rh+34*uiScale;
+  const bw=170*uiScale,bh=44*uiScale;
+  CX.fillStyle='rgba(255,255,255,0.10)';
+  CX.beginPath();CX.roundRect(cx-bw/2,by-bh/2,bw,bh,bh*0.5);CX.fill();
+  outlineText('←  '+t('back'),cx,by,15,'#FFF',800);
+  zone(cx-bw/2,by-bh/2,bw,bh,closeSettings);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ÉCRAN DE SÉLECTION DE NIVEAU
+   ───────────────────────────────────────────────────────────── */
+function drawLevelSelectScreen(){
+  hitZones.length=0;
+  drawMenuBackdrop();
+  const cx=SW*0.5;
+  outlineText(t('selectLevel'),cx,SH*0.10,24,TH.reward,900);
+
+  const cols=portrait?3:4;
+  const rows=Math.ceil(12/cols);
+  const gridW=Math.min(SW*0.9,cols*118*uiScale);
+  const cellW=gridW/cols, cellH=cellW*0.92;
+  const gridH=rows*cellH;
+  const gx=cx-gridW/2, gy=SH*0.20;
+
+  for(let i=0;i<12;i++){
+    const col=i%cols, row=Math.floor(i/cols);
+    const x=gx+col*cellW+cellW*0.5, y=gy+row*cellH+cellH*0.5;
+    const w=Math.floor(i/3), locked=(i+1)>SV.unlocked;
+    const sel=levelSelIdx===i;
+    const th=THEMES[w];
+    const cw=cellW*0.86, ch=cellH*0.86;
+
+    CX.fillStyle=locked?'rgba(255,255,255,0.05)':'rgba(255,255,255,0.09)';
+    CX.beginPath();CX.roundRect(x-cw/2,y-ch/2,cw,ch,12*uiScale);CX.fill();
+    if(sel&&!locked){
+      CX.strokeStyle=th.accent;CX.lineWidth=Math.max(1.5,2.4*uiScale);
+      CX.beginPath();CX.roundRect(x-cw/2,y-ch/2,cw,ch,12*uiScale);CX.stroke();
+    }
+    if(locked){
+      outlineText('🔒',x,y-ch*0.08,20,'rgba(255,255,255,0.35)',700);
+    } else {
+      outlineText(String(i+1),x,y-ch*0.24,20,locked?'rgba(255,255,255,0.3)':th.accent,900);
+      const key='L'+i, stars=SV.bestStars[key]||0;
+      const starY=y+ch*0.10;
+      for(let si=0;si<3;si++){
+        outlineText(si<stars?'★':'☆',x+(si-1)*14*uiScale,starY,12,
+          si<stars?th.reward:'rgba(255,255,255,0.25)',700);
+      }
+      const best=SV.bestLevel[key];
+      if(best)outlineText(String(best),x,y+ch*0.32,10,'rgba(255,255,255,0.5)',600);
+    }
+    if(!locked)zone(x-cw/2,y-ch/2,cw,ch,(idx=>()=>{levelSelIdx=idx;startAtLevel(idx);})(i));
+  }
+
+  outlineText(t('world').join('  ·  '),cx,gy+gridH+22*uiScale,11,'rgba(255,255,255,0.4)',600);
+
+  const by=gy+gridH+56*uiScale;
+  const bw=170*uiScale,bh=44*uiScale;
+  CX.fillStyle='rgba(255,255,255,0.10)';
+  CX.beginPath();CX.roundRect(cx-bw/2,by-bh/2,bw,bh,bh*0.5);CX.fill();
+  outlineText('←  '+t('back'),cx,by,15,'#FFF',800);
+  zone(cx-bw/2,by-bh/2,bw,bh,closeLevelSelect);
 }
 
 function drawLevelEnd(){
@@ -2469,6 +2707,11 @@ function render(){
   if(gs==='menu'){drawMenu();}
   else if(gs==='finale'){drawFinale();}
   else if(gs==='gameover'){drawGameOver();}
+  else if(gs==='settings'){
+    if(settingsFrom==='pause'){renderWorld();drawHUD();}
+    drawSettingsScreen();
+  }
+  else if(gs==='levelselect'){drawLevelSelectScreen();}
   else{
     renderWorld();
     drawHUD();
@@ -2515,7 +2758,12 @@ function syncUI(){
     P.state==='swing'&&Math.abs(P.ang)<CFG.PUMP_WIN);
 }
 
-btnBack.addEventListener('click',e=>{e.preventDefault();sfx('ui');toMenu();});
+btnBack.addEventListener('click',e=>{
+  e.preventDefault();sfx('ui');
+  if(gs==='settings')closeSettings();
+  else if(gs==='levelselect')closeLevelSelect();
+  else toMenu();
+});
 btnPause.addEventListener('click',e=>{e.preventDefault();sfx('ui');togglePause();});
 btnFull.addEventListener('click',e=>{
   e.preventDefault();sfx('ui');
@@ -2545,15 +2793,8 @@ function onResize(){resize();updateView();}
 window.removeEventListener('resize',resize);
 window.addEventListener('resize',onResize);
 
-// Le menu laisse choisir le personnage à la souris comme au clavier.
-CV.addEventListener('pointerdown',e=>{
-  if(gs!=='menu')return;
-  const r=CV.getBoundingClientRect();
-  const x=(e.clientX-r.left)/Math.max(1,r.width);
-  menuSel=x>0.5?1:0;
-  P.char=menuSel===0?'marc':'claire';
-  SV.char=P.char;persist();
-},true);
+// Le menu laisse choisir le personnage au clavier (le tactile et la
+// souris passent par les zones enregistrées dans drawMenu).
 addEventListener('keydown',e=>{
   if(gs!=='menu')return;
   const k=e.key.length===1?e.key.toLowerCase():e.key;

@@ -843,6 +843,11 @@ function drawPlayer(){
   // Swing trajectory preview (dotted arc)
   if(P.state==='swing'&&P.bar){const b2=P.bar;const bcx=b2.x-scrollX+b2.w/2;let simA=P.bAngle,simV=P.bAngV;CX.save();CX.setLineDash([3,5]);CX.strokeStyle='rgba(255,215,0,0.35)';CX.lineWidth=1.8;CX.beginPath();let first=true;for(let f=0;f<20;f++){const acc=-(0.3/ROPE)*Math.sin(simA);simV+=acc;simV*=0.999;simA+=simV;const px2=bcx+Math.sin(simA)*ROPE;const py2=b2.y+Math.cos(simA)*ROPE;if(first){CX.moveTo(px2,py2);first=false;}else CX.lineTo(px2,py2);}CX.stroke();CX.setLineDash([]);CX.restore();}
   const rot=['pirouette','salto','djump'].includes(P.state)?P.rot:0;
+  // Halo de contraste : detache la silhouette du fond, souvent tres sombre
+  // ou tres charge en particules lumineuses.
+  const haloR=CX.createRadialGradient(px,py-26,4,px,py-26,40);
+  haloR.addColorStop(0,'rgba(0,0,0,0.38)');haloR.addColorStop(1,'rgba(0,0,0,0)');
+  CX.fillStyle=haloR;CX.beginPath();CX.arc(px,py-26,40,0,Math.PI*2);CX.fill();
   // Draw with squash/stretch
   CX.save();CX.translate(px,py);CX.scale(P.sqX,P.sqY);drawChar(0,0,P.state,P.af,rot);CX.restore();
   _resetShadow(CX);
