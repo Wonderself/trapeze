@@ -214,7 +214,7 @@ const I18N={
     tutJump:'Sautez pour vous élancer', tutGrab:'Saisissez la barre',
     tutPump:'Pompez en bas de l’arc pour prendre de l’ampleur',
     tutRelease:'Lâchez au bon moment', tutTrick:'Enchaînez des figures en vol',
-    music:'Musique', sfx:'Effets', quality:'Qualité', lang:'Langue',
+    music:'Musique', sfx:'Effets', quality:'Qualité', lang:'Langue', speed:'Vitesse du jeu',
     vibrate:'Vibrations', guide:'Guide de trajectoire', back:'Retour',
     low:'Basse', med:'Moyenne', high:'Haute', on:'Oui', off:'Non',
     world:['Cirque','Jungle','Plage','Futur'],
@@ -235,7 +235,7 @@ const I18N={
     tutJump:'Jump to launch yourself', tutGrab:'Grab the bar',
     tutPump:'Pump at the bottom of the arc to build height',
     tutRelease:'Release at the right moment', tutTrick:'Chain tricks in the air',
-    music:'Music', sfx:'Effects', quality:'Quality', lang:'Language',
+    music:'Music', sfx:'Effects', quality:'Quality', lang:'Language', speed:'Game speed',
     vibrate:'Vibration', guide:'Trajectory guide', back:'Back',
     low:'Low', med:'Medium', high:'High', on:'On', off:'Off',
     world:['Circus','Jungle','Beach','Future'],
@@ -252,6 +252,7 @@ const SAVE_KEY='trapeze.v2.save';
 const DEFAULT_SAVE={
   schema:1, best:0, bestLevel:{}, bestStars:{}, unlocked:1, char:'marc',
   lang:null, quality:null, music:0.6, sfx:0.75, vibrate:true, guide:true, seen:{},
+  speed:1,
 };
 let SV=Object.assign({},DEFAULT_SAVE);
 function loadSave(){
@@ -283,6 +284,13 @@ let SW=VW, SH=VH, DPR=1, portrait=false, uiScale=1;
 
 const isTouch=('ontouchstart' in window)||navigator.maxTouchPoints>0;
 if(isTouch)document.body.classList.add('touch');
+
+// prefers-reduced-motion : coupe la secousse et le grain, plafonne les
+// particules. Le flash est deja plafonne a 0.5 d'opacite pour tous.
+const _reduceMQ=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)');
+let reducedMotion=_reduceMQ?_reduceMQ.matches:false;
+if(_reduceMQ&&_reduceMQ.addEventListener)
+  _reduceMQ.addEventListener('change',e=>{reducedMotion=e.matches;});
 
 function resize(){
   const w=Math.max(320,stage.clientWidth||window.innerWidth);
@@ -501,12 +509,22 @@ function musicPlay(world){
       AU.layers.push(o);
     }catch(e){}
   };
+  // La chaleur du moment ou la boucle démarre décide des couches qui
+  // entrent : elles ne sont réévaluées qu'au prochain cycle, ce qui
+  // laisse la musique monter en intensité avec quelques secondes de délai.
+  const withMelody=heatTier>=2, withBrass=heatTier>=3;
   for(let b=0;b<BARS*4;b++){
     const t=t0+b*BEAT;
     const r=roots[b%4===0?0:(b%2===0?2:1)];
     mk(r/2,t,BEAT*0.85,0.10,'sine');                       // basse
     if(b%2===0)mk(r*2,t,BEAT*0.5,0.045,kind,-6);           // arpège
     if(b%4===2)mk(r*3,t,BEAT*0.4,0.035,kind,7);
+    if(withMelody&&b%4===0)mk(r*4,t,BEAT*1.7,0.052,'triangle',3);   // mélodie, palier ola
+    if(withMelody&&b%8===4)mk(r*5,t,BEAT*0.9,0.04,'triangle',-4);
+    if(withBrass&&b%8===0){                                         // cuivres, ovation
+      mk(r*2,t,BEAT*2.4,0.07,'sawtooth',-5);
+      mk(r*3,t,BEAT*2.4,0.06,'sawtooth',5);
+    }
   }
   AU.playing=true;
   // La boucle se relance tant que la partie dure.
@@ -523,7 +541,8 @@ for(let i=0;i<PMAX;i++)PP[i]={live:false,x:0,y:0,z:0,vx:0,vy:0,vz:0,
   life:0,dec:0.02,col:'#fff',r:3,grav:0.05,drag:0.98,kind:0,rot:0,rotV:0};
 let pCount=0;
 function emit(x,y,z,vx,vy,vz,col,r,dec,kind,grav){
-  if(pCount>=QUAL.parts)return null;
+  const cap=reducedMotion?Math.min(QUAL.parts,150):QUAL.parts;
+  if(pCount>=cap)return null;
   for(let i=0;i<PMAX;i++){
     const p=PP[i];
     if(p.live)continue;
@@ -810,7 +829,10 @@ function squashUpdate(){
   P.svx+=(1-P.sx)*k;P.svy+=(1-P.sy)*k;
   P.svx*=d;P.svy*=d;P.sx+=P.svx;P.sy+=P.svy;
 }
-function shake(amp,dur){camShakeAmp=Math.max(camShakeAmp,amp);camShakeT=Math.max(camShakeT,dur);}
+function shake(amp,dur){
+  if(reducedMotion)return;           // aucune secousse d'ecran
+  camShakeAmp=Math.max(camShakeAmp,amp);camShakeT=Math.max(camShakeT,dur);
+}
 function doFlash(dur,col){flash=dur;flashCol=col||'#fff';}
 function vibrate(pattern){
   if(!SV.vibrate||!navigator.vibrate)return;
@@ -1235,6 +1257,11 @@ function cycleQuality(dir){
   const i=clamp(QUAL_ORDER.indexOf(QUAL.name)+dir,0,QUAL_ORDER.length-1);
   setQuality(QUAL_ORDER[i]);sfx('ui');
 }
+const SPEED_OPTS=[1,0.8,0.6];
+function cycleSpeed(dir){
+  const i=clamp(SPEED_OPTS.indexOf(SV.speed||1)+dir,0,SPEED_OPTS.length-1);
+  SV.speed=SPEED_OPTS[i];persist();sfx('ui');
+}
 function setLang(l){LANG=l;SV.lang=l;persist();sfx('ui');}
 function stepVol(bus,d){
   const cur=bus==='music'?SV.music:SV.sfx;
@@ -1254,6 +1281,8 @@ function settingsRows(){
      left:()=>setLang(LANG==='fr'?'en':'fr'),right:()=>setLang(LANG==='fr'?'en':'fr')},
     {label:t('quality'),val:()=>t(QUAL.name==='med'?'med':QUAL.name),
      left:()=>cycleQuality(-1),right:()=>cycleQuality(1)},
+    {label:t('speed'),val:()=>Math.round((SV.speed||1)*100)+'%',
+     left:()=>cycleSpeed(-1),right:()=>cycleSpeed(1)},
     {label:t('vibrate'),val:()=>SV.vibrate?t('on'):t('off'),
      left:toggleVibrate,right:toggleVibrate},
     {label:t('guide'),val:()=>SV.guide?t('on'):t('off'),
@@ -1278,9 +1307,17 @@ function spawnPlayer(){
    Un pas = 1/60 s. La boucle principale en exécute autant que
    nécessaire, ce qui rend le jeu identique en 60 et 120 Hz.
    ───────────────────────────────────────────────────────────── */
+let _musicDucked=false;
+function duckMusic(down){
+  if(down===_musicDucked||!AU.ready||!AU.music)return;
+  _musicDucked=down;
+  try{AU.music.gain.setTargetAtTime(down?SV.music*0.32:SV.music,AU.ctx.currentTime,0.05);}
+  catch(e){}
+}
 function step(){
   frame++;
-  if(hitStop>0){hitStop--;updateParts();updateFText();return;}
+  if(hitStop>0){hitStop--;duckMusic(true);updateParts();updateFText();return;}
+  duckMusic(false);
 
   squashUpdate();
   updateParts();updateFText();
@@ -2141,6 +2178,38 @@ function computeNear(){
   if(f){nearBar=f.bar;nearDist=f.dist;}
 }
 
+// Simule le lâcher immédiat, avec la même physique que releaseBar() et
+// la phase aérienne de step(), pour rester honnête sur ce qui va se
+// produire réellement si le joueur lâche maintenant.
+const _trajPts=[];
+function drawTrajectoryPreview(){
+  if(P.state!=='swing'||!P.bar||!SV.guide)return;
+  const v=P.angV*CFG.ROPE;
+  let vz=v*Math.cos(P.ang), vy=v*Math.sin(P.ang);
+  if(vy<0&&P.ang<0)vy*=0.5;
+  vz*=1+0.055*Math.min(P.pumped,5);
+  vz=clamp(vz,-6,CFG.FWD_MAX);
+  let x=P.x,y=P.y,z=P.z;
+  _trajPts.length=0;
+  for(let i=0;i<26;i++){
+    vy-=CFG.GRAV;if(vy<-CFG.MAXFALL)vy=-CFG.MAXFALL;
+    vz=clamp(vz*CFG.AIR_DRAG,-6,CFG.FWD_MAX);
+    x+=P.vx*0.3;y+=vy;z+=vz;
+    if(i%2===0)_trajPts.push(x,y,z);
+    if(y<CFG.NET_Y)break;
+  }
+  CX.save();
+  for(let i=0;i<_trajPts.length;i+=3){
+    const p=project(_trajPts[i],_trajPts[i+1],_trajPts[i+2],pr1);
+    if(!p)continue;
+    const k=1-(i/_trajPts.length);
+    CX.globalAlpha=0.55*k;
+    CX.fillStyle=TH.accent;
+    CX.beginPath();CX.arc(p.x,p.y,Math.max(1,4*p.s),0,6.283);CX.fill();
+  }
+  CX.restore();
+}
+
 function renderWorld(){
   drawSky();
   drawCrowd();
@@ -2161,6 +2230,7 @@ function renderWorld(){
   push(P.z,drawPlayerObj,null);
   for(let i=0;i<FTMAX;i++){const f=FT[i];if(f.live&&f.z>zMin&&f.z<zMax)push(f.z-1,drawFTextObj,f);}
   flushDL();
+  drawTrajectoryPreview();
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -2665,7 +2735,7 @@ function postFX(){
   vg.addColorStop(1,lives<=1?'rgba(90,0,10,0.5)':'rgba(0,0,0,0.45)');
   CX.fillStyle=vg;CX.fillRect(0,0,SW,SH);
 
-  if(QUAL.grain&&grainPat){
+  if(QUAL.grain&&grainPat&&!reducedMotion){
     if(frame%4===0)makeGrain();
     CX.save();CX.globalCompositeOperation='soft-light';CX.globalAlpha=0.45;
     CX.fillStyle=grainPat;CX.fillRect(0,0,SW,SH);CX.restore();
@@ -2688,7 +2758,9 @@ function frameLoop(now){
   let dt=now-lastT;lastT=now;
   if(dt>250)dt=STEP;             // onglet réveillé : on ne rattrape pas 10 s
   watchPerf(dt);
-  acc+=dt;
+  // Ralentissement global optionnel : moins de pas simulés par seconde
+  // réelle, pour les joueurs qui ont besoin de plus de temps.
+  acc+=dt*(SV.speed||1);
   let steps=0;
   while(acc>=STEP&&steps<5){acc-=STEP;steps++;
     if(gs==='play')step();

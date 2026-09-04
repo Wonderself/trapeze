@@ -68,6 +68,10 @@ const wrapEl=document.getElementById('wrap');
 const hintEl=document.getElementById('hint');
 const gameCanvas=document.getElementById('c');
 const _isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+// prefers-reduced-motion : coupe la secousse d'ecran et le grain de film.
+const _reduceMQ=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)');
+let reducedMotion=_reduceMQ?_reduceMQ.matches:false;
+if(_reduceMQ&&_reduceMQ.addEventListener)_reduceMQ.addEventListener('change',e=>{reducedMotion=e.matches;});
 const _isPWA=window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches;
 let _iosFull=false;
 function applyIosFullStyle(){
@@ -119,7 +123,7 @@ const bmCV=document.createElement('canvas');bmCV.width=Math.round(W/3);bmCV.heig
 function drawBloom(){bmCX.clearRect(0,0,bmCV.width,bmCV.height);bmCX.drawImage(CV,0,0,bmCV.width,bmCV.height);CX.save();CX.globalCompositeOperation='lighter';CX.globalAlpha=0.13;CX.filter='blur(5px)';CX.drawImage(bmCV,0,0,W,H);CX.filter='blur(10px)';CX.globalAlpha=0.06;CX.drawImage(bmCV,0,0,W,H);CX.filter='none';CX.restore();}
 function drawPostFX(){
   if(frameN%3===0)updateGrain();
-  if(gPat){CX.save();CX.globalCompositeOperation='soft-light';CX.globalAlpha=0.55;CX.fillStyle=gPat;CX.fillRect(0,0,W,H);CX.restore();}
+  if(gPat&&!reducedMotion){CX.save();CX.globalCompositeOperation='soft-light';CX.globalAlpha=0.55;CX.fillStyle=gPat;CX.fillRect(0,0,W,H);CX.restore();}
   const vig=CX.createRadialGradient(W/2,H*0.48,H*0.14,W/2,H*0.48,H*0.88);
   vig.addColorStop(0,'rgba(0,0,0,0)');vig.addColorStop(0.68,'rgba(0,0,0,0)');vig.addColorStop(1,'rgba(0,0,0,0.82)');
   CX.fillStyle=vig;CX.fillRect(0,0,W,H);
@@ -386,7 +390,7 @@ function ftext(x,y,t,col,sz){ftexts.push({x,y,text:t,col:col||'#FFD700',sz:sz||2
 function addScore(pts,x,y){score+=pts;ftext(x,y-22,'+'+pts,pts>=800?'#FF69B4':pts>=200?'#FFD700':'#fff',pts>=800?34:pts>=200?26:16);if(score>highScore){highScore=score;localStorage.setItem('tse5_hs',highScore);}const lv=[{s:10000,t:'💎 Diamant'},{s:5000,t:'🥇 Or'},{s:2000,t:'🥈 Argent'},{s:500,t:'🥉 Bronze'}];for(const m of lv){if(score>=m.s&&score-pts<m.s){medalShow=m.t;medalTimer=240;spawnConfetti(W/2,H/2,60);sfxMedal();}}}
 let flashCol='#FFFFFF';
 function doFlash(v,col){flashTimer=v||8;flashCol=col||'#FFFFFF';}
-function doShake(i,d){shakeX=(Math.random()-0.5)*i;shakeY=(Math.random()-0.5)*i;shakeDur=d||10;}
+function doShake(i,d){if(reducedMotion)return;shakeX=(Math.random()-0.5)*i;shakeY=(Math.random()-0.5)*i;shakeDur=d||10;}
 function star5(x,y,r1,r2,col){CX.fillStyle=col;CX.beginPath();for(let i=0;i<10;i++){const a=i*Math.PI/5-Math.PI/2,r=i%2===0?r1:r2;i===0?CX.moveTo(x+Math.cos(a)*r,y+Math.sin(a)*r):CX.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r);}CX.closePath();CX.fill();}
 
 /* ─── DRAW MARC (v2: breathing + enhanced skin shader) ─── */
