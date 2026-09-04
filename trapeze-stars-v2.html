@@ -213,6 +213,7 @@ const I18N={
     ola:'OLA !', combo:'ENCHAÎNEMENT', rotateHint:"Tournez l'appareil pour une vue plus large",
     tutJump:'Sautez pour vous élancer', tutGrab:'Saisissez la barre',
     tutPump:'Pompez en bas de l’arc pour prendre de l’ampleur',
+    tutPumpGuide:'Pompez en bas de l’arc — suivez la ligne pointillée pour viser votre lâcher',
     tutRelease:'Lâchez au bon moment', tutTrick:'Enchaînez des figures en vol',
     music:'Musique', sfx:'Effets', quality:'Qualité', lang:'Langue', speed:'Vitesse du jeu',
     vibrate:'Vibrations', guide:'Guide de trajectoire', back:'Retour',
@@ -234,6 +235,7 @@ const I18N={
     ola:'WAVE!', combo:'COMBO', rotateHint:'Rotate your device for a wider view',
     tutJump:'Jump to launch yourself', tutGrab:'Grab the bar',
     tutPump:'Pump at the bottom of the arc to build height',
+    tutPumpGuide:'Pump at the bottom of the arc — follow the dotted line to aim your release',
     tutRelease:'Release at the right moment', tutTrick:'Chain tricks in the air',
     music:'Music', sfx:'Effects', quality:'Quality', lang:'Language', speed:'Game speed',
     vibrate:'Vibration', guide:'Trajectory guide', back:'Back',
@@ -1266,7 +1268,7 @@ function startAtLevel(lv){
   TH=THEMES[world];
   buildLevel(world,sub);
   spawnPlayer();
-  tutStep=0;tutTimer=0;              // pas de tutoriel en accès direct
+  tutStep=SV.seen.tut?0:1;tutTimer=SV.seen.tut?0:260;
   gs='play';
   musicPlay(world);
 }
@@ -2489,7 +2491,7 @@ function drawHUD(){
 
   // ── Tutoriel : un panneau par geste, il disparaît une fois réussi ──
   if(tutStep>0&&tutTimer>0){
-    const msgs=['',t('tutJump'),t('tutGrab'),t('tutPump'),t('tutTrick')];
+    const msgs=['',t('tutJump'),t('tutGrab'),SV.guide?t('tutPumpGuide'):t('tutPump'),t('tutTrick')];
     const m=msgs[tutStep];
     if(m){
       const a=clamp(tutTimer/50,0,1);

@@ -131,23 +131,23 @@ comportement).
 
 ## Lot S10 — Petits raffinements identifiés en cours de route
 
-Rien de bloquant, remarqué pendant le travail sur S1–S8 (le conflit entre
-`setVol` et le ducking musical, noté ici la dernière fois, est déjà corrigé) :
+Les trois notés la dernière fois sont réglés :
 
-- **`SV.guide` et la prévisualisation.** Le réglage coupe la prévisualisation
-  de trajectoire, mais rien n'indique au joueur qu'elle existe avant qu'il
-  ne la voie une fois. Un indice dans le tutoriel (`tutStep`) le
-  mentionnerait.
-- **Sélection de niveau et tutoriel.** `startAtLevel()` met `tutStep=0`
-  (aucun tutoriel), ce qui est le bon choix pour un joueur qui revient, mais
-  un joueur qui débloque le niveau 2 sans avoir terminé le niveau 1 en entier
-  (impossible actuellement, mais à garder en tête si `SV.unlocked` devient
-  modifiable autrement) n'aurait pas vu le tutoriel non plus.
-- **Vent de plage et grand soleil.** Le vent (`world===2`) ne s'applique
-  qu'en état `'air'`, jamais en `'swing'` — voulu, pour ne pas fausser le
-  pendule. Mais cela signifie qu'un grand soleil en fin de plage n'est pas
-  du tout affecté par le vent, ce qui peut sembler incohérent une fois
-  qu'on y prête attention. Actuellement invisible en jeu normal.
+- **`SV.guide` et la prévisualisation** — corrigé. Le message de tutoriel qui
+  apprend le pompage (`tutStep===3`) mentionne désormais la ligne pointillée
+  quand `SV.guide` est actif ; il s'affiche exactement au moment où la ligne
+  devient visible (état `'swing'`), sans second système de message qui
+  risquerait de se superposer.
+- **Sélection de niveau et tutoriel** — corrigé. `startAtLevel()` applique
+  désormais la même règle que `startRun()` (`tutStep=SV.seen.tut?0:1`)
+  plutôt qu'un `tutStep=0` qui n'était sans conséquence que par accident du
+  flux de déverrouillage actuel.
+- **Vent de plage et grand soleil** — refermé sans changement de code. Le
+  vent ne s'applique qu'en état `'air'`, jamais en `'swing'` : c'est le
+  comportement voulu, pas un oubli — le but est justement de ne jamais
+  fausser le pendule pendant une figure. Le corriger « pour la cohérence »
+  aurait réintroduit exactement le risque que ce choix évite, pour un
+  effet que le jeu normal ne rend même pas perceptible.
 
 ## Outils
 
