@@ -1917,6 +1917,72 @@ function drawProps(){
   }
 }
 
+// S8 — Décor propre à chaque monde, sur les côtés de la piste, jamais
+// dans le couloir jouable. Purement atmosphérique : aucune collision,
+// aucun effet sur le jeu. Même schéma de clipping/fondu que drawProps().
+function drawWorldDecor(){
+  const spacing=260, offsetX=CFG.LANE+260;
+  const z0=Math.floor((CAM.z+CFG.NEAR)/spacing)*spacing;
+  for(let i=0;i<18;i++){
+    const pz=z0+i*spacing;
+    const dz=pz-CAM.z;
+    if(dz<CFG.NEAR||dz>1900)continue;
+    const fade=clamp(1-dz/1900,0,1)*0.6;
+    if(fade<=0.02)continue;
+    const side=(Math.floor(pz/spacing)%2===0)?-1:1;
+    const bx=side*offsetX;
+
+    if(TH.id==='cirque'){
+      // Fanions triangulaires suspendus entre deux mâts
+      const base=project(bx,0,pz,pr1), top=project(bx,150,pz,pr2);
+      if(!base||!top)continue;
+      CX.globalAlpha=fade;CX.strokeStyle=TH.rig;CX.lineWidth=Math.max(1,2.6*top.s);
+      CX.beginPath();CX.moveTo(base.x,base.y);CX.lineTo(top.x,top.y);CX.stroke();
+      for(let f=0;f<3;f++){
+        const fy=top.y+(base.y-top.y)*(f/3)*0.6;
+        CX.fillStyle=f%2?TH.accent:TH.accent2;
+        CX.beginPath();CX.moveTo(top.x,fy);CX.lineTo(top.x+14*top.s,fy+7*top.s);CX.lineTo(top.x,fy+14*top.s);CX.closePath();CX.fill();
+      }
+    } else if(TH.id==='jungle'){
+      // Silhouette de palmier touffu
+      const base=project(bx,0,pz,pr1);
+      if(!base)continue;
+      const s2=base.s;
+      CX.globalAlpha=fade;CX.strokeStyle='#0A2408';CX.lineWidth=Math.max(2,7*s2);
+      CX.beginPath();CX.moveTo(base.x,base.y);CX.quadraticCurveTo(base.x+10*s2,base.y-90*s2,base.x+4*s2,base.y-160*s2);CX.stroke();
+      CX.fillStyle='#153A0C';
+      for(let fr=0;fr<6;fr++){
+        const a=(fr/6)*6.283;
+        CX.beginPath();
+        CX.ellipse(base.x+4*s2+Math.cos(a)*26*s2,base.y-160*s2+Math.sin(a)*14*s2,26*s2,10*s2,a,0,6.283);
+        CX.fill();
+      }
+    } else if(TH.id==='plage'){
+      // Parasol de plage
+      const base=project(bx,0,pz,pr1);
+      if(!base)continue;
+      const s2=base.s;
+      CX.globalAlpha=fade;CX.strokeStyle='#7A5020';CX.lineWidth=Math.max(1.5,4*s2);
+      CX.beginPath();CX.moveTo(base.x,base.y);CX.lineTo(base.x,base.y-90*s2);CX.stroke();
+      CX.fillStyle=side>0?'#FF7BA8':'#4DD2FF';
+      CX.beginPath();CX.arc(base.x,base.y-90*s2,38*s2,Math.PI,0);CX.closePath();CX.fill();
+      CX.strokeStyle='rgba(255,255,255,0.4)';CX.lineWidth=Math.max(1,1.6*s2);
+      for(let k=-1;k<=1;k++){CX.beginPath();CX.moveTo(base.x,base.y-90*s2);CX.lineTo(base.x+k*32*s2,base.y-92*s2);CX.stroke();}
+    } else { // futur
+      // Tour lointaine, fenêtres qui pulsent
+      const base=project(bx,0,pz,pr1), top=project(bx,220,pz,pr2);
+      if(!base||!top)continue;
+      const w2=Math.max(2,22*top.s);
+      CX.globalAlpha=fade*0.8;CX.fillStyle='#0A1830';
+      CX.fillRect(top.x-w2/2,top.y,w2,base.y-top.y);
+      CX.globalAlpha=fade*(0.4+0.4*Math.abs(Math.sin(frame*0.03+pz*0.01)));
+      CX.fillStyle=TH.accent;
+      for(let wy=0;wy<5;wy++)CX.fillRect(top.x-w2*0.28,top.y+(base.y-top.y)*(wy+0.5)/5,w2*0.56,Math.max(1,2*top.s));
+    }
+    CX.globalAlpha=1;
+  }
+}
+
 // Position réelle de la barre : elle suit le voltigeur quand il est
 // suspendu, et pend à son propre angle sinon.
 function barPose(b,out){
@@ -2287,6 +2353,7 @@ function renderWorld(){
   drawCrowd();
   drawGround();
   drawProps();
+  drawWorldDecor();
   drawGravZones();
   drawNet();
 
