@@ -9,10 +9,15 @@ Ce document est le contrat d'exécution. Il est découpé en lots (WP) autonomes
 chacun avec son périmètre, ses fichiers, et ses critères d'acceptation.
 Un lot peut être confié à une session séparée sans contexte supplémentaire.
 
-> **État d'avancement.** WP-0, WP-B, WP-A, WP-C et WP-H sont réalisés.
-> WP-D, WP-E, WP-F, WP-G et WP-I sont partiels.
-> L'état détaillé et les lots restants, découpés pour une exécution séparée,
-> sont dans [`RESTE-A-FAIRE.md`](RESTE-A-FAIRE.md).
+> **État d'avancement.** Tous les lots (WP-0 à WP-I) sont réalisés, y compris
+> les réglages, la sélection de niveau, la musique en couches, les
+> mécaniques par monde et l'accessibilité. WP-I (QA) reste partiel dans la
+> seule mesure où aucun appareil physique n'a été disponible pour le
+> tester — tout ce qui pouvait être vérifié sans matériel réel l'a été
+> (dont deux bugs trouvés en simulant les conditions Safari : navigation
+> privée et absence de l'API plein écran). Le détail complet, y compris ce
+> qui reste hors de portée sans un vrai iPhone ou Android, est dans
+> [`RESTE-A-FAIRE.md`](RESTE-A-FAIRE.md).
 >
 > Deux décisions ont changé depuis la rédaction : **V1 assume son identité de
 > platformer en vue de côté** (saut à hauteur variable, écrasement d'ennemis),
