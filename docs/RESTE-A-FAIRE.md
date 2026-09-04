@@ -1,11 +1,12 @@
 # Reste à faire
 
-État au terme de la grosse session. Les lots ci-dessous sont volontairement
-cadrés pour être exécutés séparément, y compris par un modèle plus léger :
-chacun est court, local, et vérifiable.
+État au terme de la session. Les lots ci-dessous sont volontairement cadrés
+pour être exécutés séparément, y compris par un modèle plus léger : chacun
+est court, local, et vérifiable.
 
 **Avant toute modification** : `node tools/check.js <fichier>` doit passer, et
-`node tools/play_v2.js` doit rester vert après une modification de V2.
+`node tools/play_v2.js` doit rester vert après une modification de V2 (lancer
+plusieurs fois : la génération de niveau est aléatoire).
 
 ---
 
@@ -17,114 +18,108 @@ chacun est court, local, et vérifiable.
 | WP-B V1 Classic, corrections | ✅ | les 20 défauts de l'audit sont corrigés |
 | WP-A Socle technique | ✅ | V2 : rendu responsive, pas fixe, qualité, i18n, sauvegarde |
 | WP-C V2 game design | ✅ | pompage, grand soleil, figures, porteur, chaleur, filet |
-| WP-D Game feel | ◐ | temps d'arrêt, écrasement, secousse par bruit, caméra faits ; haptique fait |
-| WP-E Art direction | ◐ | tokens par monde, perspective, personnage articulé faits ; décors à approfondir |
-| WP-F UI/UX | ◐ | HUD, pause, contrôles contextuels, tutoriel faits ; réglages à faire |
-| WP-G Audio | ◐ | bus séparés, limiteur, effets faits ; musique en couches à finir |
+| WP-D Game feel | ✅ | temps d'arrêt, écrasement, secousse par bruit, caméra, haptique |
+| WP-E Art direction | ✅ | tokens par monde, perspective, personnage articulé, décor par monde (S8) |
+| WP-F UI/UX | ✅ | HUD, pause, contrôles contextuels, tutoriel, réglages (S1), niveaux (S2) |
+| WP-G Audio | ✅ | bus séparés, limiteur, effets, musique en couches (S3) |
 | WP-H Page de garde | ✅ | `index.html` |
-| WP-I QA | ◐ | harnais + captures faits ; matrice d'appareils réels à couvrir |
+| WP-I QA | ◐ | harnais + captures Chromium multi-format faits ; appareils réels restants |
+| S1 Réglages | ✅ | musique, effets, langue, qualité, vibrations, guide, vitesse |
+| S2 Sélection de niveau | ✅ | grille 12 niveaux, étoiles, meilleur score, verrouillage |
+| S3 Musique en couches | ✅ | mélodie à l'ola, cuivres à l'ovation, atténuation au hit-stop |
+| S4 Prévisualisation de trajectoire | ✅ | pendant la suspension, masquable via le réglage guide |
+| S5 Mécaniques par monde | ✅ | singe voleur (jungle), vent (plage), gravité réduite (futur) |
+| S6 Lisibilité du personnage V1 | ✅ | halo de contraste derrière le joueur |
+| S7 Accessibilité | ✅ | `prefers-reduced-motion` (les deux versions), vitesse globale (V2) |
+| S8 Décors par monde | ✅ (version légère) | décor latéral par monde, sans mise en cache hors écran |
+
+Tout ce qui était planifié dans la session précédente est fait. Ce qui suit
+est nouveau : des raffinements identifiés en cours de route, plus le travail
+qui exige un vrai appareil et ne peut pas être fait ici.
 
 ---
 
-## Lot S1 — Écran de réglages (V2)
+## Limitation connue — V1 en portrait mobile, hors plein écran
 
-Tout le stockage existe déjà (`SV`, `persist()`), et les valeurs sont lues
-partout. Il ne manque que l'écran.
+Le canvas de V1 est fixe (800×450, ratio préservé par CSS `aspect-ratio`).
+Sur un écran haut en portrait, avant de passer en plein écran, le jeu occupe
+une bande étroite au centre de l'écran — comportement d'origine, pas une
+régression de cette session (voir défaut D5 du `MEGA-PLAN.md`). Le bouton
+plein écran (⛶) corrige l'affichage en occupant tout l'écran disponible ;
+c'est l'usage prévu sur mobile.
 
-- Ajouter un état `gs==='settings'`, atteignable depuis le menu et la pause.
-- Réglages à exposer, tous déjà branchés dans le code :
-  `SV.music`, `SV.sfx` (via `setVol`), `SV.lang` (via `LANG` et `t()`),
-  `SV.quality` (via `setQuality`), `SV.vibrate`, `SV.guide`.
-- `SV.guide` n'a pas encore d'effet : il doit masquer la prévisualisation
-  d'arc quand elle sera ajoutée (lot S4).
-- Navigable au clavier et au doigt, cible tactile de 56 px minimum.
+Ce n'est **pas** à corriger sans décision explicite : le plan cadrait V1 comme
+« le build actuel, débogué et fiabilisé, gameplay inchangé », pas comme une
+refonte responsive. Une refonte du rendu de V1 pour qu'il remplisse l'écran
+même hors plein écran est possible (reprendre le principe de `updateView()`
+de V2 : résolution logique + `viewScale` dérivé), mais c'est un changement
+d'architecture, pas une retouche — à traiter comme un lot à part si demandé.
 
-## Lot S2 — Sélection de niveau (V2)
-
-`SV.unlocked` et `SV.bestLevel` sont déjà remplis à chaque fin de niveau.
-
-- Grille des 12 niveaux dans le menu, verrouillés au-delà de `SV.unlocked`.
-- Afficher le meilleur score et les étoiles par niveau.
-- Permet de lancer une démo directement sur un beau niveau, ce qui est
-  précisément l'usage visé.
-
-## Lot S3 — Musique en couches (V2)
-
-`musicPlay(world)` joue aujourd'hui une base et un arpège.
-
-- Ajouter une couche mélodique qui n'entre qu'à partir du palier « ola »
-  (`heatTier>=2`) et une couche de cuivres réservée à l'ovation.
-- Les couches se fondent avec `gain.setTargetAtTime`, elles ne se coupent pas.
-- Assourdir la musique pendant les temps d'arrêt (`hitStop>0`).
-
-## Lot S4 — Prévisualisation de trajectoire (V2)
-
-Annoncée dans le plan, pas encore implémentée.
-
-- Pendant la suspension, tracer trois à cinq points estompés le long de la
-  trajectoire qu'un lâcher immédiat produirait.
-- Intégrer la même physique que `releaseBar()` pour rester honnête.
-- Masquable via `SV.guide`.
-
-## Lot S5 — Mécaniques propres à chaque monde (V2)
-
-La banque de blocs de `buildLevel` est prête à recevoir des blocs
-spécifiques. Aujourd'hui les quatre mondes partagent les mêmes.
-
-- Jungle : lianes qui dérivent latéralement, branches qui cèdent après une
-  saisie.
-- Plage : vent latéral constant qui courbe les trajectoires.
-- Futur : zones de gravité réduite, anneaux de téléportation.
-- Ajouter les blocs dans `BLOCKS` avec un champ `world` et filtrer dessus.
-
-## Lot S6 — Lisibilité du personnage (V1)
-
-Défaut réel constaté à la capture : sur le fond noir de V1, l'artiste se
-distingue mal des effets lumineux.
-
-- Ajouter un liseré sombre ou une lueur de contour derrière le personnage
-  dans `drawPlayer()`, sans toucher `drawMarc` ni `drawClaire`.
-- Vérifier la lisibilité dans les quatre mondes.
-
-## Lot S7 — Accessibilité (les deux versions)
-
-- Respecter `prefers-reduced-motion` : couper secousse, grain et aberration,
-  réduire le nombre de particules.
-- Mode daltonien : les dangers ont déjà une forme distinctive, vérifier que
-  rien d'autre ne repose sur la seule couleur.
-- Option de ralentissement global à 80 % et 60 %.
-- Vérifier qu'aucun clignotement ne dépasse trois par seconde.
-
-## Lot S8 — Décors par monde (V2)
-
-`drawSky` et `drawCrowd` sont communs aux quatre mondes, seule la palette
-change.
-
-- Ajouter par monde deux à trois couches de parallaxe pré-rendues dans un
-  canvas hors écran, redessinées seulement au changement de monde.
-- Ne pas reconstruire le fond à chaque frame.
+---
 
 ## Lot S9 — Matrice de tests sur appareils réels
 
-`tools/shots.js` couvre trois formats dans Chromium. Reste à couvrir :
+`tools/shots.js` (scratchpad, non commité — à recréer si besoin) couvre trois
+formats dans Chromium/SwiftShader logiciel. Cela ne remplace pas de vrais
+appareils : SwiftShader n'a pas les mêmes limites mémoire/GPU qu'un téléphone,
+et Safari a son propre moteur de rendu Canvas 2D. Reste à couvrir :
 
-- Safari iOS, portrait et paysage, avec encoche.
-- Un Android de milieu de gamme.
-- Un écran 120 Hz, pour confirmer que le pas fixe tient.
-- Mode privé Safari, où `localStorage` échoue à l'écriture.
-- Session de trente minutes, à la recherche d'une fuite mémoire.
+- Safari iOS, portrait et paysage, avec encoche (iPhone récent).
+- Un Android de milieu de gamme (pas un flagship — c'est là que `QUAL_PRESETS`
+  et `autoQuality()` sont vraiment mis à l'épreuve).
+- Un écran 120 Hz, pour confirmer que le pas fixe (`STEP=1000/60`) tient et
+  que rien n'accélère.
+- Mode privé Safari, où `localStorage` échoue à l'écriture — `loadSave()` et
+  `persist()` ont un `try/catch`, mais jamais vérifié sur le vrai moteur qui
+  lève cette erreur.
+- Session de trente minutes, à la recherche d'une fuite mémoire (le pool de
+  particules et `hitZones.length=0` par frame sont conçus pour ne pas fuir,
+  mais seul un profileur réel le confirme).
+- Multi-touch réel (déplacement + action simultanés) sur un écran tactile
+  physique — le clavier/souris de test ne l'exerce pas complètement.
 
----
+## Lot S10 — Petits raffinements identifiés en cours de route
+
+Rien de bloquant, remarqué pendant le travail sur S1–S8 :
+
+- **Ducking musical et `setVol` en conflit.** `setVol('music', v)` écrit
+  `AU.music.gain.value=v` directement ; si un temps d'arrêt est en cours
+  (`duckMusic(true)` a lancé une rampe `setTargetAtTime`), régler le volume
+  pendant ce court instant peut être écrasé par la rampe en cours. Effet
+  inaudible en pratique (les temps d'arrêt durent moins de 15 frames), mais
+  propre à corriger : faire passer `setVol` par la même logique de cible.
+- **`SV.guide` et la prévisualisation.** Le réglage coupe la prévisualisation
+  de trajectoire, mais rien n'indique au joueur qu'elle existe avant qu'il
+  ne la voie une fois. Un indice dans le tutoriel (`tutStep`) le
+  mentionnerait.
+- **Sélection de niveau et tutoriel.** `startAtLevel()` met `tutStep=0`
+  (aucun tutoriel), ce qui est le bon choix pour un joueur qui revient, mais
+  un joueur qui débloque le niveau 2 sans avoir terminé le niveau 1 en entier
+  (impossible actuellement, mais à garder en tête si `SV.unlocked` devient
+  modifiable autrement) n'aurait pas vu le tutoriel non plus.
+- **Vent de plage et grand soleil.** Le vent (`world===2`) ne s'applique
+  qu'en état `'air'`, jamais en `'swing'` — voulu, pour ne pas fausser le
+  pendule. Mais cela signifie qu'un grand soleil en fin de plage n'est pas
+  du tout affecté par le vent, ce qui peut sembler incohérent une fois
+  qu'on y prête attention. Actuellement invisible en jeu normal.
 
 ## Outils
 
 | Fichier | Rôle |
 |---|---|
 | `tools/check.js` | Syntaxe, chargement, et parcours de tous les états de jeu. Contient le test de non-régression du bug `flashN`. |
-| `tools/play_v2.js` | Joueur automatique qui passe par les mêmes entrées qu'un humain et doit franchir les 12 niveaux. |
+| `tools/play_v2.js` | Joueur automatique qui passe par les mêmes entrées qu'un humain, esquive les dangers, et doit franchir les 12 niveaux. Vérifié stable sur au moins 8 exécutions consécutives à seed aléatoire. |
 | `tools/sandbox.js` | DOM et audio simulés, partagés par les deux. |
 
-Le joueur automatique de `play_v2.js` est la meilleure protection contre les
-régressions de gameplay : il a trouvé deux défauts de conception que la
-lecture du code n'avait pas révélés (barres hors d'atteinte, trapèze
-impossible à relancer depuis l'arrêt). Le garder vert.
+Le joueur automatique de `play_v2.js` reste la meilleure protection contre
+les régressions de gameplay. Il a trouvé, au fil des deux sessions : les
+barres hors d'atteinte, le trapèze impossible à relancer depuis l'arrêt, et
+plus récemment rien de neuf — signe que S1–S8 n'ont pas cassé le cœur du jeu,
+seulement ajouté autour. Le garder vert à chaque changement.
+
+Les captures Chromium (via `playwright-core` + le binaire préinstallé
+`/opt/pw-browsers/chromium-1194/chrome-linux/chrome`) ont trouvé, cette
+session-ci comme la précédente, des défauts qu'aucun test headless ne peut
+attraper : mise à l'échelle, police canvas invalide, convention d'angle
+inversée. **Toujours regarder le rendu réel après un changement visuel**,
+pas seulement faire tourner le harnais.

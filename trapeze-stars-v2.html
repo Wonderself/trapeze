@@ -429,7 +429,13 @@ function audioResume(){
   if(AU.ctx&&AU.ctx.state==='suspended'){AU.ctx.resume().catch(()=>{});}
 }
 function setVol(bus,v){
-  if(bus==='music'){SV.music=v;if(AU.music)AU.music.gain.value=v;}
+  if(bus==='music'){
+    SV.music=v;
+    // Si un temps d'arret est en cours, la rampe de ducking pilote deja
+    // le gain : on ne fait que mettre a jour sa cible, jamais la valeur
+    // brute, pour ne pas se faire ecraser par la rampe en cours.
+    if(AU.music)AU.music.gain.value=_musicDucked?v*0.32:v;
+  }
   else{SV.sfx=v;if(AU.sfx)AU.sfx.gain.value=v;}
   persist();
 }
