@@ -181,7 +181,7 @@ const CFG={
   // Caméra
   FOCAL:     560,
   CAM_BACK:  330,     // recul derrière le joueur
-  CAM_UP:    108,
+  CAM_UP:    62,
   CAM_LAG:   0.10,
   NEAR:      42,
   FAR:       4200,
@@ -291,7 +291,9 @@ function resize(){
   if(CV.width!==SW||CV.height!==SH){CV.width=SW;CV.height=SH;}
   // L'échelle d'interface suit la plus petite dimension, plancher inclus,
   // pour que le HUD reste lisible sur un petit téléphone.
-  uiScale=Math.max(0.62,Math.min(1.5,Math.min(SW/VW,SH/VH)*(portrait?1.22:1)));
+  // Le canvas est en pixels physiques : l'interface doit suivre la
+  // densite d'ecran, sinon elle devient minuscule sur un ecran Retina.
+  uiScale=clamp(Math.min(SW/VW,SH/VH)*(portrait?1.5:1.05),0.9,3.4);
   const rot=document.getElementById('rotate');
   if(rot)rot.classList.remove('on');
 }
@@ -317,9 +319,10 @@ function autoQuality(){
 let QUAL=SV.quality&&QUAL_PRESETS[SV.quality]?QUAL_PRESETS[SV.quality]:autoQuality();
 function setQuality(name){
   QUAL=QUAL_PRESETS[name]||QUAL_PRESETS.med;
-  SV.quality=QUAL.name;persist();resize();
+  SV.quality=QUAL.name;persist();onResize();
 }
-resize();
+// Le premier dimensionnement a lieu dans init(), une fois que les
+// utilitaires de la section 6 sont initialises.
 
 // Surveillance du temps de frame : on descend d'un cran si ça ne suit pas.
 // Jamais de remontée automatique, pour éviter les oscillations.
@@ -336,7 +339,7 @@ function watchPerf(dtMs){
       if(QUAL.name==='high')QUAL=QUAL_PRESETS.med;
       else if(QUAL.name==='med')QUAL=QUAL_PRESETS.low;
       else perfChecked=true;
-      perfSamples=[];resize();
+      perfSamples=[];onResize();
     }
     if(QUAL.name==='low')perfChecked=true;
   }
@@ -365,20 +368,26 @@ function project(x,y,z,out){
   const o=out||_p;
   const dz=z-CAM.z;
   if(dz<CFG.NEAR){o.dz=dz;o.s=0;return null;}
-  const s=(CFG.FOCAL*CAM.fov)/dz;
+  // s est exprime en pixels par unite monde a cette profondeur :
+  // il sert autant aux positions qu'aux tailles et aux epaisseurs.
+  const s=(CFG.FOCAL*CAM.fov)/dz*viewScale;
   o.s=s;o.dz=dz;
-  o.x=SW*0.5+(x-CAM.x)*s*viewScale;
-  o.y=SH*horizonY+(CAM.y-y)*s*viewScale;
+  o.x=SW*0.5+(x-CAM.x)*s;
+  o.y=SH*horizonY+(CAM.y-y)*s;
   return o;
 }
 // viewScale convertit les unités de projection en pixels écran.
 // En portrait on resserre l'horizontal et on donne plus de hauteur.
-let viewScale=1, horizonY=0.46;
+let viewScale=1, horizonY=0.42;
 function updateView(){
-  const base=Math.min(SW/VW,SH/VH);
-  viewScale=portrait?base*1.16:base*1.30;
-  horizonY=portrait?0.40:0.46;
   CAM.fov=portrait?0.86:1;
+  // Le couloir jouable, marge de décor comprise, doit toujours remplir la
+  // largeur de l'écran à la profondeur du joueur. On en déduit l'échelle
+  // au lieu de la deviner, ce qui rend portrait et paysage cohérents.
+  const halfWorld=CFG.LANE+112;
+  const sAtPlayer=(CFG.FOCAL*CAM.fov)/CFG.CAM_BACK;
+  viewScale=clamp((SW*0.5/halfWorld)/sAtPlayer,0.4,8);
+  horizonY=portrait?0.36:0.40;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -578,22 +587,22 @@ function updateFText(){
 const THEMES=[
   { id:'cirque', accent:'#FFC53D', accent2:'#FF5E8A', danger:'#FF3B30', reward:'#FFD700',
     sky:['#2A0B4E','#12042A','#05010F'], fog:'#1A0636',
-    ring:'#8A2140', ringTop:'#D4A03C', rig:'#C8922B', rope:'#E8C86A',
+    ring:'#4A1028', ringTop:'#D4A03C', rig:'#C8922B', rope:'#E8C86A',
     plat:'#7A1E46', platTop:'#E0B24E', net:'#F0E6D2',
     light:'#FFE9A8', crowd:['#FF6B8A','#FFC53D','#6BC5FF','#B084FF','#7DE0A8'] },
   { id:'jungle', accent:'#7BE04D', accent2:'#FFD24D', danger:'#FF5722', reward:'#C6FF4D',
     sky:['#0B3D24','#052616','#010D08'], fog:'#0A3A22',
-    ring:'#2E5A18', ringTop:'#6FA82E', rig:'#6B4226', rope:'#A8804A',
+    ring:'#1B3610', ringTop:'#6FA82E', rig:'#6B4226', rope:'#A8804A',
     plat:'#28481A', platTop:'#7FB93C', net:'#D8E8B8',
     light:'#D9FFB0', crowd:['#7BE04D','#FFD24D','#4DC4A8','#C6FF4D','#FF9E4D'] },
   { id:'plage', accent:'#4DD2FF', accent2:'#FF7BA8', danger:'#FF4030', reward:'#FFE066',
     sky:['#0A5A8C','#063A5E','#021A2E'], fog:'#0A4A75',
-    ring:'#C89A56', ringTop:'#F0D49A', rig:'#9AA8B0', rope:'#D8E4EC',
+    ring:'#7A5C32', ringTop:'#F0D49A', rig:'#9AA8B0', rope:'#D8E4EC',
     plat:'#B08248', platTop:'#EBCD92', net:'#FFFFFF',
     light:'#FFF3D0', crowd:['#4DD2FF','#FF7BA8','#FFE066','#4DFFCB','#FFAB5E'] },
   { id:'futur', accent:'#00F0FF', accent2:'#C84DFF', danger:'#FF0055', reward:'#00FFAA',
     sky:['#12043A','#08021F','#01000A'], fog:'#160A44',
-    ring:'#101E38', ringTop:'#00D8E8', rig:'#0A5A80', rope:'#3AC0E8',
+    ring:'#0A1424', ringTop:'#00D8E8', rig:'#0A5A80', rope:'#3AC0E8',
     plat:'#0C2038', platTop:'#00E0C8', net:'#7AF0FF',
     light:'#B0FFFA', crowd:['#00F0FF','#C84DFF','#FF0088','#00FFAA','#FFD400'] },
 ];
@@ -629,7 +638,7 @@ function resetWorld(){
 function addBar(z,x,y){
   const yy=(y===undefined?CFG.RIG_Y:y);
   const b={z,x,y:yy,w:132,
-    anchorY:yy+CFG.ROPE-16,
+    anchorY:yy+CFG.ROPE,
     ang:rnd(-0.5,0.5),angV:rnd(-0.02,0.02),held:false,used:false,vib:0,cool:0,giants:0};
   bars.push(b);return b;
 }
@@ -947,7 +956,8 @@ function grabBar(b,quality){
     addHeat(3);
     cashBank(quality==='good'?1:0.75,P.x,P.y,P.z);
   }
-  if(tutStep===1){tutStep=2;tutTimer=200;}
+  // Une fois la barre saisie, on enseigne le geste suivant : le pompage.
+  if(tutStep<=2){tutStep=3;tutTimer=220;}
 }
 function releaseBar(){
   const b=P.bar;if(!b)return;
@@ -965,7 +975,7 @@ function releaseBar(){
   b.cool=26;                      // évite de ré-attraper la barre qu'on quitte
   P.bar=null;P.state='air';P.spin=0;
   sfx('release');squash(1.22,0.8);
-  if(tutStep===2){tutStep=3;tutTimer=200;}
+  if(tutStep===3){tutStep=4;tutTimer=200;}
 }
 function updateSwing(){
   const b=P.bar;if(!b)return;
@@ -1262,7 +1272,8 @@ function step(){
       P.vz=Math.max(P.vz,CFG.FWD_BASE+1.6);
       sfx('jump');squash(0.8,1.26);vibrate([7]);
       burst(P.x,P.y,P.z,'rgba(255,255,255,0.5)',6,1.6,0);
-      if(tutStep===1&&tutTimer<=0)tutTimer=180;
+      // En l'air, la consigne devient « saisissez la barre »
+      if(tutStep===1){tutStep=2;tutTimer=200;}
     }
     // Saisie : barre, puis porteur
     else if(P.jumpBuf>0&&P.state==='air'){
@@ -1367,7 +1378,10 @@ function step(){
   for(const b of bars){
     if(b.z<P.z-300)continue;
     if(b.z>P.z+900)break;
-    if(!b.held){b.ang+=b.angV;b.angV+=-0.0016*Math.sin(b.ang);b.angV*=0.995;}
+    if(!b.held){
+      b.ang+=b.angV;b.angV+=-0.0016*Math.sin(b.ang);
+      b.angV*=0.97;b.ang*=0.985;   // revient au repos, la zone de saisie reste fiable
+    }
     if(b.vib>0)b.vib*=0.9;
     if(b.cool>0)b.cool--;
   }
@@ -1433,33 +1447,39 @@ const _pose={sh:0,tors:0,armL:0,armLf:0,armR:0,armRf:0,legL:0,legLf:0,legR:0,leg
 function poseFor(st,af,vy,tuckAmt){
   const q=_pose;
   if(st==='run'){
-    const c=Math.sin(af*0.30), c2=Math.cos(af*0.30);
+    const c=Math.sin(af*0.30);
     q.tors=0.06*c;q.head=-0.04*c;
-    q.armL=-0.5*c-0.2;q.armLf=-0.5;q.armR=0.5*c-0.2;q.armRf=-0.5;
-    q.legL=0.7*c;q.legLf=Math.max(0,-c)*0.9;q.legR=-0.7*c;q.legRf=Math.max(0,c)*0.9;
+    // Bras le long du corps, qui balancent en opposition des jambes
+    q.armL=-0.55*c;q.armLf=-0.55;q.armR=0.55*c;q.armRf=-0.55;
+    q.legL=0.75*c;q.legLf=Math.max(0,-c)*0.95;
+    q.legR=-0.75*c;q.legRf=Math.max(0,c)*0.95;
     q.tuck=0;
   } else if(st==='swing'){
-    q.tors=0.02*Math.sin(af*0.08);q.head=0.12;
-    q.armL=-2.85;q.armLf=0.06;q.armR=-2.85;q.armRf=-0.06;   // bras tendus vers la barre
-    q.legL=0.16+0.1*Math.sin(af*0.09);q.legLf=0.22;
-    q.legR=-0.10+0.1*Math.sin(af*0.09);q.legRf=0.28;
+    // Suspendu : bras tendus vers le haut, corps qui pend, jambes groupées
+    const sw=Math.sin(af*0.09);
+    q.tors=0.03*sw;q.head=0.14;
+    q.armL=2.94;q.armLf=-0.05;q.armR=2.94;q.armRf=0.05;
+    q.legL=0.22+0.12*sw;q.legLf=0.30;
+    q.legR=-0.06+0.12*sw;q.legRf=0.34;
     q.tuck=0;
   } else if(st==='caught'){
-    q.tors=0;q.head=-0.2;
-    q.armL=-2.7;q.armLf=0.5;q.armR=-2.7;q.armRf=-0.5;
-    q.legL=0.5;q.legLf=0.1;q.legR=0.35;q.legRf=0.1;q.tuck=0;
+    q.tors=0;q.head=0.16;
+    q.armL=2.82;q.armLf=-0.3;q.armR=2.82;q.armRf=0.3;
+    q.legL=0.45;q.legLf=0.5;q.legR=0.28;q.legRf=0.5;q.tuck=0;
   } else if(st==='net'){
-    q.tors=0.3;q.head=0.3;
-    q.armL=-1.5;q.armLf=0.7;q.armR=1.5;q.armRf=-0.7;
-    q.legL=0.9;q.legLf=1.1;q.legR=-0.7;q.legRf=1.0;q.tuck=0;
-  } else { // air
+    // Étalé dans le filet, membres écartés
+    q.tors=0.28;q.head=0.3;
+    q.armL=-1.75;q.armLf=-0.6;q.armR=1.75;q.armRf=0.6;
+    q.legL=0.95;q.legLf=0.9;q.legR=-0.75;q.legRf=0.85;q.tuck=0;
+  } else { // en vol
     const tk=tuckAmt||0;
-    q.tors=0.05;q.head=-0.06;
-    q.armL=lerp(-1.15,-2.2,tk);q.armLf=lerp(-0.6,-1.5,tk);
-    q.armR=lerp(1.15,2.2,tk);q.armRf=lerp(0.6,1.5,tk);
+    q.tors=0.05;q.head=-0.08;
+    // Bras écartés en vol libre, ramenés sur la poitrine en groupé
+    q.armL=lerp(-1.55,-2.45,tk);q.armLf=lerp(-0.35,-1.55,tk);
+    q.armR=lerp(1.55,2.45,tk);q.armRf=lerp(0.35,1.55,tk);
     const rise=clamp(-vy/12,-1,1);
-    q.legL=lerp(0.30+rise*0.2,1.5,tk);q.legLf=lerp(0.5,1.9,tk);
-    q.legR=lerp(-0.20+rise*0.2,1.35,tk);q.legRf=lerp(0.4,1.9,tk);
+    q.legL=lerp(0.34+rise*0.24,1.45,tk);q.legLf=lerp(0.14,1.75,tk);
+    q.legR=lerp(-0.20+rise*0.24,1.25,tk);q.legRf=lerp(0.10,1.75,tk);
     q.tuck=tk;
   }
   return q;
@@ -1498,9 +1518,10 @@ function drawArtist(px,py,scale,st,rot,face,charId,alpha,sqx,sqy){
   }
 
   const hipY=-30, shY=-58;
-  // Jambes (derrière le torse)
-  limb(-7,hipY,q.legL+Math.PI,20,q.legLf,18,9,7,C.suit,C.suitD);
-  limb( 7,hipY,q.legR+Math.PI,20,q.legRf,18,9,7,C.suit,C.suitD);
+  // Jambes. Dans limb(), l'angle 0 pointe vers le bas : une jambe au repos
+  // est donc proche de 0, pas de PI.
+  limb(-7,hipY,q.legL,20,q.legLf,18,9,7,C.suit,C.suitD);
+  limb( 7,hipY,q.legR,20,q.legRf,18,9,7,C.suit,C.suitD);
 
   // Torse
   CX.save();CX.rotate(q.tors);
@@ -1521,14 +1542,14 @@ function drawArtist(px,py,scale,st,rot,face,charId,alpha,sqx,sqy){
   CX.restore();
 
   // Bras
-  limb(-11,shY+4,q.armL+Math.PI,17,q.armLf,15,8,6,C.suit,C.suitD);
-  limb( 11,shY+4,q.armR+Math.PI,17,q.armRf,15,8,6,C.suit,C.suitD);
-  // Mains
+  limb(-11,shY+4,q.armL,17,q.armLf,15,8,6,C.suit,C.suitD);
+  limb( 11,shY+4,q.armR,17,q.armRf,15,8,6,C.suit,C.suitD);
+  // Mains, au bout de la chaine bras + avant-bras
   CX.fillStyle=C.skin;
-  const hxL=-11+Math.sin(q.armL+Math.PI)*17+Math.sin(q.armL+Math.PI+q.armLf)*15;
-  const hyL=shY+4+Math.cos(q.armL+Math.PI)*17+Math.cos(q.armL+Math.PI+q.armLf)*15;
-  const hxR= 11+Math.sin(q.armR+Math.PI)*17+Math.sin(q.armR+Math.PI+q.armRf)*15;
-  const hyR=shY+4+Math.cos(q.armR+Math.PI)*17+Math.cos(q.armR+Math.PI+q.armRf)*15;
+  const hxL=-11+Math.sin(q.armL)*17+Math.sin(q.armL+q.armLf)*15;
+  const hyL=shY+4+Math.cos(q.armL)*17+Math.cos(q.armL+q.armLf)*15;
+  const hxR= 11+Math.sin(q.armR)*17+Math.sin(q.armR+q.armRf)*15;
+  const hyR=shY+4+Math.cos(q.armR)*17+Math.cos(q.armR+q.armRf)*15;
   CX.beginPath();CX.arc(hxL,hyL,4.2,0,6.283);CX.fill();
   CX.beginPath();CX.arc(hxR,hyR,4.2,0,6.283);CX.fill();
 
@@ -1571,6 +1592,15 @@ function flushDL(){
 
 const pr1={x:0,y:0,s:0,dz:0}, pr2={x:0,y:0,s:0,dz:0}, pr3={x:0,y:0,s:0,dz:0};
 
+// Fondu de proximité : un objet déjà dépassé occupe tout l'écran sans rien
+// apporter. On l'estompe entre 460 et 200 unités de la caméra.
+const NEAR_FADE_FAR=460, NEAR_FADE_NEAR=200;
+function nearFade(dz){
+  if(dz>=NEAR_FADE_FAR)return 1;
+  if(dz<=NEAR_FADE_NEAR)return 0;
+  return (dz-NEAR_FADE_NEAR)/(NEAR_FADE_FAR-NEAR_FADE_NEAR);
+}
+
 function drawSky(){
   const g=CX.createLinearGradient(0,0,0,SH);
   g.addColorStop(0,TH.sky[0]);g.addColorStop(0.52,TH.sky[1]);g.addColorStop(1,TH.sky[2]);
@@ -1605,8 +1635,8 @@ function drawCrowd(){
       if(clapT>0)ex=Math.abs(Math.sin(frame*0.32+c*0.7))*0.7;
       if(ovation)ex=Math.max(ex,Math.abs(Math.sin(frame*0.42+c*0.5))*1);
       if(wave>=0){const d=Math.abs(u-wave);if(d<0.10)ex=Math.max(ex,1-d/0.10);}
-      const lift=ex*13*s*10;
-      const rad=Math.max(1.2,7*s*10);
+      const lift=ex*13*s;
+      const rad=Math.max(1.2,7*s);
       CX.fillStyle=TH.crowd[(c*7+r*3)%TH.crowd.length];
       CX.globalAlpha=0.42+r*0.06+ex*0.35;
       CX.beginPath();CX.arc(x,yBase-lift,rad,0,6.283);CX.fill();
@@ -1629,7 +1659,12 @@ function drawGround(){
   const step=180;
   const z0=Math.floor((CAM.z+CFG.NEAR)/step)*step;
   const hy=SH*horizonY;
-  CX.fillStyle=TH.ring;
+  // Fond de piste : un degre sombre qui s'eclaircit vers le lointain,
+  // pour que le sol se lise comme un sol et non comme un mur.
+  const bgGrad=CX.createLinearGradient(0,hy,0,SH);
+  bgGrad.addColorStop(0,TH.fog);
+  bgGrad.addColorStop(1,TH.sky[2]);
+  CX.fillStyle=bgGrad;
   CX.fillRect(0,hy,SW,SH-hy);
   for(let i=0;i<26;i++){
     const zA=z0+i*step, zB=zA+step;
@@ -1665,13 +1700,13 @@ function drawGround(){
 function drawNet(){
   const step=170;
   const z0=Math.floor((CAM.z+CFG.NEAR)/step)*step;
-  CX.strokeStyle=TH.net;CX.globalAlpha=0.16;
+  CX.strokeStyle=TH.net;CX.globalAlpha=0.10;
   for(let i=0;i<14;i++){
     const z=z0+i*step;
     const a=project(-CFG.LANE-70,CFG.NET_Y,z,pr1);
     const b=project(CFG.LANE+70,CFG.NET_Y,z,pr2);
     if(!a||!b)continue;
-    CX.lineWidth=Math.max(0.6,1.6*a.s*10);
+    CX.lineWidth=Math.max(0.6,1.6*a.s);
     CX.beginPath();CX.moveTo(a.x,a.y);CX.lineTo(b.x,b.y);CX.stroke();
   }
   for(let k=-3;k<=3;k++){
@@ -1679,7 +1714,7 @@ function drawNet(){
     const a=project(x,CFG.NET_Y,Math.max(CAM.z+CFG.NEAR+10,z0),pr1);
     const b=project(x,CFG.NET_Y,z0+13*step,pr2);
     if(!a||!b)continue;
-    CX.lineWidth=Math.max(0.6,1.4*a.s*10);
+    CX.lineWidth=Math.max(0.6,1.4*a.s);
     CX.beginPath();CX.moveTo(a.x,a.y);CX.lineTo(b.x,b.y);CX.stroke();
   }
   CX.globalAlpha=1;
@@ -1697,7 +1732,7 @@ function drawProps(){
     if(!l||!r)continue;
     const fade=clamp(1-dz/CFG.FAR,0,1);
     CX.globalAlpha=0.16+fade*0.34;
-    CX.strokeStyle=TH.rig;CX.lineWidth=Math.max(1,3.4*top.s*10);
+    CX.strokeStyle=TH.rig;CX.lineWidth=Math.max(1,3.4*top.s);
     CX.beginPath();
     CX.moveTo(l.x,l.y);
     CX.quadraticCurveTo(top.x,top.y-Math.abs(top.y)*0.12,r.x,r.y);
@@ -1705,22 +1740,35 @@ function drawProps(){
     // Projecteur au sommet
     CX.globalAlpha=(0.25+fade*0.5)*(ovation?1:0.6);
     CX.fillStyle=TH.light;
-    CX.beginPath();CX.arc(top.x,top.y,Math.max(1.5,4*top.s*10),0,6.283);CX.fill();
+    CX.beginPath();CX.arc(top.x,top.y,clamp(4*top.s,1.5,14*uiScale),0,6.283);CX.fill();
     CX.globalAlpha=1;
   }
 }
 
+// Position réelle de la barre : elle suit le voltigeur quand il est
+// suspendu, et pend à son propre angle sinon.
+function barPose(b,out){
+  const a=b.held?P.ang:b.ang;
+  out.y=b.anchorY-Math.cos(a)*CFG.ROPE;
+  out.z=b.z+Math.sin(a)*CFG.ROPE;
+  return out;
+}
+const _bp={y:0,z:0};
 function drawBarObj(b){
   const anchor=project(b.x,b.anchorY,b.z,pr1);
-  const bar=project(b.x,b.y,b.z,pr2);
+  barPose(b,_bp);
+  const bar=project(b.x,_bp.y,_bp.z,pr2);
   if(!anchor||!bar)return;
-  const s=bar.s*viewScale;
+  // La barre que l'on tient reste opaque, celles qu'on a dépassées s'effacent.
+  const fade=(P.bar===b)?1:nearFade(bar.dz);
+  if(fade<=0)return;
+  CX.save();CX.globalAlpha=fade;
   const near=nearBar===b;
   // Cordes. Une légère caténaire quand la barre n'est pas chargée.
   CX.strokeStyle=TH.rope;
-  CX.lineWidth=Math.max(0.8,2.2*bar.s*10);
-  const halfW=b.w*0.5*bar.s*viewScale;
-  const sag=b.held?0:2.5*bar.s*10;
+  CX.lineWidth=Math.max(0.8,2.2*bar.s);
+  const halfW=b.w*0.5*bar.s;
+  const sag=b.held?0:2.5*bar.s;
   for(const side of [-1,1]){
     CX.beginPath();
     CX.moveTo(anchor.x+side*halfW*0.82,anchor.y);
@@ -1735,29 +1783,30 @@ function drawBarObj(b){
     const col=q==='perfect'?TH.reward:q==='good'?TH.accent:'rgba(255,255,255,0.5)';
     const pulse=0.45+0.35*Math.sin(frame*0.28);
     CX.globalAlpha=pulse;
-    CX.strokeStyle=col;CX.lineWidth=Math.max(1.5,4*bar.s*10);
+    CX.strokeStyle=col;CX.lineWidth=Math.max(1.5,4*bar.s);
     CX.beginPath();
-    CX.ellipse(bar.x,bar.y,halfW*1.3,Math.max(5,11*bar.s*10),0,0,6.283);
+    CX.ellipse(bar.x,bar.y,halfW*1.3,Math.max(5,11*bar.s),0,0,6.283);
     CX.stroke();
     // Repère de synchronisation : l'anneau se resserre à l'approche
     const t2=clamp(1-nearDist/(CFG.GRAB_R*1.5),0,1);
     CX.globalAlpha=pulse*0.8;
     CX.beginPath();
-    CX.ellipse(bar.x,bar.y,halfW*(2.6-t2*1.3),Math.max(4,(20-t2*9)*bar.s*10),0,0,6.283);
+    CX.ellipse(bar.x,bar.y,halfW*(2.6-t2*1.3),Math.max(4,(20-t2*9)*bar.s),0,0,6.283);
     CX.stroke();
     CX.globalAlpha=1;
   }
   // Barre
-  const vib=b.vib>0.02?Math.sin(frame*0.9)*b.vib*2.5*bar.s*10:0;
+  const vib=b.vib>0.02?Math.sin(frame*0.9)*b.vib*2.5*bar.s:0;
   const g=CX.createLinearGradient(bar.x-halfW,0,bar.x+halfW,0);
   g.addColorStop(0,TH.rig);g.addColorStop(0.5,TH.ringTop);g.addColorStop(1,TH.rig);
   CX.fillStyle=g;
-  const th=Math.max(2,5*bar.s*10);
+  const th=Math.max(2,5*bar.s);
   CX.beginPath();CX.roundRect(bar.x-halfW,bar.y-th*0.5+vib,halfW*2,th,th*0.5);CX.fill();
   // Embouts
   CX.fillStyle=TH.accent;
   CX.beginPath();CX.arc(bar.x-halfW,bar.y+vib,th*0.75,0,6.283);CX.fill();
   CX.beginPath();CX.arc(bar.x+halfW,bar.y+vib,th*0.75,0,6.283);CX.fill();
+  CX.restore();
 }
 
 function drawCatcherObj(c){
@@ -1767,25 +1816,25 @@ function drawCatcherObj(c){
   if(!anchor||!body)return;
   const s=body.s;
   // Barre fixe du porteur
-  CX.strokeStyle=TH.rig;CX.lineWidth=Math.max(1.5,4*s*10);
+  CX.strokeStyle=TH.rig;CX.lineWidth=Math.max(1.5,4*s);
   CX.beginPath();
-  CX.moveTo(anchor.x-70*s*viewScale,anchor.y);
-  CX.lineTo(anchor.x+70*s*viewScale,anchor.y);CX.stroke();
+  CX.moveTo(anchor.x-70*s,anchor.y);
+  CX.lineTo(anchor.x+70*s,anchor.y);CX.stroke();
   // Corps suspendu par les jarrets
-  CX.strokeStyle=TH.rope;CX.lineWidth=Math.max(1,2.4*s*10);
+  CX.strokeStyle=TH.rope;CX.lineWidth=Math.max(1,2.4*s);
   CX.beginPath();CX.moveTo(anchor.x,anchor.y);CX.lineTo(body.x,body.y);CX.stroke();
   // Le porteur, tête en bas
-  const sc=Math.max(0.02,s*viewScale*0.62);
-  drawArtist(body.x,body.y,sc,'caught',Math.PI,1,'marc',1,1,1);
+  const sc=Math.max(0.02,s*0.62);
+  drawArtist(body.x,body.y-85*sc,sc,'caught',Math.PI,1,'marc',1,1,1);
   // Fenêtre de réception : annoncée avant, jamais après
   if(c.ready&&!c.used){
     const pulse=0.5+0.45*Math.sin(frame*0.34);
     CX.globalAlpha=pulse;
-    CX.strokeStyle=TH.reward;CX.lineWidth=Math.max(2,5*s*10);
-    CX.beginPath();CX.arc(body.x,body.y,Math.max(10,52*s*viewScale),0,6.283);CX.stroke();
+    CX.strokeStyle=TH.reward;CX.lineWidth=Math.max(2,5*s);
+    CX.beginPath();CX.arc(body.x,body.y,Math.max(10,52*s),0,6.283);CX.stroke();
     CX.globalAlpha=pulse*0.55;
     CX.fillStyle=TH.reward;
-    CX.beginPath();CX.arc(body.x,body.y,Math.max(6,26*s*viewScale),0,6.283);CX.fill();
+    CX.beginPath();CX.arc(body.x,body.y,Math.max(6,26*s),0,6.283);CX.fill();
     CX.globalAlpha=1;
   }
 }
@@ -1793,12 +1842,15 @@ function drawCatcherObj(c){
 function drawHoopObj(h){
   const c=project(h.x,h.y,h.z,pr1);
   if(!c)return;
-  const R=h.r*c.s*viewScale;
+  const fade=nearFade(c.dz);
+  if(fade<=0)return;
+  const R=h.r*c.s;
   if(R<1.5)return;
-  const lw=Math.max(1.5,7*c.s*10);
+  const lw=Math.max(1.5,7*c.s);
+  CX.save();CX.globalAlpha=fade;
   if(h.passed){
-    CX.globalAlpha=0.18;CX.strokeStyle='#fff';CX.lineWidth=lw*0.5;
-    CX.beginPath();CX.arc(c.x,c.y,R,0,6.283);CX.stroke();CX.globalAlpha=1;return;
+    CX.globalAlpha=0.18*fade;CX.strokeStyle='#fff';CX.lineWidth=lw*0.5;
+    CX.beginPath();CX.arc(c.x,c.y,R,0,6.283);CX.stroke();CX.restore();return;
   }
   const col=h.fire?'#FF8A2B':TH.accent2;
   // Halo
@@ -1820,13 +1872,13 @@ function drawHoopObj(h){
     CX.globalAlpha=0.55+0.4*Math.abs(Math.sin(frame*0.1+i));
     CX.beginPath();CX.arc(c.x+Math.cos(a)*rr,c.y+Math.sin(a)*rr,Math.max(1,lw*0.55),0,6.283);CX.fill();
   }
-  CX.globalAlpha=1;
+  CX.restore();
 }
 
 function drawStarObj(st){
   const c=project(st.x,st.y+Math.sin(st.t)*7,st.z,pr1);
   if(!c)return;
-  const R=Math.max(1.5,15*c.s*viewScale);
+  const R=Math.max(1.5,15*c.s);
   CX.globalAlpha=0.25;CX.fillStyle=TH.reward;
   CX.beginPath();CX.arc(c.x,c.y,R*1.7,0,6.283);CX.fill();
   CX.globalAlpha=0.85+0.15*Math.sin(st.t*2);
@@ -1849,18 +1901,21 @@ function drawPlatObj(pl){
   const d=project(pl.x-pl.w*0.5,pl.y,pl.z+pl.len,{x:0,y:0,s:0,dz:0});
   if(!d)return;
   // Plateau
+  // Dessus mat, arête avant lumineuse : la plateforme se lit comme un
+  // appui sans écraser la scène.
   const g=CX.createLinearGradient(0,c.y,0,a.y);
-  g.addColorStop(0,TH.plat);g.addColorStop(1,TH.platTop);
-  CX.fillStyle=g;
+  g.addColorStop(0,TH.plat);g.addColorStop(1,TH.plat);
+  CX.fillStyle=g;CX.globalAlpha=0.92;
   CX.beginPath();CX.moveTo(a.x,a.y);CX.lineTo(b.x,b.y);
   CX.lineTo(c.x,c.y);CX.lineTo(d.x,d.y);CX.closePath();CX.fill();
+  CX.globalAlpha=1;
   // Arête avant, très lisible : c'est le repère de réception
-  CX.strokeStyle=TH.platTop;CX.lineWidth=Math.max(1.5,3.4*a.s*10);
+  CX.strokeStyle=TH.platTop;CX.lineWidth=Math.max(1.5,3.4*a.s);
   CX.beginPath();CX.moveTo(a.x,a.y);CX.lineTo(b.x,b.y);CX.stroke();
   // Pieds
   const foot=project(pl.x,0,pl.z+pl.len*0.5,{x:0,y:0,s:0,dz:0});
   if(foot&&pl.y>8){
-    CX.strokeStyle=TH.rig;CX.lineWidth=Math.max(1.5,6*a.s*10);
+    CX.strokeStyle=TH.rig;CX.lineWidth=Math.max(1.5,6*a.s);
     CX.globalAlpha=0.7;
     CX.beginPath();CX.moveTo((a.x+b.x)/2,(a.y+b.y)/2);CX.lineTo(foot.x,foot.y);CX.stroke();
     CX.globalAlpha=1;
@@ -1870,7 +1925,10 @@ function drawPlatObj(pl){
 function drawHazardObj(hz){
   const c=project(hz.x,hz.y,hz.z,pr1);
   if(!c)return;
-  const R=Math.max(2,hz.r*c.s*viewScale);
+  const fade=nearFade(c.dz);
+  if(fade<=0)return;
+  CX.save();CX.globalAlpha=fade;
+  const R=Math.max(2,hz.r*c.s);
   const warn=0.4+0.4*Math.sin(frame*0.18);
   // Aura d'avertissement : un danger doit s'annoncer avant d'être là
   CX.globalAlpha=warn*0.3;CX.fillStyle=TH.danger;
@@ -1889,12 +1947,13 @@ function drawHazardObj(hz){
     CX.lineTo(c.x+Math.cos(a+0.2)*R*0.9,c.y+Math.sin(a+0.2)*R*0.9);
     CX.closePath();CX.fill();
   }
+  CX.restore();
 }
 
 function drawPartObj(p){
   const c=project(p.x,p.y,p.z,pr1);
   if(!c)return;
-  const R=Math.max(0.6,p.r*c.s*viewScale);
+  const R=Math.max(0.6,p.r*c.s);
   CX.globalAlpha=clamp(p.life,0,1);
   CX.fillStyle=p.col;
   if(p.kind===1){ // confetti : rectangle qui tourne
@@ -1912,9 +1971,9 @@ function drawPartObj(p){
 function drawFTextObj(f){
   const c=project(f.x,f.y,f.z,pr1);
   if(!c)return;
-  const size=Math.max(9,f.size*c.s*viewScale*1.1);
+  const size=Math.max(9,f.size*c.s*1.1);
   CX.globalAlpha=clamp(f.life*1.5,0,1);
-  CX.font='900 '+size.toFixed(0)+'px inherit';
+  CX.font='900 '+size.toFixed(0)+'px '+FONT;
   CX.textAlign='center';CX.textBaseline='middle';
   CX.lineWidth=Math.max(2,size*0.16);CX.strokeStyle='rgba(0,0,0,0.65)';
   CX.strokeText(f.txt,c.x,c.y);
@@ -1937,7 +1996,7 @@ function drawPlayerObj(){
       CX.strokeStyle=ovation
         ?'hsl('+((frame*4+i*14)%360)+',90%,65%)'
         :TH.accent;
-      CX.lineWidth=Math.max(1,7*b.s*10*k);
+      CX.lineWidth=Math.max(1,7*b.s*k);
       CX.beginPath();CX.moveTo(a.x,a.y);CX.lineTo(b.x,b.y);CX.stroke();
     }
     CX.globalAlpha=1;
@@ -1949,20 +2008,23 @@ function drawPlayerObj(){
       const k=clamp(1-(P.y-CFG.NET_Y)/380,0.08,0.5);
       CX.globalAlpha=k*0.5;CX.fillStyle='#000';
       CX.beginPath();
-      CX.ellipse(sh.x,sh.y,Math.max(2,26*sh.s*viewScale),Math.max(1,8*sh.s*viewScale),0,0,6.283);
+      CX.ellipse(sh.x,sh.y,Math.max(2,26*sh.s),Math.max(1,8*sh.s),0,0,6.283);
       CX.fill();CX.globalAlpha=1;
     }
   }
   // Clignotement d'invincibilité, sans jamais disparaître complètement
   const alpha=P.inv>0?(0.35+0.65*Math.abs(Math.sin(frame*0.4))):1;
-  const scale=c.s*viewScale*0.62;
-  drawArtist(c.x,c.y,scale,P.state,P.rot,P.face,P.char,alpha,P.sx,P.sy);
+  const scale=c.s*0.62;
+  // P.y est la position des mains quand on est suspendu : on décale le
+  // corps vers le bas pour que les mains coïncident avec la barre.
+  const hang=(P.state==='swing'||P.state==='caught')?85*scale:0;
+  drawArtist(c.x,c.y+hang,scale,P.state,P.rot,P.face,P.char,alpha,P.sx,P.sy);
 
   // Aura d'ovation
   if(ovation){
     CX.globalAlpha=0.3+0.2*Math.sin(frame*0.25);
     CX.strokeStyle='hsl('+((frame*5)%360)+',95%,68%)';
-    CX.lineWidth=Math.max(1.5,4*c.s*10);
+    CX.lineWidth=Math.max(1.5,4*c.s);
     CX.beginPath();CX.arc(c.x,c.y-28*scale,Math.max(8,46*scale),0,6.283);CX.stroke();
     CX.globalAlpha=1;
   }
@@ -2003,8 +2065,15 @@ function renderWorld(){
    21. HUD
    Tout tient dans la zone sûre : encoches et coins arrondis compris.
    ───────────────────────────────────────────────────────────── */
-function uiFont(size,weight){CX.font=(weight||700)+' '+Math.round(size*uiScale)+'px inherit';}
+// Le contexte canvas ne connait pas la police du document : il faut une
+// famille reelle. On evite les noms a espaces, qui exigeraient des
+// apostrophes au milieu d'une chaine JS.
+const FONT='Avenir,Verdana,sans-serif';
+function uiFont(size,weight){CX.font=(weight||700)+' '+Math.round(size*uiScale)+'px '+FONT;}
 function safeTop(){return 14*uiScale+(portrait?18:6);}
+// Les boutons système occupent une bande de 36 px CSS en haut, à gauche et
+// à droite. Le HUD dessiné doit démarrer sous cette bande.
+function sysBar(){return 52*DPR;}
 function panel(x,y,w,h,r,alpha){
   CX.fillStyle='rgba(6,2,18,'+(alpha===undefined?0.46:alpha)+')';
   CX.beginPath();CX.roundRect(x,y,w,h,r||10*uiScale);CX.fill();
@@ -2020,10 +2089,12 @@ function outlineText(txt,x,y,size,col,weight,align){
 function drawHUD(){
   const top=safeTop();
   const pad=16*uiScale;
+  // Seconde rangée, sous les boutons système
+  const row2=top+sysBar();
 
   // ── Vies ──
   for(let i=0;i<3;i++){
-    const x=pad+i*22*uiScale+56*uiScale, y=top+16*uiScale;
+    const x=pad+i*22*uiScale, y=row2;
     const on=i<lives;
     CX.globalAlpha=on?1:0.22;
     CX.fillStyle=on?'#FF3F63':'#FFFFFF';
@@ -2051,7 +2122,7 @@ function drawHUD(){
 
   // ── Jauge de chaleur du public ──
   const gw=Math.min(SW*0.34,190*uiScale), gh=9*uiScale;
-  const gx=SW-gw-pad, gy=top+8*uiScale;
+  const gx=SW-gw-pad, gy=row2-gh*0.5;
   panel(gx-4,gy-4,gw+8,gh+8,gh,0.4);
   const hg=CX.createLinearGradient(gx,0,gx+gw,0);
   hg.addColorStop(0,TH.accent);hg.addColorStop(0.6,TH.accent2);hg.addColorStop(1,TH.reward);
@@ -2069,7 +2140,7 @@ function drawHUD(){
   // ── Progression du niveau ──
   const prog=clamp((P.z+120)/(goalZ+120),0,1);
   const pw=Math.min(SW*0.5,260*uiScale), px=cx-pw*0.5;
-  const pyy=top+(portrait?86:78)*uiScale;
+  const pyy=row2+26*uiScale;
   panel(px-3,pyy-3,pw+6,7*uiScale+6,6*uiScale,0.38);
   CX.fillStyle=TH.accent;
   CX.beginPath();CX.roundRect(px,pyy,Math.max(3,pw*prog),7*uiScale,3.5*uiScale);CX.fill();
@@ -2160,18 +2231,18 @@ function drawMenu(){
   // Choix du personnage
   outlineText(t('chooseChar'),cx,SH*(portrait?0.42:0.44),14,'rgba(255,255,255,0.7)',700);
   const ids=['marc','claire'];
-  const gap=(portrait?96:130)*uiScale;
+  const gap=(portrait?128:150)*uiScale;
   for(let i=0;i<2;i++){
-    const x=cx+(i===0?-gap*0.5:gap*0.5), y=SH*(portrait?0.56:0.58);
+    const x=cx+(i===0?-gap*0.5:gap*0.5), y=SH*(portrait?0.58:0.60);
     const sel=menuSel===i;
     if(sel){
-      CX.globalAlpha=0.3+0.15*Math.sin(menuT*0.1);
+      CX.globalAlpha=0.26+0.14*Math.sin(menuT*0.1);
       CX.fillStyle=TH.reward;
-      CX.beginPath();CX.arc(x,y-24*uiScale,44*uiScale,0,6.283);CX.fill();
+      CX.beginPath();CX.arc(x,y-40*uiScale,70*uiScale,0,6.283);CX.fill();
       CX.globalAlpha=1;
     }
-    drawArtist(x,y,uiScale*(sel?0.82:0.62),'run',0,1,ids[i],sel?1:0.55,1,1);
-    outlineText(CHARS[ids[i]].name,x,y+20*uiScale,13,sel?'#FFF':'rgba(255,255,255,0.45)',800);
+    drawArtist(x,y,uiScale*(sel?1.35:1.0),'run',0,1,ids[i],sel?1:0.5,1,1);
+    outlineText(CHARS[ids[i]].name,x,y+30*uiScale,15,sel?'#FFF':'rgba(255,255,255,0.45)',800);
   }
 
   // Appel à l'action
