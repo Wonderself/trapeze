@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0418">
+<meta name="description" content="Trapeze City — le trapèze sur les toits d'une ville néon. Socle technique, session 1.">
+<title>Trapeze City</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:#0a0418;}
+body{
+  font-family:Avenir,'Trebuchet MS','Segoe UI',system-ui,sans-serif;
+  color:#fff;user-select:none;-webkit-user-select:none;
+  overscroll-behavior:none;touch-action:none;
+}
+#stage{position:fixed;inset:0;overflow:hidden;}
+canvas{display:block;position:absolute;inset:0;width:100%;height:100%;touch-action:none;}
+
+.sysbtn{
+  position:absolute;z-index:30;height:36px;min-width:36px;padding:0 9px;
+  border:1px solid rgba(255,255,255,0.18);border-radius:9px;
+  background:rgba(10,4,24,0.55);color:rgba(255,255,255,0.8);
+  font:600 13px/1 Avenir,sans-serif;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:5px;
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+}
+.sysbtn:active{transform:scale(0.93);}
+#btnFull{top:calc(env(safe-area-inset-top,0px) + 10px);right:calc(env(safe-area-inset-right,0px) + 10px);}
+
+/* Commandes tactiles minimales. Le pad complet est le lot de la session 4 ;
+   ici il s'agit seulement que le jeu ne soit pas mort au doigt. */
+#pad{position:absolute;inset:0;z-index:20;display:none;pointer-events:none;}
+body.touch #pad.on{display:block;}
+.tbtn{
+  position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);
+  width:88px;height:88px;border-radius:50%;
+  border:2px solid rgba(255,255,255,0.24);background:rgba(12,4,32,0.45);
+  color:#fff;font:800 13px/1.2 Avenir,sans-serif;
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  pointer-events:auto;-webkit-tap-highlight-color:transparent;touch-action:manipulation;
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+}
+.tbtn:active{transform:scale(0.92);background:rgba(255,46,136,0.30);}
+#tAct{right:calc(env(safe-area-inset-right,0px) + 20px);}
+#tRel{left:calc(env(safe-area-inset-left,0px) + 20px);}
+
+#rotate{
+  position:absolute;inset:0;z-index:60;display:none;
+  align-items:center;justify-content:center;text-align:center;
+  background:#0a0418;font:700 17px/1.5 Avenir,sans-serif;padding:28px;
+}
+#rotate.on{display:flex;}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c"></canvas>
+  <div id="pad">
+    <div class="tbtn" id="tRel">LÂCHER</div>
+    <div class="tbtn" id="tAct">POMPER<br>SAISIR</div>
+  </div>
+  <button class="sysbtn" id="btnFull" title="Plein écran">⛶</button>
+  <div id="rotate">Tourne ton téléphone à l'horizontale.</div>
+</div>
+<script>
+'use strict';
+/* ═══════════════════════════════════════════════════════════════════
+   TRAPEZE CITY — session 1 : socle technique
+
+   Un jeu de trapèze, sur les mêmes bases que Classic et Deluxe, posé sur
+   les toits d'une ville. Le côté GTA est dans les graphismes et l'UI/UX,
+   jamais dans les mécaniques : pas de véhicule, pas de poursuite, pas
+   d'arme.
+
+   Cette session livre : la caméra 3D et sa projection (avec découpage au
+   plan proche), le rendu en couches, la génération de ville, les rigs de
+   trapèze, le pendule et le vol, la saisie de barre, l'acrobate, la
+   caméra de cadreur, la boucle à pas fixe et les profils de qualité.
+
+   Repère monde : X est, Y HAUT, Z nord. Une unité = un mètre.
+   Ce n'est pas le repère de Deluxe, où Z était la profondeur d'avancée.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────────────────────────
+   1. CONFIGURATION
+   ───────────────────────────────────────────────────────────── */
+const CFG={
+  /* ── Ville ─────────────────────────────────────────────────
+     La trame est fine : 34 m de pas. C'est une contrainte de
+     gameplay avant d'être un choix esthétique — un vol de trapèze
+     franchit une vingtaine de mètres, donc les toits doivent être
+     à portée. Une trame de pâté de maisons classique (une centaine
+     de mètres) rendrait la traversée physiquement impossible. */
+  CELL:      34,     // pas de la trame de tours
+  GRID:      27,     // 27 × 27 cellules ≈ 918 m de côté
+  FOOT:      11,     // demi-emprise d'une tour (22 × 22 m)
+  STREET:    4,      // une rue tous les 4 rangs
+  H_MIN:     30,
+  H_MAX:     124,
+
+  /* ── Trapèze ───────────────────────────────────────────────
+     G_SWING et G_FLIGHT sont volontairement différents. Le balancé
+     doit être nerveux, le vol doit être ample et lisible : deux
+     exigences de jeu qui ne se satisfont pas avec la même gravité.
+     L'énergie n'est donc pas conservée au lâcher, et c'est voulu. */
+  G_SWING:   26,     // gravité du pendule, en unités angulaires
+  G_FLIGHT:  13,     // gravité du vol libre, m/s²
+  ROPE:      7.4,    // longueur de câble par défaut
+  RIG_H:     9,      // hauteur du portique au-dessus du toit
+  DAMP:      0.99975,// amortissement, par pas : environ 3 % d'énergie par seconde
+  ANGV_MAX:  4.2,    // garde-fou : au-delà le pendule s'emballe
+  PUMP_WIN:  0.46,   // demi-fenêtre de pompage, en fraction d'amplitude
+  PUMP_GAIN: 1.68,   // gain d'amplitude sur un pompage réussi
+  PUMP_LOSS: 0.965,  // pénalité sur un pompage manqué
+  PUMP_CD:   26,     // pas de rechargement : environ un pompage par extrême
+  PUMP_MIN:  0.30,   // amplitude plancher, en radians : relance un pendule mort
+  AMP_MAX:   2.86,   // amplitude maximale (un peu moins que le tour complet)
+  GIANT:     2.30,   // seuil du grand soleil
+  AIR_DRAG:  0.9988, // traînée du vol, par pas de simulation
+
+  /* ── Saisie ────────────────────────────────────────────────
+     Assistance généreuse mais jamais automatique : la prise reste
+     un geste volontaire, comme en Deluxe. */
+  GRAB_R:    3.4,    // rayon de saisie, en mètres
+  GRAB_PERF: 1.1,    // écart pour une prise parfaite
+  GRAB_GOOD: 2.1,
+  GRAB_BUF:  10,     // pas de mémoire d'entrée
+  GRIP_K:    [1.0,0.86,0.60],  // report de vitesse selon la qualité
+
+  /* ── Caméra de cadreur ─────────────────────────────────────
+     Elle se place DE TROIS QUARTS par rapport au plan du balancé,
+     jamais dedans : c'est ce qui donne à la fois la lisibilité du
+     geste et la profondeur du décor. */
+  CAM_SIDE:  9.8,    // décalage latéral, perpendiculaire au plan
+  CAM_BACK:  5.0,    // recul dans le plan
+  CAM_UP:    3.0,
+  CAM_LAG:   0.115,  // suivi de la position, par pas
+  CAM_AIM:   0.16,   // suivi du point visé, par pas
+  FOV:       58*Math.PI/180,
+  FOV_WIDE:  72*Math.PI/180,
+  NEAR:      0.35,   // plan proche, en mètres
+
+  /* ── Rendu ─────────────────────────────────────────────────── */
+  FOG_NEAR:  210,    // avant, rien ne s'estompe : la ville garde son contraste
+  FOG_FAR:   0,      // renseigné depuis la distance de rendu du profil
+  FALL_Y:    -4,     // sous le toit de départ : chute confirmée
+};
+
+// Résolution virtuelle de référence. Le rendu s'y adapte, la logique non.
+const VW=1280, VH=720;
+const DEG=Math.PI/180;
+
+/* ─────────────────────────────────────────────────────────────
+   2. INTERNATIONALISATION
+   Le texte de la session 1 est minimal : le HUD complet est le lot
+   de la session 4. Les chaînes passent tout de même par t() dès
+   maintenant, pour qu'aucune ne soit à retrouver plus tard.
+   ───────────────────────────────────────────────────────────── */
+const I18N={
+  fr:{
+    title:'TRAPEZE CITY', sub:'Session 1 — socle technique',
+    start:'Entrer en scène', hintStart:'ESPACE pour commencer',
+    pump:'ESPACE : pomper', release:'S : lâcher', grab:'ESPACE : saisir',
+    amp:'AMPLITUDE', giant:'GRAND SOLEIL', rig:'RIG',
+    perfect:'PRISE PARFAITE', good:'BONNE PRISE', poor:'PRISE JUSTE',
+    fall:'CHUTE', arrived:'TRAVERSÉE BOUCLÉE', again:'R pour recommencer',
+    paused:'PAUSE', resume:'P pour reprendre',
+  },
+  en:{
+    title:'TRAPEZE CITY', sub:'Session 1 — technical core',
+    start:'Take the stage', hintStart:'SPACE to begin',
+    pump:'SPACE: pump', release:'S: release', grab:'SPACE: catch',
+    amp:'SWING', giant:'GIANT SWING', rig:'RIG',
+    perfect:'PERFECT CATCH', good:'GOOD CATCH', poor:'CLOSE CATCH',
+    fall:'FALL', arrived:'CROSSING COMPLETE', again:'R to restart',
+    paused:'PAUSED', resume:'P to resume',
+  },
+};
+let LANG=(navigator.language||'fr').slice(0,2)==='en'?'en':'fr';
+function t(k){const d=I18N[LANG]||I18N.fr;return d[k]!==undefined?d[k]:(I18N.fr[k]!==undefined?I18N.fr[k]:k);}
+
+/* ─────────────────────────────────────────────────────────────
+   3. SAUVEGARDE
+   Tous les accès à localStorage sont protégés. En navigation privée
+   Safari, un setItem non protégé lève et tue la boucle de rendu :
+   ce bug exact a déjà été trouvé en V1, il ne revient pas ici.
+   ───────────────────────────────────────────────────────────── */
+const SAVE_KEY='trapezecity.v3.save';
+const SV={schema:1,quality:null,lang:null,best:0};
+(function loadSave(){
+  try{
+    const raw=localStorage.getItem(SAVE_KEY);
+    if(!raw)return;
+    const o=JSON.parse(raw);
+    if(!o||o.schema!==1)return;
+    if(o.quality)SV.quality=o.quality;
+    if(o.lang)SV.lang=o.lang;
+    if(typeof o.best==='number')SV.best=o.best;
+  }catch(e){}
+})();
+if(SV.lang)LANG=SV.lang;
+let _persistT=0;
+function persist(){
+  if(_persistT)return;
+  _persistT=setTimeout(function(){
+    _persistT=0;
+    try{localStorage.setItem(SAVE_KEY,JSON.stringify(SV));}catch(e){}
+  },280);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   4. CANVAS, DIMENSIONS, QUALITÉ
+   ───────────────────────────────────────────────────────────── */
+const stage=document.getElementById('stage');
+const CV=document.getElementById('c');
+const CX=CV.getContext('2d');
+// Le canvas exige une VRAIE famille de police. 'inherit' est invalide et
+// fait retomber tout le texte en 10 px sans le moindre avertissement :
+// ce piège a déjà coûté une session sur Deluxe.
+const FONT='Avenir,Verdana,sans-serif';
+
+let SW=VW, SH=VH, DPR=1, portrait=false, uiScale=1;
+let HW=VW*0.5, HH=VH*0.5, FOCAL=800;
+
+const isTouch=('ontouchstart' in window)||navigator.maxTouchPoints>0;
+if(isTouch)document.body.classList.add('touch');
+
+const _reduceMQ=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)');
+let reducedMotion=_reduceMQ?_reduceMQ.matches:false;
+if(_reduceMQ&&_reduceMQ.addEventListener)
+  _reduceMQ.addEventListener('change',function(e){reducedMotion=e.matches;});
+
+/* Trois profils. Le budget de faces est le levier principal : c'est lui
+   qui décide de la distance de rendu et de la densité de fenêtres.
+   Ces chiffres ne sont pas devinés : render() a été mesuré à 1,6 ms sur un
+   budget de 16,7 ms avec des valeurs trois fois plus basses. La marge
+   existait, la ville était inutilement clairsemée, et laisser un décor vide
+   aurait donné une fausse idée de ce que le socle peut porter. Il reste
+   volontairement de quoi absorber le post-traitement de la session 3. */
+const QUAL_PRESETS={
+  low: {name:'low', faces:460,  dist:360, dprCap:1.0, windows:420,  fogSteps:10, silhouettes:false},
+  med: {name:'med', faces:850,  dist:520, dprCap:1.5, windows:1400, fogSteps:14, silhouettes:true},
+  high:{name:'high',faces:1400, dist:700, dprCap:2.0, windows:3000, fogSteps:16, silhouettes:true},
+};
+function autoQuality(){
+  const mem=navigator.deviceMemory||4;
+  const cores=navigator.hardwareConcurrency||4;
+  if(isTouch&&(mem<=3||cores<=4))return QUAL_PRESETS.med;
+  if(mem<=2||cores<=2)return QUAL_PRESETS.low;
+  return QUAL_PRESETS.high;
+}
+let QUAL=SV.quality&&QUAL_PRESETS[SV.quality]?QUAL_PRESETS[SV.quality]:autoQuality();
+function setQuality(name){
+  QUAL=QUAL_PRESETS[name]||QUAL_PRESETS.med;
+  SV.quality=QUAL.name;persist();buildMaterials();buildWindowColours();onResize();
+}
+
+// Surveillance du temps d'image : on descend d'un cran si ça ne suit pas.
+// Jamais de remontée automatique, pour éviter les oscillations.
+let perfSamples=[], perfSettled=false;
+function watchPerf(dtMs){
+  if(perfSettled||SV.quality)return;
+  perfSamples.push(dtMs);
+  if(perfSamples.length<110)return;
+  perfSamples.shift();
+  const sorted=perfSamples.slice().sort(function(a,b){return a-b;});
+  const p95=sorted[Math.floor(sorted.length*0.95)];
+  if(p95>21){
+    if(QUAL.name==='high')QUAL=QUAL_PRESETS.med;
+    else if(QUAL.name==='med')QUAL=QUAL_PRESETS.low;
+    else perfSettled=true;
+    perfSamples=[];buildMaterials();buildWindowColours();onResize();
+  }
+  if(QUAL.name==='low')perfSettled=true;
+}
+
+function resize(){
+  const w=Math.max(320,stage.clientWidth||window.innerWidth||VW);
+  const h=Math.max(240,stage.clientHeight||window.innerHeight||VH);
+  portrait=h>w;
+  DPR=Math.min(window.devicePixelRatio||1,QUAL.dprCap);
+  SW=Math.round(w*DPR);SH=Math.round(h*DPR);
+  if(CV.width!==SW||CV.height!==SH){CV.width=SW;CV.height=SH;}
+  HW=SW*0.5;HH=SH*0.5;
+  // Le canvas est en pixels physiques : l'interface doit suivre la densité
+  // d'écran, sinon elle devient minuscule sur un écran à forte densité.
+  uiScale=clamp(Math.min(SW/VW,SH/VH)*(portrait?1.5:1.05),0.9,3.4);
+  skyDirty=true;
+  checkRotate();
+}
+function onResize(){resize();}
+window.addEventListener('resize',resize);
+window.addEventListener('orientationchange',function(){setTimeout(resize,180);});
+
+// Portrait très étroit : la scène devient illisible. On demande la
+// rotation et on met en pause, avec reprise automatique au retour.
+const rotateEl=document.getElementById('rotate');
+let autoPausedByRotate=false;
+function checkRotate(){
+  if(!rotateEl)return;
+  const vw=window.innerWidth||VW, vh=window.innerHeight||VH;
+  const need=isTouch&&vh>vw&&vw<520;
+  if(rotateEl.classList)rotateEl.classList.toggle('on',need);
+  if(need){
+    if(gs==='playing'&&!paused){paused=true;autoPausedByRotate=true;}
+  }else if(autoPausedByRotate){
+    autoPausedByRotate=false;
+    if(gs==='playing'&&paused)paused=false;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   5. MATHS ET ALÉATOIRE REPRODUCTIBLE
+   ───────────────────────────────────────────────────────────── */
+function clamp(v,a,b){return v<a?a:(v>b?b:v);}
+function lerp(a,b,k){return a+(b-a)*k;}
+
+// Générateur à graine. La ville doit être identique à chaque chargement :
+// sinon elle n'est ni testable, ni mémorisable par le joueur.
+function mulberry32(seed){
+  let a=seed>>>0;
+  return function(){
+    a=(a+0x6D2B79F5)>>>0;
+    let t=a;
+    t=Math.imul(t^(t>>>15),t|1);
+    t^=t+Math.imul(t^(t>>>7),t|61);
+    return ((t^(t>>>14))>>>0)/4294967296;
+  };
+}
+// Hachage entier stable : sert à décider quelles fenêtres sont allumées.
+// Surtout pas Math.random() par image — la ville se mettrait à scintiller.
+function hash2(x,y){
+  let h=Math.imul(x|0,0x27d4eb2d)^Math.imul(y|0,0x165667b1);
+  h^=h>>>15;h=Math.imul(h,0x2545f491);h^=h>>>13;
+  return (h>>>0)/4294967296;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   6. MATÉRIAUX ET BROUILLARD
+   Une face colorée avec une chaîne 'rgb(...)' construite à la volée,
+   ce sont plusieurs centaines d'allocations par image. Ici toutes les
+   combinaisons matériau × palier de brouillard sont calculées une fois
+   au démarrage : la boucle chaude ne fait qu'un accès de tableau.
+   ───────────────────────────────────────────────────────────── */
+// Soleil bas à l'ouest, légèrement au sud. Sert au calcul d'éclairage.
+const SUN=(function(){
+  const v={x:-0.86,y:0.30,z:-0.41};
+  const l=Math.hypot(v.x,v.y,v.z);
+  v.x/=l;v.y/=l;v.z/=l;return v;
+})();
+const FOG_COL={r:96,g:56,b:104};
+
+// Teintes de base des bâtiments. Aucune n'est grise : le volume vient de
+// la teinte selon l'orientation, pas d'un calcul d'éclairage.
+const BASE_COLS=[
+  {r:44,g:38,b:74},{r:58,g:42,b:70},{r:36,g:40,b:66},
+  {r:64,g:48,b:64},{r:40,g:34,b:58},{r:52,g:44,b:78},
+];
+const MAT_STRUCT=BASE_COLS.length;      // premier matériau hors bâtiment
+const STRUCT_COLS=[
+  {r:96,g:88,b:104},   // acier du portique
+  {r:62,g:56,b:70},    // acier sombre
+  {r:110,g:96,b:82},   // platelage du toit
+  {r:150,g:132,b:96},  // barre de trapèze
+  {r:30,g:26,b:44},    // socle, ombre portée
+];
+const ALL_COLS=BASE_COLS.concat(STRUCT_COLS);
+
+// Cinq orientations de face : +X, -X, +Z, -Z, +Y.
+const ORIENT=[
+  {x:1,y:0,z:0},{x:-1,y:0,z:0},{x:0,y:0,z:1},{x:0,y:0,z:-1},{x:0,y:1,z:0},
+];
+const NORI=ORIENT.length;
+let MATC=null, MATFOG=16;
+function buildMaterials(){
+  updateFog();
+  MATFOG=QUAL.fogSteps;
+  const n=ALL_COLS.length*NORI*MATFOG;
+  MATC=new Array(n);
+  for(let c=0;c<ALL_COLS.length;c++){
+    const base=ALL_COLS[c];
+    for(let o=0;o<NORI;o++){
+      const nrm=ORIENT[o];
+      const d=Math.max(0,nrm.x*SUN.x+nrm.y*SUN.y+nrm.z*SUN.z);
+      const li=0.26+1.15*d;            // ambiante + diffuse
+      // Les faces au soleil tirent vers l'orange, les autres vers le bleu.
+      // L'écart doit être franc : c'est lui, et lui seul, qui donne le
+      // volume — il n'y a aucun calcul d'éclairage derrière.
+      const warm=d*d, cool=1-d;
+      let r=base.r*li+warm*118+cool*2;
+      let g=base.g*li+warm*54+cool*8;
+      let b=base.b*li+warm*16+cool*44;
+      for(let f=0;f<MATFOG;f++){
+        const k=MATFOG===1?0:f/(MATFOG-1);
+        const rr=Math.round(clamp(lerp(r,FOG_COL.r,k),0,255));
+        const gg=Math.round(clamp(lerp(g,FOG_COL.g,k),0,255));
+        const bb=Math.round(clamp(lerp(b,FOG_COL.b,k),0,255));
+        MATC[(c*NORI+o)*MATFOG+f]='rgb('+rr+','+gg+','+bb+')';
+      }
+    }
+  }
+}
+// Le brouillard doit finir exactement à la distance de rendu : sinon les
+// bâtiments les plus lointains disparaissent d'un coup au lieu de se fondre.
+let fogSpan=340;
+function updateFog(){CFG.FOG_FAR=QUAL.dist;fogSpan=Math.max(60,QUAL.dist-CFG.FOG_NEAR);}
+// Index de matériau, prêt à être stocké dans le tampon de faces.
+function matIdx(colIdx,orient){return (colIdx*NORI+orient)*MATFOG;}
+// Palier de brouillard d'une profondeur donnée.
+function fogStep(dist){
+  const k=clamp((dist-CFG.FOG_NEAR)/(fogSpan),0,1);
+  const s=(k*(MATFOG-1))|0;
+  return s>=MATFOG?MATFOG-1:s;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   7. CAMÉRA, ESPACE ŒIL, DÉCOUPAGE, PROJECTION
+
+   Le point le plus délicat de tout le fichier. Un polygone à cheval sur
+   le plan de la caméra DOIT être découpé dans l'espace œil contre
+   z = NEAR avant d'être projeté. Sans ce découpage, un mur frôlé
+   s'étale en travers de tout l'écran : c'est le mode de défaillance
+   classique de tout pipeline 3D écrit à la main.
+   ───────────────────────────────────────────────────────────── */
+const CAM={
+  x:0,y:80,z:0,          // position
+  yaw:0,pitch:0,         // lacet (0 = regard vers +Z), tangage (>0 = vers le haut)
+  fov:CFG.FOV,
+  shake:0,shakeX:0,shakeY:0,
+};
+// Bases trigonométriques, recalculées une fois par image.
+let CY=1,SY=0,CP=1,SP=0;
+function camPrepare(){
+  CY=Math.cos(CAM.yaw);SY=Math.sin(CAM.yaw);
+  CP=Math.cos(CAM.pitch);SP=Math.sin(CAM.pitch);
+  FOCAL=HW/Math.tan(CAM.fov*0.5);
+}
+// Avant de la caméra : (sin yaw, 0, cos yaw). Droite : (cos yaw, 0, -sin yaw).
+// La profondeur œil est donc la projection sur l'avant, puis la rotation
+// de tangage dans le plan (profondeur, hauteur).
+function eyeZ(x,y,z){
+  const dx=x-CAM.x, dy=y-CAM.y, dz=z-CAM.z;
+  return dy*SP+(dx*SY+dz*CY)*CP;
+}
+// Espace œil complet. Écrit dans _ex/_ey/_ez, pas d'allocation.
+let _ex=0,_ey=0,_ez=0;
+function toEye(x,y,z){
+  const dx=x-CAM.x, dy=y-CAM.y, dz=z-CAM.z;
+  const f=dx*SY+dz*CY;              // profondeur avant tangage
+  _ex=dx*CY-dz*SY;                  // latéral (droite)
+  _ey=dy*CP-f*SP;
+  _ez=dy*SP+f*CP;
+}
+// Projette un point monde. Renvoie false s'il est derrière le plan proche.
+// Un point isolé ne peut pas être découpé : seul un polygone le peut.
+let _px=0,_py=0,_pk=0;
+function project(x,y,z){
+  toEye(x,y,z);
+  if(_ez<CFG.NEAR){_pk=0;return false;}
+  _pk=FOCAL/_ez;
+  _px=HW+_ex*_pk+CAM.shakeX;
+  _py=HH-_ey*_pk+CAM.shakeY;
+  return true;
+}
+
+// Tampons de découpage. Un quadrilatère découpé contre un seul plan donne
+// au plus 5 sommets ; 12 laisse toute la marge nécessaire.
+const _clA=new Float64Array(36), _clB=new Float64Array(36);
+const _scx=new Float64Array(12), _scy=new Float64Array(12);
+// Découpe le polygone de _clA (n sommets, en espace œil) contre z = NEAR.
+// Renvoie le nombre de sommets écrits dans _clB.
+function clipNear(n){
+  let m=0;
+  for(let i=0;i<n;i++){
+    const j=(i+1===n)?0:i+1;
+    const ax=_clA[i*3],ay=_clA[i*3+1],az=_clA[i*3+2];
+    const bx=_clA[j*3],by=_clA[j*3+1],bz=_clA[j*3+2];
+    const ain=az>=CFG.NEAR, bin=bz>=CFG.NEAR;
+    if(ain){_clB[m*3]=ax;_clB[m*3+1]=ay;_clB[m*3+2]=az;m++;}
+    if(ain!==bin){
+      const t=(CFG.NEAR-az)/(bz-az);
+      _clB[m*3]=ax+(bx-ax)*t;
+      _clB[m*3+1]=ay+(by-ay)*t;
+      _clB[m*3+2]=CFG.NEAR;m++;
+    }
+  }
+  return m;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   8. TAMPON DE FACES
+
+   Le tri par peintre seul produit des artefacts sur une ville. La parade
+   est de séparer en couches ce qui ne peut pas s'entrecroiser : le ciel,
+   puis les volumes triés entre eux, puis l'acrobate, puis le HUD.
+   À l'intérieur de la couche des volumes, les faces sont triées par
+   profondeur œil décroissante.
+
+   Tout est stocké dans des tableaux typés : ni objet ni chaîne créés dans
+   la boucle chaude.
+   ───────────────────────────────────────────────────────────── */
+const FCAP=2600;
+const fvx=new Float64Array(FCAP*4), fvy=new Float64Array(FCAP*4), fvz=new Float64Array(FCAP*4);
+const fcol=new Int32Array(FCAP);     // index direct dans MATC
+const fkey=new Float64Array(FCAP);   // profondeur de tri
+const fwin=new Int32Array(FCAP);     // bâtiment porteur de fenêtres, ou -1
+const fara=new Float64Array(FCAP);   // aire projetée estimée, en pixels
+const fwok=new Int8Array(FCAP);      // face retenue pour ses fenêtres
+const forder=[];
+let fn=0, fnDropped=0;
+
+function facesReset(){fn=0;fnDropped=0;}
+
+// Pousse un quadrilatère. L'ordre des sommets doit être anti-horaire vu de
+// l'extérieur : la normale ainsi obtenue sert à éliminer les faces arrière.
+// v0 bas-gauche, v1 bas-droite, v2 haut-droite, v3 haut-gauche.
+function pushQuad(x0,y0,z0,x1,y1,z1,x2,y2,z2,x3,y3,z3,colIdx,orient,winId){
+  if(fn>=FCAP){fnDropped++;return;}
+  // Élimination des faces arrière : la caméra doit être du côté de la normale.
+  const ux=x1-x0, uy=y1-y0, uz=z1-z0;
+  const vx=x3-x0, vy=y3-y0, vz=z3-z0;
+  const nx=uy*vz-uz*vy, ny=uz*vx-ux*vz, nz=ux*vy-uy*vx;
+  const dot=nx*(CAM.x-x0)+ny*(CAM.y-y0)+nz*(CAM.z-z0);
+  if(dot<=0)return;
+  // Profondeur du centroïde : clé de tri et palier de brouillard.
+  const cx=(x0+x1+x2+x3)*0.25, cy2=(y0+y1+y2+y3)*0.25, cz=(z0+z1+z2+z3)*0.25;
+  const dz=eyeZ(cx,cy2,cz);
+  if(dz<-24)return;                       // franchement derrière la caméra
+  // Aire projetée, estimée sans projeter : le produit mixte déjà calculé
+  // pour l'élimination des faces arrière contient l'aire et l'inclinaison.
+  fara[fn]=dz>2?dot*FOCAL*FOCAL/(dz*dz*dz):0;
+  const i=fn*4;
+  fvx[i]=x0;fvy[i]=y0;fvz[i]=z0;
+  fvx[i+1]=x1;fvy[i+1]=y1;fvz[i+1]=z1;
+  fvx[i+2]=x2;fvy[i+2]=y2;fvz[i+2]=z2;
+  fvx[i+3]=x3;fvy[i+3]=y3;fvz[i+3]=z3;
+  fcol[fn]=matIdx(colIdx,orient)+fogStep(dz<0?0:dz);
+  fkey[fn]=dz;
+  fwin[fn]=winId===undefined?-1:winId;
+  fn++;
+}
+
+// Boîte alignée sur les axes. Au plus deux faces latérales et le toit sont
+// visibles depuis un point donné : on ne pousse que celles-là.
+function pushBox(cx,cz,hw,hd,y0,y1,colIdx,winId){
+  const xa=cx-hw, xb=cx+hw, za=cz-hd, zb=cz+hd;
+  if(CAM.x>xb) pushQuad(xb,y0,zb, xb,y0,za, xb,y1,za, xb,y1,zb, colIdx,0,winId);
+  else if(CAM.x<xa) pushQuad(xa,y0,za, xa,y0,zb, xa,y1,zb, xa,y1,za, colIdx,1,winId);
+  if(CAM.z>zb) pushQuad(xa,y0,zb, xb,y0,zb, xb,y1,zb, xa,y1,zb, colIdx,2,winId);
+  else if(CAM.z<za) pushQuad(xb,y0,za, xa,y0,za, xa,y1,za, xb,y1,za, colIdx,3,winId);
+  if(CAM.y>y1) pushQuad(xa,y1,za, xb,y1,za, xb,y1,zb, xa,y1,zb, colIdx,4,-1);
+}
+
+// Boîte orientée autour de l'axe Y : sert aux portiques et aux barres, qui
+// suivent la direction du rig et non celle des axes du monde.
+function pushBoxDir(cx,cy,cz,dx,dz,hl,hw,hh,colIdx){
+  // dx,dz : direction unitaire de la longueur ; la largeur suit la normale.
+  const px=-dz, pz=dx;
+  const ax=dx*hl, az=dz*hl, bx=px*hw, bz=pz*hw;
+  const y0=cy-hh, y1=cy+hh;
+  // Quatre faces latérales + dessus + dessous, chacune filtrée par pushQuad.
+  pushQuad(cx+ax+bx,y0,cz+az+bz, cx+ax-bx,y0,cz+az-bz, cx+ax-bx,y1,cz+az-bz, cx+ax+bx,y1,cz+az+bz, colIdx,0);
+  pushQuad(cx-ax-bx,y0,cz-az-bz, cx-ax+bx,y0,cz-az+bz, cx-ax+bx,y1,cz-az+bz, cx-ax-bx,y1,cz-az-bz, colIdx,1);
+  pushQuad(cx-ax+bx,y0,cz-az+bz, cx+ax+bx,y0,cz+az+bz, cx+ax+bx,y1,cz+az+bz, cx-ax+bx,y1,cz-az+bz, colIdx,2);
+  pushQuad(cx+ax-bx,y0,cz+az-bz, cx-ax-bx,y0,cz-az-bz, cx-ax-bx,y1,cz-az-bz, cx+ax-bx,y1,cz+az-bz, colIdx,3);
+  pushQuad(cx-ax-bx,y1,cz-az-bz, cx+ax-bx,y1,cz+az-bz, cx+ax+bx,y1,cz+az+bz, cx-ax+bx,y1,cz-az+bz, colIdx,4);
+  pushQuad(cx-ax+bx,y0,cz-az+bz, cx+ax+bx,y0,cz+az+bz, cx+ax-bx,y0,cz+az-bz, cx-ax-bx,y0,cz-az-bz, colIdx,4);
+}
+
+// Tri du tampon, du plus loin au plus pres. Si le budget de faces est
+// depasse, ce sont les plus lointaines qui sautent : elles sont deja
+// fondues dans le brouillard.
+let winBudget=0, drawnFaces=0, fStart=0, winDrawn=0, winFaces=0;
+function sortFaces(){
+  forder.length=fn;
+  for(let i=0;i<fn;i++)forder[i]=i;
+  forder.sort(function(a,b){return fkey[b]-fkey[a];});
+  fStart=fn>QUAL.faces?fn-QUAL.faces:0;
+  drawnFaces=0;
+  // Répartition du budget de fenêtres, EN PARTANT DES FAÇADES LES PLUS
+  // PROCHES. En le dépensant dans l'ordre du tri, les façades lointaines
+  // le consommaient entièrement et les grandes façades du premier plan
+  // finissaient nues — exactement l'inverse de ce qu'il faut.
+  let budget=QUAL.windows;winFaces=0;winDrawn=0;
+  for(let o=fn-1;o>=fStart;o--){
+    const f=forder[o];
+    // fara vaut 0 pour les faces au ras ou derrière la caméra : elles ne
+    // dessineront rien et ne doivent donc pas consommer le budget.
+    if(fwin[f]<0||budget<=0||fara[f]<1300*DPR*DPR){fwok[f]=0;continue;}
+    const est=estWindows(f);
+    if(est>budget&&budget<40){fwok[f]=0;continue;}
+    fwok[f]=1;budget-=est;winFaces++;
+  }
+  winBudget=QUAL.windows;
+}
+// Niveau de détail de la trame de fenêtres, déduit de l'aire projetée.
+function winLod(f){
+  const a=fara[f]/(DPR*DPR);
+  return a>260000?1:(a>70000?2:(a>18000?3:4));
+}
+let _wcols=0,_wrows=0;
+function winGrid(f){
+  const i=f*4, lod=winLod(f);
+  const wide=Math.hypot(fvx[i+1]-fvx[i],fvy[i+1]-fvy[i],fvz[i+1]-fvz[i]);
+  const tall=Math.hypot(fvx[i+3]-fvx[i],fvy[i+3]-fvy[i],fvz[i+3]-fvz[i]);
+  _wcols=Math.max(2,Math.min(13,Math.round(wide/(2.55*lod))));
+  _wrows=Math.max(2,Math.min(42,Math.round(tall/(3.35*lod))));
+}
+// Nombre de fenêtres qu'une façade allumerait : sert à répartir le budget
+// avant de dessiner quoi que ce soit.
+function estWindows(f){
+  winGrid(f);
+  return Math.round(_wcols*_wrows*(0.28+0.46*hash2(fwin[f],131)));
+}
+// Premier rang, dans l ordre trie, dont la profondeur passe sous `depth`.
+// Sert a inserer l acrobate au bon endroit de la pile au lieu de le
+// plaquer devant tout le monde.
+function faceSplit(depth){
+  let lo=fStart, hi=fn;
+  while(lo<hi){const m=(lo+hi)>>1;if(fkey[forder[m]]>depth)lo=m+1;else hi=m;}
+  return lo;
+}
+function drawFaceRange(a,b){
+  for(let o=a;o<b;o++){
+    const f=forder[o];
+    const i=f*4;
+    // Passage en espace oeil, puis decoupage contre le plan proche.
+    let allIn=true;
+    for(let v=0;v<4;v++){
+      toEye(fvx[i+v],fvy[i+v],fvz[i+v]);
+      _clA[v*3]=_ex;_clA[v*3+1]=_ey;_clA[v*3+2]=_ez;
+      if(_ez<CFG.NEAR)allIn=false;
+    }
+    let n=4;
+    if(!allIn){
+      n=clipNear(4);
+      if(n<3)continue;
+      for(let v=0;v<n*3;v++)_clA[v]=_clB[v];
+    }
+    for(let v=0;v<n;v++){
+      const k=FOCAL/_clA[v*3+2];
+      _scx[v]=HW+_clA[v*3]*k+CAM.shakeX;
+      _scy[v]=HH-_clA[v*3+1]*k+CAM.shakeY;
+    }
+    CX.fillStyle=MATC[fcol[f]];
+    CX.beginPath();
+    CX.moveTo(_scx[0],_scy[0]);
+    for(let v=1;v<n;v++)CX.lineTo(_scx[v],_scy[v]);
+    CX.closePath();CX.fill();
+    drawnFaces++;
+    if(fwok[f]&&winBudget>0)drawWindows(f);
+  }
+}
+
+/* Fenêtres émissives.
+   Elles sont dessinées juste après leur propre face, à l'intérieur de la
+   boucle triée : c'est ce qui les fait masquer correctement par les
+   bâtiments plus proches. Toutes les fenêtres d'une face partent dans un
+   seul chemin, donc un seul appel de remplissage.
+   L'allumage vient d'un hachage de la position, jamais de Math.random() :
+   sinon la ville entière scintillerait d'une image à l'autre. */
+const WIN_HUES=2;
+let WINC=null;
+function buildWindowColours(){
+  const hues=[{r:255,g:196,b:120},{r:150,g:226,b:255}];
+  WINC=new Array(WIN_HUES*MATFOG);
+  for(let h=0;h<WIN_HUES;h++)for(let f=0;f<MATFOG;f++){
+    const k=MATFOG===1?0:f/(MATFOG-1);
+    const c=hues[h];
+    WINC[h*MATFOG+f]='rgba('+Math.round(lerp(c.r,FOG_COL.r,k))+','
+      +Math.round(lerp(c.g,FOG_COL.g,k))+','
+      +Math.round(lerp(c.b,FOG_COL.b,k))+','+(0.92-0.62*k).toFixed(3)+')';
+  }
+}
+
+function drawWindows(f){
+  const i=f*4;
+  const x0=fvx[i], y0=fvy[i], z0=fvz[i];
+  const ux=fvx[i+1]-x0, uy=fvy[i+1]-y0, uz=fvz[i+1]-z0;
+  const vx=fvx[i+3]-x0, vy=fvy[i+3]-y0, vz=fvz[i+3]-z0;
+  winGrid(f);
+  const cols=_wcols, rows=_wrows;
+  const b=fwin[f];
+  const hue=hash2(b,7717)<0.72?0:1;
+  const lit=0.28+0.46*hash2(b,131);
+  CX.fillStyle=WINC[hue*MATFOG+(fcol[f]%MATFOG)];
+  CX.beginPath();
+  let drawn=0;
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      if(hash2(b*911+c,r*37+5)>lit)continue;
+      if(winBudget<=0){r=rows;break;}
+      const ua=(c+0.30)/cols, ub=(c+0.70)/cols;
+      const va=(r+0.30)/rows, vb=(r+0.66)/rows;
+      if(!project(x0+ux*ua+vx*va, y0+uy*ua+vy*va, z0+uz*ua+vz*va))continue;
+      const ax=_px, ay=_py;
+      if(!project(x0+ux*ub+vx*va, y0+uy*ub+vy*va, z0+uz*ub+vz*va))continue;
+      const bx=_px, by=_py;
+      if(!project(x0+ux*ub+vx*vb, y0+uy*ub+vy*vb, z0+uz*ub+vz*vb))continue;
+      const cx2=_px, cy2=_py;
+      if(!project(x0+ux*ua+vx*vb, y0+uy*ua+vy*vb, z0+uz*ua+vz*vb))continue;
+      CX.moveTo(ax,ay);CX.lineTo(bx,by);CX.lineTo(cx2,cy2);CX.lineTo(_px,_py);
+      CX.closePath();
+      winBudget--;drawn++;winDrawn++;
+    }
+  }
+  if(drawn)CX.fill();
+}
+
+/* ─────────────────────────────────────────────────────────────
+   9. LA VILLE
+
+   Trame de tours de 34 m de pas. Ce n'est pas une trame de pâté de
+   maisons : un vol de trapèze franchit une vingtaine de mètres, donc les
+   toits doivent être à portée. Une trame urbaine réaliste d'une centaine
+   de mètres rendrait la traversée impossible — la ville est dimensionnée
+   par le gameplay, pas l'inverse.
+
+   Graine fixe : la ville est identique à chaque chargement, donc testable
+   et mémorisable.
+   ───────────────────────────────────────────────────────────── */
+const CITY_SEED=20260905;
+const G=CFG.GRID;
+const tOcc=new Int8Array(G*G);
+const tX=new Float32Array(G*G), tZ=new Float32Array(G*G);
+const tW=new Float32Array(G*G), tD=new Float32Array(G*G);
+const tH=new Float32Array(G*G);
+const tCol=new Int8Array(G*G), tTop=new Int8Array(G*G);
+
+function cellX(i){return (i-(G-1)*0.5)*CFG.CELL;}
+function cellZ(j){return (j-(G-1)*0.5)*CFG.CELL;}
+
+function buildCity(){
+  const rng=mulberry32(CITY_SEED);
+  const c=(G-1)*0.5;
+  for(let j=0;j<G;j++)for(let i=0;i<G;i++){
+    const k=j*G+i;
+    // Les rues : un rang sur quatre, dans les deux directions.
+    if(i%CFG.STREET===0||j%CFG.STREET===0){tOcc[k]=0;continue;}
+    const r1=rng(), r2=rng(), r3=rng(), r4=rng();
+    if(r1<0.07){tOcc[k]=0;continue;}          // quelques dents creuses
+    const dc=Math.min(1,Math.hypot(i-c,j-c)/c);
+    // Silhouette : haut au centre, bas vers le port, au sud.
+    let h=lerp(CFG.H_MAX,CFG.H_MIN,Math.pow(dc,0.8));
+    h*=0.55+0.75*r2;
+    if(j<6)h*=0.42+0.20*r3;                    // le port
+    tH[k]=clamp(h,13,CFG.H_MAX);
+    tX[k]=cellX(i)+(r3-0.5)*3.2;
+    tZ[k]=cellZ(j)+(r4-0.5)*3.2;
+    const wide=r1>0.86;                        // quelques bâtiments trapus
+    tW[k]=CFG.FOOT*(wide?1.34:0.80+0.34*r2);
+    tD[k]=CFG.FOOT*(wide?1.20:0.80+0.34*r3);
+    if(wide)tH[k]*=0.55;
+    tCol[k]=(rng()*BASE_COLS.length)|0;
+    tTop[k]=r4>0.58?1:0;                       // édicule technique sur le toit
+    tOcc[k]=1;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   10. LA ROUTE ET LES RIGS
+
+   Le parcours n'est pas laissé au hasard : c'est une chaîne de tours
+   étroites posée par-dessus la ville générée, avec un profil de hauteur
+   dessiné et des écarts choisis pour rester franchissables. Les tours de
+   la trame trop proches sont effacées, pour que la ligne se lise.
+   ───────────────────────────────────────────────────────────── */
+const RIGS=[];
+function addRig(x,z,roofY,rope,side){
+  RIGS.push({
+    x:x, z:z, roofY:roofY, rope:rope,
+    ax:x, ay:roofY+CFG.RIG_H, az:z,   // point d'ancrage
+    dx:0, dz:1,                        // direction du plan de balancé
+    side:side||1,                      // côté de cadrage de la caméra
+    ang:0, angV:0,                     // état de la barre au repos
+    idx:RIGS.length,
+  });
+}
+function buildRoute(){
+  RIGS.length=0;
+  // Quatre tours, trois vols. Écarts croissants, toits qui montent :
+  // la difficulté est dans les chiffres, pas dans un réglage caché.
+  const pts=[
+    {x:-26, z:-88, h:74},
+    {x:-14, z:-66, h:76},
+    {x:  4, z:-45, h:79},
+    {x: 26, z:-23, h:82},
+  ];
+  for(let n=0;n<pts.length;n++){
+    const p=pts[n];
+    addRig(p.x,p.z,p.h,CFG.ROPE,(n%2===0)?1:1);
+  }
+  // Direction du plan de balancé : vers le rig suivant. Le dernier reprend
+  // la direction du précédent, pour que son portique reste cohérent.
+  for(let n=0;n<RIGS.length;n++){
+    const a=RIGS[n], b=RIGS[n+1];
+    if(b){
+      const dx=b.x-a.x, dz=b.z-a.z, l=Math.hypot(dx,dz)||1;
+      a.dx=dx/l;a.dz=dz/l;
+    }else if(n>0){a.dx=RIGS[n-1].dx;a.dz=RIGS[n-1].dz;}
+  }
+  // Les tours de la trame qui empiètent sur la route sont effacées.
+  for(let k=0;k<G*G;k++){
+    if(!tOcc[k])continue;
+    for(let n=0;n<RIGS.length;n++){
+      if(Math.hypot(tX[k]-RIGS[n].x,tZ[k]-RIGS[n].z)<27){tOcc[k]=0;break;}
+    }
+  }
+}
+// Position de la barre d'un rig pour un angle donné.
+// angle 0 : la barre pend à la verticale sous l'ancrage.
+// angle positif : la barre part vers l'avant du plan (dx,dz).
+let _bx=0,_by=0,_bz=0;
+function barAt(rig,ang){
+  const s=Math.sin(ang), co=Math.cos(ang);
+  _bx=rig.ax+rig.dx*s*rig.rope;
+  _by=rig.ay-co*rig.rope;
+  _bz=rig.az+rig.dz*s*rig.rope;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   11. LE JOUEUR
+
+   Le pendule reste plan. C'est la simplification qui fait tout tenir :
+   dans le plan du rig on simule un pendule à un degré de liberté —
+   exactement la physique éprouvée de Deluxe — puis on place le résultat
+   dans le repère 3D. Seul le vol entre deux barres est réellement en
+   trois dimensions.
+
+   Le point suivi par la physique est la PRISE (les mains). Le corps est
+   accroché dessous. C'est ce qui rend la saisie de la barre suivante
+   naturelle à tester : une distance entre deux points.
+   ───────────────────────────────────────────────────────────── */
+const P={
+  state:'hang',        // 'hang' | 'fly' | 'fall'
+  rig:0, dst:1,
+  ang:0, angV:0,
+  x:0,y:0,z:0,
+  vx:0,vy:0,vz:0,
+  phi:0, spin:0,
+  amp:0, flyT:0, fallT:0,
+  grabBuf:0, pumpCd:0, pumpArm:1,
+  pike:0, tuck:0,
+  best:0,
+};
+
+// Amplitude déduite de l'énergie. Deluxe manipulait l'amplitude par un
+// facteur ad hoc ; passer par l'énergie donne un pompage cohérent quel que
+// soit l'endroit du balancé où le joueur appuie.
+function ampOf(ang,angV,rope){
+  const w2=CFG.G_SWING/rope;
+  const E=0.5*angV*angV+w2*(1-Math.cos(ang));
+  return Math.acos(clamp(1-E/w2,-1,1));
+}
+function setAmp(rig,A){
+  const w2=CFG.G_SWING/rig.rope;
+  const v2=2*(w2*(1-Math.cos(A))-w2*(1-Math.cos(P.ang)));
+  const s=P.angV>=0?1:-1;
+  P.angV=s*Math.sqrt(Math.max(0,v2));
+}
+
+let toast='', toastT=0, toastCol='#fff';
+function say(msg,col){toast=msg;toastT=110;toastCol=col||'#fff';}
+
+// Pompage. L'impulsion plancher est la pièce indispensable : sans elle un
+// trapèze arrêté ne repart jamais et le joueur reste bloqué pour de bon.
+// Ce blocage exact a existé dans Deluxe.
+function pump(){
+  if(P.state!=='hang'||P.pumpCd>0)return;
+  P.pumpCd=CFG.PUMP_CD;
+  const rig=RIGS[P.rig];
+  const amp=ampOf(P.ang,P.angV,rig.rope);
+  // Sous l'amplitude plancher, le pompage réussit toujours : un pendule
+  // presque arrêté n'a pas d'extrême identifiable, donc pas de « bon
+  // moment » à viser. C'est cette règle qui garantit qu'on peut toujours
+  // relancer un trapèze mort.
+  // Un pompage par demi-balancé, armé au passage par le point bas. Sans ce
+  // verrou, les appuis s'empilent dans une même fenêtre et l'amplitude
+  // maximale s'atteint en deux secondes de martèlement : le pompage cesse
+  // alors d'être une compétence.
+  const inWin=amp<CFG.PUMP_MIN||(P.pumpArm&&Math.abs(P.ang)>=(1-CFG.PUMP_WIN)*amp);
+  let na=inWin?amp*CFG.PUMP_GAIN:amp*CFG.PUMP_LOSS;
+  if(inWin)P.pumpArm=0;
+  // Le plancher est un MINIMUM garanti, pas une valeur imposée. L'imposer
+  // enfermait le pendule à 0,30 rad : chaque pompage le ramenait à la même
+  // valeur et l'amplitude ne montait jamais.
+  if(inWin&&na<CFG.PUMP_MIN)na=CFG.PUMP_MIN;
+  setAmp(rig,Math.min(CFG.AMP_MAX,na));
+}
+
+function release(){
+  if(P.state!=='hang')return;
+  const rig=RIGS[P.rig];
+  barAt(rig,P.ang);
+  P.x=_bx;P.y=_by;P.z=_bz;
+  // Vitesse tangentielle : dérivée de la position de la barre par rapport
+  // à l'angle, multipliée par la vitesse angulaire. Le vecteur tangent est
+  // unitaire puisque dx² + dz² = 1.
+  const c=Math.cos(P.ang), s=Math.sin(P.ang);
+  const v=P.angV*rig.rope;
+  P.vx=v*rig.dx*c;P.vy=v*s;P.vz=v*rig.dz*c;
+  P.phi=-P.ang;
+  P.spin=-P.angV*0.55;
+  P.state='fly';P.flyT=0;
+  P.dst=Math.min(RIGS.length-1,P.rig+1);
+}
+
+function tryGrab(){
+  if(P.state!=='fly')return false;
+  let best=-1, bd=CFG.GRAB_R;
+  for(let n=0;n<RIGS.length;n++){
+    if(n===P.rig)continue;
+    const rig=RIGS[n];
+    barAt(rig,rig.ang);
+    const d=Math.hypot(P.x-_bx,P.y-_by,P.z-_bz);
+    if(d<bd){bd=d;best=n;}
+  }
+  if(best<0)return false;
+  const rig=RIGS[best];
+  const q=bd<CFG.GRAB_PERF?0:(bd<CFG.GRAB_GOOD?1:2);
+  P.rig=best;P.ang=rig.ang;
+  const c=Math.cos(P.ang), s=Math.sin(P.ang);
+  // Seule la composante tangentielle de la vitesse est conservée : le
+  // reste part dans les bras. Une prise approximative coûte donc de
+  // l'élan, sans qu'aucun malus artificiel n'ait à être ajouté.
+  const vt=P.vx*rig.dx*c+P.vy*s+P.vz*rig.dz*c;
+  P.angV=clamp(vt/rig.rope*CFG.GRIP_K[q],-CFG.ANGV_MAX,CFG.ANGV_MAX);
+  P.state='hang';P.grabBuf=0;P.spin=0;
+  say(q===0?t('perfect'):(q===1?t('good'):t('poor')),q===0?'#25E5FF':(q===1?'#9CFF7A':'#FFC46E'));
+  score+=q===0?300:(q===1?180:90);
+  shake(q===0?3:1.6);
+  if(best>=RIGS.length-1&&gs==='playing'){gs='levelcomplete';say(t('arrived'),'#FF2E88');}
+  return true;
+}
+
+function fallStart(){
+  if(P.state==='fall')return;
+  P.state='fall';P.fallT=0;
+  say(t('fall'),'#FF5B6E');
+  shake(6);
+}
+function respawn(){
+  const rig=RIGS[P.rig];
+  P.state='hang';P.ang=0;P.angV=0;P.phi=0;P.spin=0;
+  barAt(rig,0);P.x=_bx;P.y=_by;P.z=_bz;
+  P.vx=P.vy=P.vz=0;P.flyT=0;P.fallT=0;
+}
+// Conservé sous ce nom pour rester compatible avec tools/check.js, qui
+// vérifie sur les trois jeux que la boucle survit à la perte d'une vie.
+function loseLife(){
+  lives--;
+  if(lives<=0){lives=0;gs='gameover';return;}
+  respawn();
+}
+
+function shake(a){if(!reducedMotion)CAM.shake=Math.max(CAM.shake,a);}
+
+/* Pas de simulation du joueur. dt est fixe : 1/120 s. */
+const DT=1/120;
+function stepPlayer(){
+  if(P.pumpCd>0)P.pumpCd--;
+  if(P.grabBuf>0)P.grabBuf--;
+  const rig=RIGS[P.rig];
+
+  if(P.state==='hang'){
+    const w2=CFG.G_SWING/rig.rope;
+    P.angV+=-w2*Math.sin(P.ang)*DT;
+    P.angV*=CFG.DAMP;
+    P.angV=clamp(P.angV,-CFG.ANGV_MAX,CFG.ANGV_MAX);
+    P.ang+=P.angV*DT;
+    // Au-delà du tour complet on replie l'angle, sinon la pose se dévisse.
+    if(P.ang>Math.PI)P.ang-=2*Math.PI;
+    if(P.ang<-Math.PI)P.ang+=2*Math.PI;
+    barAt(rig,P.ang);
+    P.x=_bx;P.y=_by;P.z=_bz;
+    P.phi=-P.ang;
+    P.amp=ampOf(P.ang,P.angV,rig.rope);
+    // Cambré à l'arrière du balancé, groupé à l'avant : la pose raconte
+    // le sens du mouvement, ce qui aide à sentir quand pomper.
+    P.pike=clamp(P.angV*0.17,-0.55,0.55);
+    P.tuck=0;
+    // Réarmement au passage par le point bas.
+    if(Math.abs(P.ang)<0.30*Math.max(P.amp,0.25))P.pumpArm=1;
+  }else if(P.state==='fly'){
+    P.flyT++;
+    P.vy-=CFG.G_FLIGHT*DT;
+    P.vx*=CFG.AIR_DRAG;P.vy*=CFG.AIR_DRAG;P.vz*=CFG.AIR_DRAG;
+    P.x+=P.vx*DT;P.y+=P.vy*DT;P.z+=P.vz*DT;
+    P.phi+=P.spin*DT;
+    P.tuck=clamp(Math.abs(P.spin)*0.5,0,1);
+    P.pike=0;
+    if(P.grabBuf>0)tryGrab();
+    if(P.state==='fly'){
+      const floor=RIGS[P.dst]?Math.min(rig.roofY,RIGS[P.dst].roofY):rig.roofY;
+      if(P.y<floor+CFG.FALL_Y||P.flyT>900)fallStart();
+    }
+  }else{
+    P.fallT++;
+    P.vy-=CFG.G_FLIGHT*DT;
+    P.x+=P.vx*DT;P.y+=P.vy*DT;P.z+=P.vz*DT;
+    P.phi+=P.spin*DT;
+    if(P.fallT>96)loseLife();
+  }
+  if(P.amp>P.best)P.best=P.amp;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   12. LA CAMÉRA DE CADREUR
+
+   Ce n'est pas une caméra de poursuite. Elle se place de trois quarts par
+   rapport au plan du balancé — jamais dedans, jamais perpendiculaire.
+   Dans le plan, le geste devient illisible ; perpendiculaire, la ville
+   perd toute profondeur. Le trois-quarts donne les deux.
+   ───────────────────────────────────────────────────────────── */
+const CAMS={
+  fx:0,fz:1, px:0,py:90,pz:-40, lx:0,ly:80,lz:0,
+  yawOff:0,pitchOff:0, ready:false,
+};
+let camFrozen=false;
+function stepCamera(){
+  if(camFrozen)return;
+  const rig=RIGS[P.rig];
+  let dx=rig.dx, dz=rig.dz;
+  if(P.state==='fly'&&RIGS[P.dst]){
+    const b=RIGS[P.dst];
+    dx+=b.dx;dz+=b.dz;
+    const l=Math.hypot(dx,dz)||1;dx/=l;dz/=l;
+  }
+  CAMS.fx=lerp(CAMS.fx,dx,0.05);CAMS.fz=lerp(CAMS.fz,dz,0.05);
+  const l=Math.hypot(CAMS.fx,CAMS.fz)||1;
+  const ux=CAMS.fx/l, uz=CAMS.fz/l;
+  const nx=uz, nz=-ux;                       // perpendiculaire horizontale
+  const ampK=clamp(P.amp/CFG.AMP_MAX,0,1);
+  const flyK=(P.state==='hang')?0:1;
+  CAM.fov=lerp(CFG.FOV,CFG.FOV_WIDE,clamp(ampK*0.7+flyK*0.35,0,1));
+
+  // Point visé. À grande amplitude on glisse vers le POINT D'ANCRAGE : le
+  // pendule décrit alors un arc presque complet centré dessus, et c'est le
+  // pivot qui doit tenir l'image. Viser la barre ferait balayer le cadre au
+  // rythme du balancé, ce qui est illisible.
+  // Étendue réelle de l'arc à l'amplitude courante. Le point bas est
+  // toujours à une longueur de câble sous l'ancrage ; le point haut est à
+  // rope·cos(amplitude) — donc au-dessus de l'ancrage seulement au-delà du
+  // quart de tour. Cadrer systématiquement le cercle entier ferait reculer
+  // la caméra pour rien sur un balancé modeste.
+  const amp=Math.max(P.amp,0.35);
+  const cosA=Math.cos(Math.min(amp,Math.PI*0.98));
+  const arcY=rig.ay-rig.rope*(1+cosA)*0.5;      // centre vertical de l'arc
+  const halfV=rig.rope*(1-cosA)*0.5+1.9;
+  const halfH=rig.rope*Math.sin(Math.min(amp,Math.PI*0.5))+1.6;
+  const pull=Math.pow(ampK,0.7)*0.85;
+  let ax=lerp(P.x,rig.ax,pull), ay=lerp(P.y-1.0,arcY,pull), az=lerp(P.z,rig.az,pull);
+  if(P.state==='fly'&&RIGS[P.dst]){
+    const b=RIGS[P.dst];barAt(b,b.ang);
+    ax=lerp(ax,_bx,0.42);ay=lerp(ay,_by,0.46);az=lerp(az,_bz,0.42);
+  }
+  // Distance de cadrage, DÉDUITE de la géométrie et non devinée : l'arc du
+  // balancé a pour rayon la longueur de câble, il doit tenir dans la
+  // hauteur de l'image. C'est la même discipline que l'échelle de vue de
+  // Deluxe — on calcule ce qu'il faut voir, on ne tâtonne pas.
+  const vTan=Math.tan(CAM.fov*0.5)*SH/SW;
+  const hTan=Math.tan(CAM.fov*0.5);
+  const base=Math.hypot(CFG.CAM_SIDE,CFG.CAM_BACK);
+  let want=Math.max(base,halfV/vTan,halfH/hTan);
+  if(P.state==='fly'&&RIGS[P.dst]){
+    // En vol, l'acrobate et la barre visée doivent tenir ensemble dans le cadre.
+    const b=RIGS[P.dst];barAt(b,b.ang);
+    const spread=Math.hypot(_bx-P.x,_by-P.y,_bz-P.z)*0.60;
+    want=Math.max(want,(spread+3)/hTan);
+  }
+  const dist=want/base;
+  const side=rig.side;
+  const tx=ax+nx*CFG.CAM_SIDE*side*dist-ux*CFG.CAM_BACK*dist;
+  const ty=ay+CFG.CAM_UP*Math.sqrt(dist)*(1-0.45*flyK);
+  const tz=az+nz*CFG.CAM_SIDE*side*dist-uz*CFG.CAM_BACK*dist;
+  if(!CAMS.ready){
+    CAMS.px=tx;CAMS.py=ty;CAMS.pz=tz;CAMS.lx=ax;CAMS.ly=ay;CAMS.lz=az;CAMS.ready=true;
+  }
+  CAMS.px=lerp(CAMS.px,tx,CFG.CAM_LAG);
+  CAMS.py=lerp(CAMS.py,ty,CFG.CAM_LAG);
+  CAMS.pz=lerp(CAMS.pz,tz,CFG.CAM_LAG);
+  CAMS.lx=lerp(CAMS.lx,ax,CFG.CAM_AIM);
+  CAMS.ly=lerp(CAMS.ly,ay,CFG.CAM_AIM);
+  CAMS.lz=lerp(CAMS.lz,az,CFG.CAM_AIM);
+
+  CAM.x=CAMS.px;CAM.y=CAMS.py;CAM.z=CAMS.pz;
+  const vx=CAMS.lx-CAM.x, vy=CAMS.ly-CAM.y, vz=CAMS.lz-CAM.z;
+  const h=Math.hypot(vx,vz)||0.0001;
+  CAM.yaw=Math.atan2(vx,vz)+CAMS.yawOff;
+  CAM.pitch=clamp(Math.atan2(vy,h)+CAMS.pitchOff,-1.15,1.05);
+
+  // Regard libre : il revient de lui-même derrière l'action.
+  CAMS.yawOff*=0.955;CAMS.pitchOff*=0.955;
+
+  // Secousse : bruit lissé plutôt qu'un Math.random() par image, qui
+  // scintille au lieu de secouer.
+  if(CAM.shake>0.01){
+    CAM.shake*=0.90;
+    const s=CAM.shake*DPR*2.2;
+    CAM.shakeX=Math.sin(frame*0.9)*s;
+    CAM.shakeY=Math.cos(frame*1.27)*s;
+  }else{CAM.shake=0;CAM.shakeX=0;CAM.shakeY=0;}
+}
+
+/* ─────────────────────────────────────────────────────────────
+   13. CIEL, SOL, SOLEIL
+   Le ciel est ancré sur la ligne d'horizon réelle : pour un point à
+   l'infini au niveau des yeux, l'écran donne y = HH + FOCAL·tan(tangage).
+   Le dégradé suit donc le tangage au lieu de flotter.
+   ───────────────────────────────────────────────────────────── */
+let skyDirty=true, skyGrad=null, skyGnd=null, skyH=-9999;
+function drawSky(){
+  const hz=HH+FOCAL*Math.tan(CAM.pitch)+CAM.shakeY;
+  if(skyDirty||Math.abs(hz-skyH)>3){
+    skyH=hz;skyDirty=false;
+    const top=hz-SH*1.5, bot=hz+SH*0.15;
+    skyGrad=CX.createLinearGradient(0,top,0,bot);
+    skyGrad.addColorStop(0,'#150C36');
+    skyGrad.addColorStop(0.42,'#3C1B54');
+    skyGrad.addColorStop(0.70,'#B0316E');
+    skyGrad.addColorStop(0.90,'#E9603F');
+    skyGrad.addColorStop(1,'#FF8A3D');
+    skyGnd=CX.createLinearGradient(0,hz,0,hz+SH*0.9);
+    skyGnd.addColorStop(0,'rgb('+FOG_COL.r+','+FOG_COL.g+','+FOG_COL.b+')');
+    skyGnd.addColorStop(0.45,'#1B1030');
+    skyGnd.addColorStop(1,'#0A0518');
+  }
+  CX.fillStyle=skyGrad;CX.fillRect(0,0,SW,Math.max(0,Math.min(SH,hz)));
+  // Le sol n'est pas de la géométrie : un plan infini à y = 0 est
+  // exactement ce que le tri par peintre gère le plus mal. Rempli en
+  // espace écran sous l'horizon, il est correct et gratuit.
+  if(hz<SH)CX.fillStyle=skyGnd,CX.fillRect(0,Math.max(0,hz),SW,SH-Math.max(0,hz));
+
+  // Le soleil, très loin dans sa direction d'éclairage.
+  if(project(CAM.x+SUN.x*3000,CAM.y+SUN.y*3000,CAM.z+SUN.z*3000)){
+    const r=Math.min(SW,SH)*0.5;
+    const g=CX.createRadialGradient(_px,_py,0,_px,_py,r);
+    g.addColorStop(0,'rgba(255,226,168,0.85)');
+    g.addColorStop(0.10,'rgba(255,170,110,0.42)');
+    g.addColorStop(0.42,'rgba(255,90,120,0.13)');
+    g.addColorStop(1,'rgba(255,90,120,0)');
+    CX.fillStyle=g;CX.fillRect(0,0,SW,SH);
+    CX.fillStyle='rgba(255,236,196,0.92)';
+    CX.beginPath();CX.arc(_px,_py,Math.min(SW,SH)*0.030,0,6.2832);CX.fill();
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   14. COLLECTE DE LA VILLE ET DES RIGS
+   La trame est régulière : elle sert directement de grille spatiale.
+   On ne parcourt que les cellules dans la distance de rendu, et on rejette
+   par cône de vue avant de pousser la moindre face.
+   ───────────────────────────────────────────────────────────── */
+function collectCity(){
+  const d=QUAL.dist;
+  const half=(G-1)*0.5;
+  const i0=Math.max(0,Math.floor((CAM.x-d)/CFG.CELL+half));
+  const i1=Math.min(G-1,Math.ceil((CAM.x+d)/CFG.CELL+half));
+  const j0=Math.max(0,Math.floor((CAM.z-d)/CFG.CELL+half));
+  const j1=Math.min(G-1,Math.ceil((CAM.z+d)/CFG.CELL+half));
+  const tanH=Math.tan(CAM.fov*0.5);
+  for(let j=j0;j<=j1;j++)for(let i=i0;i<=i1;i++){
+    const k=j*G+i;
+    if(!tOcc[k])continue;
+    const hgt=tH[k];
+    toEye(tX[k],hgt*0.5,tZ[k]);
+    if(_ez>d)continue;
+    const marg=(tW[k]+tD[k])*1.2+10;
+    if(_ez<-marg)continue;
+    if(Math.abs(_ex)>(Math.abs(_ez)+marg)*tanH*1.6+marg)continue;
+    pushBox(tX[k],tZ[k],tW[k],tD[k],0,hgt,tCol[k],k);
+    // Édicules techniques : c'est ce qui donne l'échelle d'un toit.
+    if(tTop[k]&&_ez<230&&QUAL.windows>0){
+      const w=tW[k]*0.34, dd=tD[k]*0.34;
+      pushBox(tX[k]-tW[k]*0.3,tZ[k]+tD[k]*0.3,w,dd,hgt,hgt+3.4,MAT_STRUCT+1,-1);
+    }
+  }
+}
+function collectRigs(){
+  for(let n=0;n<RIGS.length;n++){
+    const rig=RIGS[n];
+    toEye(rig.x,rig.roofY*0.5,rig.z);
+    if(_ez>QUAL.dist+80||_ez<-60)continue;
+    // La tour porteuse du rig : élancée, pour que la ligne du parcours se
+    // lise dans la silhouette de la ville.
+    pushBox(rig.x,rig.z,9.5,9.5,0,rig.roofY,(n*2)%BASE_COLS.length,4000+n);
+    // Platelage du toit.
+    pushBox(rig.x,rig.z,9.55,9.55,rig.roofY,rig.roofY+0.25,MAT_STRUCT+2,-1);
+    const px=rig.dz, pz=-rig.dx;
+    const my=rig.roofY+CFG.RIG_H*0.5;
+    // Deux montants et une traverse : le portique.
+    pushBoxDir(rig.x+px*1.9,my,rig.z+pz*1.9,rig.dx,rig.dz,0.24,0.24,CFG.RIG_H*0.5,MAT_STRUCT);
+    pushBoxDir(rig.x-px*1.9,my,rig.z-pz*1.9,rig.dx,rig.dz,0.24,0.24,CFG.RIG_H*0.5,MAT_STRUCT);
+    pushBoxDir(rig.ax,rig.ay+0.2,rig.az,px,pz,2.2,0.22,0.22,MAT_STRUCT);
+    // Plateforme de départ, en retrait dans le plan du balancé.
+    pushBox(rig.x-rig.dx*5.4,rig.z-rig.dz*5.4,1.7,1.7,rig.roofY+0.4,rig.roofY+2.0,MAT_STRUCT+1,-1);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   15. L'ACROBATE
+
+   Le squelette est décrit en coordonnées planes (avant, haut) dans le plan
+   du rig, puis placé dans le monde. Chaque articulation est projetée, et
+   les membres sont tracés ENTRE DEUX POINTS PROJETÉS.
+
+   Ce détail a son importance : Deluxe dessinait ses membres à partir
+   d'angles, avec une convention où l'angle 0 pointait vers le bas, ce qui
+   avait fini par produire des bras à l'envers. En traçant de point à
+   point, cette classe d'erreur devient structurellement impossible.
+   ───────────────────────────────────────────────────────────── */
+const JX=new Float64Array(24),JY=new Float64Array(24),JK=new Float64Array(24);
+let jOK=true, _jcs=1, _jsn=0;
+function jproj(idx,gx,gy,gz,dx,dz,nx,nz,la,lb,off){
+  const A=la*_jcs+lb*_jsn, B=-la*_jsn+lb*_jcs;
+  if(!project(gx+dx*A+nx*off,gy+B,gz+dz*A+nz*off)){jOK=false;JK[idx]=0;return;}
+  JX[idx]=_px;JY[idx]=_py;JK[idx]=_pk;
+}
+function seg(a,b,rad,col){
+  const k=(JK[a]+JK[b])*0.5;
+  if(k<=0)return;
+  CX.strokeStyle=col;
+  CX.lineWidth=Math.max(1,rad*2*k);
+  CX.beginPath();CX.moveTo(JX[a],JY[a]);CX.lineTo(JX[b],JY[b]);CX.stroke();
+}
+const SUIT='#E8365F', SUIT_D='#8E1B3A', SKIN='#F2C79B', TRIM='#25E5FF';
+
+function drawAcrobat(){
+  const rig=RIGS[P.rig];
+  const dx=rig.dx, dz=rig.dz;
+  const nx=dz, nz=-dx;
+  _jcs=Math.cos(P.phi);_jsn=Math.sin(P.phi);
+  jOK=true;
+  const tuck=P.tuck, pike=P.pike+tuck*0.75;
+  const kA=0.05+pike*0.5+1.55*tuck;
+  const sA=0.10+1.75*tuck;
+  const hipA=pike*0.34;
+  const kx=hipA+Math.sin(kA)*0.52, ky=-1.34-Math.cos(kA)*0.52;
+  const fx=kx+Math.sin(kA+sA)*0.50, fy=ky-Math.cos(kA+sA)*0.50;
+  // Le côté le plus proche de la caméra est dessiné en dernier.
+  const nearSide=((CAM.x-P.x)*nx+(CAM.z-P.z)*nz)>=0?1:-1;
+
+  for(let pass=0;pass<2;pass++){
+    const off=(pass===0?-nearSide:nearSide);
+    const A=0.19*off, L=0.13*off;
+    jproj(0,P.x,P.y,P.z,dx,dz,nx,nz,0,0,A);            // main
+    jproj(1,P.x,P.y,P.z,dx,dz,nx,nz,0,-0.66,A);        // épaule
+    jproj(2,P.x,P.y,P.z,dx,dz,nx,nz,hipA,-1.34,L);     // hanche
+    jproj(3,P.x,P.y,P.z,dx,dz,nx,nz,kx,ky,L);          // genou
+    jproj(4,P.x,P.y,P.z,dx,dz,nx,nz,fx,fy,L);          // pied
+    if(!jOK)return;
+    const dark=pass===0;
+    seg(0,1,0.075,dark?'#C9A886':SKIN);
+    seg(2,3,0.098,dark?SUIT_D:SUIT);
+    seg(3,4,0.076,dark?SUIT_D:SUIT);
+    if(pass===1){
+      // Tronc et tête, une seule fois, sur le côté proche.
+      jproj(5,P.x,P.y,P.z,dx,dz,nx,nz,hipA*0.5,-1.0,0);
+      jproj(6,P.x,P.y,P.z,dx,dz,nx,nz,0,-0.66,0);
+      jproj(7,P.x,P.y,P.z,dx,dz,nx,nz,hipA,-1.34,0);
+      if(!jOK)return;
+      seg(6,7,0.145,SUIT);
+      seg(6,5,0.150,SUIT);
+      // Ceinture néon : c'est ce qui rend la silhouette lisible de loin.
+      seg(5,7,0.155,TRIM);
+      jproj(8,P.x,P.y,P.z,dx,dz,nx,nz,0.05,-0.50,0);
+      if(!jOK)return;
+      CX.fillStyle=SKIN;
+      CX.beginPath();CX.arc(JX[8],JY[8],Math.max(1,0.145*JK[8]),0,6.2832);CX.fill();
+    }
+  }
+}
+
+// Barre et câbles d'un rig. Dessinés en traits : ils sont trop fins pour
+// mériter des faces, et leur épaisseur suit l'échelle de projection.
+function drawBar(rig,ang){
+  barAt(rig,ang);
+  const bx=_bx,by=_by,bz=_bz;
+  const px=rig.dz*0.68, pz=-rig.dx*0.68;
+  if(!project(bx+px,by,bz+pz))return;
+  const ax1=_px,ay1=_py,k1=_pk;
+  if(!project(bx-px,by,bz-pz))return;
+  const ax2=_px,ay2=_py,k2=_pk;
+  if(!project(rig.ax+px,rig.ay,rig.az+pz))return;
+  const cx1=_px,cy1=_py;
+  if(!project(rig.ax-px,rig.ay,rig.az-pz))return;
+  const cx2=_px,cy2=_py;
+  const k=(k1+k2)*0.5;
+  CX.strokeStyle='rgba(226,214,196,0.55)';
+  CX.lineWidth=Math.max(0.7,0.028*k);
+  CX.beginPath();CX.moveTo(cx1,cy1);CX.lineTo(ax1,ay1);
+  CX.moveTo(cx2,cy2);CX.lineTo(ax2,ay2);CX.stroke();
+  CX.strokeStyle='#D8C28A';
+  CX.lineWidth=Math.max(1.2,0.11*k);
+  CX.lineCap='round';
+  CX.beginPath();CX.moveTo(ax1,ay1);CX.lineTo(ax2,ay2);CX.stroke();
+}
+
+/* ─────────────────────────────────────────────────────────────
+   16. RENDU
+   Ordre strict : ciel, sol, volumes triés, et l'acrobate INSÉRÉ dans la
+   pile triée à sa propre profondeur — pas plaqué devant tout le monde.
+   ───────────────────────────────────────────────────────────── */
+const ovD=new Float64Array(16), ovT=new Int32Array(16), ovN=new Int32Array(16);
+const ovOrder=[];
+function render(){
+  camPrepare();
+  CX.setTransform(1,0,0,1,0,0);
+  drawSky();
+  facesReset();
+  collectCity();
+  collectRigs();
+  sortFaces();
+
+  // Superpositions : les barres de chaque rig, et l'acrobate.
+  let on=0;
+  for(let n=0;n<RIGS.length;n++){
+    const rig=RIGS[n];
+    if(n===P.rig&&P.state==='hang')continue;   // dessinée avec l'acrobate
+    barAt(rig,rig.ang);
+    ovD[on]=eyeZ(_bx,_by,_bz);ovT[on]=0;ovN[on]=n;on++;
+  }
+  ovD[on]=eyeZ(P.x,P.y-0.9,P.z);ovT[on]=1;ovN[on]=P.rig;on++;
+  ovOrder.length=on;
+  for(let i=0;i<on;i++)ovOrder[i]=i;
+  ovOrder.sort(function(a,b){return ovD[b]-ovD[a];});
+
+  let cursor=fStart;
+  for(let i=0;i<on;i++){
+    const o=ovOrder[i];
+    const cut=faceSplit(ovD[o]);
+    if(cut>cursor){drawFaceRange(cursor,cut);cursor=cut;}
+    if(ovT[o]===0)drawBar(RIGS[ovN[o]],RIGS[ovN[o]].ang);
+    else{
+      if(P.state==='hang')drawBar(RIGS[P.rig],P.ang);
+      drawAcrobat();
+    }
+  }
+  if(cursor<fn)drawFaceRange(cursor,fn);
+
+  drawHUD();
+}
+
+/* ─────────────────────────────────────────────────────────────
+   17. ÉTAT DE JEU ET INTERFACE
+   Le HUD complet — radar des toits, étoiles de hype, compteur de cagnotte —
+   est le lot de la session 4. Ici : le strict nécessaire pour piloter et
+   pour vérifier le socle.
+   ───────────────────────────────────────────────────────────── */
+let gs='menu';            // 'menu' | 'playing' | 'gameover' | 'levelcomplete'
+let paused=false;
+let lives=5, score=0, level=1, frame=0;
+let debugOn=false, fps=60, faceAvg=0;
+
+function uiFont(size,weight){CX.font=(weight||700)+' '+Math.round(size*uiScale)+'px '+FONT;}
+function outlineText(txt,x,y,size,col,weight,align){
+  uiFont(size,weight);
+  CX.textAlign=align||'center';CX.textBaseline='middle';
+  CX.lineJoin='round';CX.lineWidth=Math.max(2,size*uiScale*0.22);
+  CX.strokeStyle='rgba(6,2,16,0.72)';CX.strokeText(txt,x,y);
+  CX.fillStyle=col;CX.fillText(txt,x,y);
+}
+function drawHUD(){
+  const u=uiScale;
+  if(gs==='menu'){
+    CX.fillStyle='rgba(8,3,22,0.52)';CX.fillRect(0,0,SW,SH);
+    outlineText(t('title'),HW,SH*0.40,44,'#FFFFFF',900);
+    outlineText(t('sub'),HW,SH*0.40+40*u,15,'rgba(255,255,255,0.62)',700);
+    outlineText(t('hintStart'),HW,SH*0.60,18,'#25E5FF',800);
+    outlineText(t('pump')+'   ·   '+t('release'),HW,SH*0.60+30*u,13,'rgba(255,255,255,0.5)',700);
+    return;
+  }
+  // Jauge d'amplitude, à gauche.
+  const gx=26*u, gy=SH-38*u, gw=Math.min(SW*0.34,240*u), gh=9*u;
+  CX.fillStyle='rgba(8,3,22,0.55)';CX.fillRect(gx,gy,gw,gh);
+  const k=clamp(P.amp/CFG.AMP_MAX,0,1);
+  CX.fillStyle=P.amp>=CFG.GIANT?'#FF2E88':'#25E5FF';
+  CX.fillRect(gx,gy,gw*k,gh);
+  CX.fillStyle='rgba(255,255,255,0.30)';
+  CX.fillRect(gx+gw*(CFG.GIANT/CFG.AMP_MAX),gy-3*u,2*u,gh+6*u);
+  outlineText(P.amp>=CFG.GIANT?t('giant'):t('amp'),gx,gy-13*u,11,
+    P.amp>=CFG.GIANT?'#FF2E88':'rgba(255,255,255,0.72)',800,'left');
+  // Rig courant et score, à droite. Le bouton plein écran est un élément
+  // HTML posé par-dessus le canvas : il faut lui laisser sa place, sinon le
+  // texte passe dessous en portrait.
+  const rx=SW-(46*DPR+10*u);
+  outlineText(t('rig')+' '+(P.rig+1)+'/'+RIGS.length,rx,34*u,16,'#FFFFFF',800,'right');
+  outlineText(String(score),rx,58*u,20,'#FFD98A',900,'right');
+
+  if(toastT>0&&gs==='playing')outlineText(toast,HW,SH*0.24,22,toastCol,900);
+  // Rappel contextuel de la commande utile à l'instant.
+  if(gs==='playing'&&!paused){
+    const hint=P.state==='fly'?t('grab'):(P.state==='hang'?t('pump')+'   ·   '+t('release'):'');
+    if(hint)outlineText(hint,HW,SH-22*u,12,'rgba(255,255,255,0.42)',700);
+  }
+  if(paused){
+    CX.fillStyle='rgba(8,3,22,0.6)';CX.fillRect(0,0,SW,SH);
+    outlineText(t('paused'),HW,HH-12*u,32,'#FFF',900);
+    outlineText(t('resume'),HW,HH+22*u,14,'rgba(255,255,255,0.6)',700);
+  }
+  if(gs==='gameover'||gs==='levelcomplete'){
+    CX.fillStyle='rgba(8,3,22,0.6)';CX.fillRect(0,0,SW,SH);
+    outlineText(gs==='levelcomplete'?t('arrived'):t('fall'),HW,HH-14*u,30,
+      gs==='levelcomplete'?'#25E5FF':'#FF5B6E',900);
+    outlineText(t('again'),HW,HH+22*u,14,'rgba(255,255,255,0.62)',700);
+  }
+  if(debugOn){
+    CX.fillStyle='rgba(0,0,0,0.55)';CX.fillRect(0,0,232*u,116*u);
+    const L=['fps '+fps.toFixed(0)+'   faces '+drawnFaces+(fnDropped?' (+'+fnDropped+' perdues)':''),
+      'qual '+QUAL.name+'   dpr '+DPR.toFixed(2)+'   '+SW+'x'+SH,
+      'etat '+P.state+'   rig '+(P.rig+1)+'/'+RIGS.length,
+      'ang '+P.ang.toFixed(2)+'  angV '+P.angV.toFixed(2)+'  amp '+P.amp.toFixed(2),
+      'pos '+P.x.toFixed(1)+' '+P.y.toFixed(1)+' '+P.z.toFixed(1),
+      'cam yaw '+(CAM.yaw*180/Math.PI).toFixed(0)+'  pitch '+(CAM.pitch*180/Math.PI).toFixed(0)
+        +'  fov '+(CAM.fov*180/Math.PI).toFixed(0)];
+    for(let i=0;i<L.length;i++)outlineText(L[i],8*u,(14+i*17)*u,11,'#9CFF7A',700,'left');
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   18. TRANSITIONS
+   Noms conservés (startGame, togglePause, toMenu, loseLife) pour que
+   tools/check.js traverse les trois jeux avec le même pont de test.
+   ───────────────────────────────────────────────────────────── */
+function startGame(){
+  gs='playing';paused=false;
+  lives=5;score=0;level=1;
+  P.rig=0;P.dst=1;P.best=0;
+  respawn();
+  CAMS.ready=false;
+  toastT=0;
+}
+function toMenu(){gs='menu';paused=false;}
+function togglePause(){if(gs==='playing')paused=!paused;}
+
+/* ─────────────────────────────────────────────────────────────
+   19. ENTRÉES
+   Le pad tactile complet est le lot de la session 4. Ici, deux boutons et
+   le glissement de caméra : de quoi ne pas être mort au doigt.
+   ───────────────────────────────────────────────────────────── */
+function action(){
+  if(gs==='menu'){startGame();return;}
+  if(gs==='gameover'||gs==='levelcomplete'){startGame();return;}
+  if(paused)return;
+  if(P.state==='hang')pump();
+  else P.grabBuf=CFG.GRAB_BUF;
+}
+function doRelease(){
+  if(gs!=='playing'||paused)return;
+  release();
+}
+window.addEventListener('keydown',function(e){
+  const k=e.key;
+  if(k===' '||k==='Spacebar'||k==='w'||k==='z'||k==='ArrowUp'){e.preventDefault();action();return;}
+  if(k==='s'||k==='ArrowDown'||k==='Shift'){e.preventDefault();doRelease();return;}
+  if(k==='p'||k==='P'){togglePause();return;}
+  if(k==='r'||k==='R'){startGame();return;}
+  if(k==='Escape'){toMenu();return;}
+  if(k==='F3'){e.preventDefault();debugOn=!debugOn;return;}
+  if(k==='1'){setQuality('low');return;}
+  if(k==='2'){setQuality('med');return;}
+  if(k==='3'){setQuality('high');return;}
+});
+// Regard libre. Il revient de lui-même : on ne laisse jamais le joueur
+// coincé face à un mur.
+let dragId=-1, dragX=0, dragY=0;
+function look(dx,dy){
+  CAMS.yawOff=clamp(CAMS.yawOff-dx*0.0032,-1.1,1.1);
+  CAMS.pitchOff=clamp(CAMS.pitchOff+dy*0.0026,-0.5,0.5);
+}
+CV.addEventListener('pointerdown',function(e){
+  if(dragId<0){dragId=e.pointerId;dragX=e.clientX;dragY=e.clientY;}
+});
+CV.addEventListener('pointermove',function(e){
+  if(e.pointerId!==dragId)return;
+  look(e.clientX-dragX,e.clientY-dragY);
+  dragX=e.clientX;dragY=e.clientY;
+});
+function endDrag(e){if(e.pointerId===dragId)dragId=-1;}
+CV.addEventListener('pointerup',endDrag);
+CV.addEventListener('pointercancel',endDrag);
+CV.addEventListener('click',function(){if(gs!=='playing')action();});
+
+(function bindTouch(){
+  const a=document.getElementById('tAct'), r=document.getElementById('tRel');
+  const pad=document.getElementById('pad');
+  if(pad&&pad.classList&&isTouch)pad.classList.add('on');
+  if(a)a.addEventListener('pointerdown',function(e){e.preventDefault();action();});
+  if(r)r.addEventListener('pointerdown',function(e){e.preventDefault();doRelease();});
+})();
+(function bindFull(){
+  const b=document.getElementById('btnFull');
+  if(!b)return;
+  b.addEventListener('click',function(){
+    const el=document.documentElement;
+    try{
+      if(document.fullscreenElement||document.webkitFullscreenElement){
+        if(document.exitFullscreen)document.exitFullscreen();
+        else if(document.webkitExitFullscreen)document.webkitExitFullscreen();
+      }else if(el.requestFullscreen)el.requestFullscreen();
+      else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();
+    }catch(err){}
+  });
+})();
+
+/* ─────────────────────────────────────────────────────────────
+   20. BOUCLE PRINCIPALE
+   Pas de temps fixe à 1/120 s. La physique du pendule devient instable en
+   dessous, et le jeu doit être identique en 60 Hz et en 120 Hz.
+   ───────────────────────────────────────────────────────────── */
+const STEP=1000/120;
+let acc=0, lastT=0, fpsAcc=0, fpsN=0;
+function step(){
+  frame++;
+  if(toastT>0)toastT--;
+  if(gs==='playing'&&!paused)stepPlayer();
+  stepCamera();
+}
+function frameLoop(now){
+  requestAnimationFrame(frameLoop);
+  if(!lastT)lastT=now;
+  let dt=now-lastT;lastT=now;
+  if(dt>250)dt=STEP;                 // onglet réveillé : on ne rattrape pas
+  watchPerf(dt);
+  fpsAcc+=dt;fpsN++;
+  if(fpsAcc>500){fps=1000/(fpsAcc/fpsN);fpsAcc=0;fpsN=0;}
+  acc+=dt;
+  let n=0;
+  while(acc>=STEP&&n<10){acc-=STEP;n++;step();}
+  // Le temps d'image affiché par le navigateur est plafonné par la
+  // synchronisation verticale : il ne dit rien du coût réel. On mesure donc
+  // le temps passé dans render(), qui est la vraie marge disponible.
+  const t0=performance.now();
+  render();
+  const t1=performance.now();
+  rtSamples[rtN++%rtSamples.length]=t1-t0;
+  if(rtN>rtSamples.length)rtFull=true;
+}
+const rtSamples=new Float64Array(120);let rtN=0,rtFull=false;
+function renderMs(){
+  const n=rtFull?rtSamples.length:rtN;
+  if(!n)return{p50:0,p95:0};
+  const a=Array.prototype.slice.call(rtSamples,0,n).sort(function(x,y){return x-y;});
+  return{p50:a[(n*0.5)|0],p95:a[Math.min(n-1,(n*0.95)|0)]};
+}
+
+/* ─────────────────────────────────────────────────────────────
+   21. DÉMARRAGE ET PONT DE DÉBOGAGE
+   ───────────────────────────────────────────────────────────── */
+function init(){
+  buildMaterials();
+  buildWindowColours();
+  buildCity();
+  buildRoute();
+  respawn();
+  resize();
+  requestAnimationFrame(frameLoop);
+}
+// Pont exposé pour les outils : shot_v3.js et le pilote automatique de la
+// session 2 en dépendent, et il évite de deviner l'état depuis l'extérieur.
+window.__v3={
+  CFG:CFG,P:P,CAM:CAM,RIGS:RIGS,
+  get state(){return{gs:gs,paused:paused,score:score,lives:lives,
+    rig:P.rig,pstate:P.state,amp:P.amp,ang:P.ang,angV:P.angV,
+    x:P.x,y:P.y,z:P.z,faces:drawnFaces,dropped:fnDropped,winFaces:winFaces,winDrawn:winDrawn,fps:fps,
+    qual:QUAL.name,sw:SW,sh:SH,render:renderMs()};},
+  action:action,release:doRelease,start:startGame,menu:toMenu,
+  pause:togglePause,quality:setQuality,
+  debug:function(v){debugOn=!!v;},
+  look:look,
+  // Utilisé par les tests : place le joueur sur un rig donné, au repos.
+  goRig:function(n){P.rig=clamp(n|0,0,RIGS.length-1);respawn();CAMS.ready=false;},
+  setAmp:function(a){const r=RIGS[P.rig];P.ang=0;P.angV=0.0001;setAmp(r,a);},
+  // Avance la simulation d'un nombre exact de pas : les captures de test
+  // sont ainsi reproductibles, au lieu de dépendre du temps réel écoulé.
+  sim:function(n){for(let i=0;i<(n|0);i++)step();},
+  // Fige la caméra à un endroit choisi. Sert notamment à la coller contre
+  // un mur pour vérifier le découpage au plan proche.
+  freeze:function(x,y,z,yaw,pitch){
+    camFrozen=true;CAM.x=x;CAM.y=y;CAM.z=z;
+    CAM.yaw=yaw;CAM.pitch=pitch||0;CAM.shakeX=0;CAM.shakeY=0;skyDirty=true;
+  },
+  unfreeze:function(){camFrozen=false;CAMS.ready=false;},
+  // Renvoie la tour occupée la plus proche d'un point : de quoi viser un
+  // mur sans le coder en dur.
+  nearestTower:function(x,z){
+    let best=null,bd=1e9;
+    for(let j=0;j<G;j++)for(let i=0;i<G;i++){
+      const k=j*G+i;if(!tOcc[k])continue;
+      const d=Math.hypot(tX[k]-x,tZ[k]-z);
+      if(d<bd){bd=d;best={x:tX[k],z:tZ[k],w:tW[k],d:tD[k],h:tH[k]};}
+    }
+    return best;
+  },
+};
+init();
+</script>
+</body>
+</html>

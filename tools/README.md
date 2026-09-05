@@ -9,7 +9,16 @@ node tools/check.js <fichier.html>     # syntaxe, chargement, parcours des état
 node tools/play_v2.js                  # joueur automatique, doit franchir les 12 niveaux de V2
 node tools/monkey_v1.js                # 8000 entrées aléatoires (clavier, tap, transitions brutales)
 node tools/monkey_v2.js                # même principe pour V2, y compris réglages et sélection de niveau
+node tools/reach_v3.js                 # preuve que chaque barre de Trapeze City est atteignable
 ```
+
+`reach_v3.js` rejoue la physique de `trapeze-city-v3.html` pour balayer, à
+chaque vol, le couple (amplitude, angle de lâcher). Il répond à la seule
+question qui compte pour un niveau de trapèze — *cette barre est-elle
+atteignable, et à partir de quelle amplitude ?* — à laquelle aucune
+relecture de code ne répond. Il sort en échec si un vol devient
+infranchissable : à relancer après tout changement de gravité, de longueur
+de câble ou de position de rig.
 
 N'utilisent que `fs`/`vm` de Node, via un DOM et un audio simulés
 (`sandbox.js`). Rien à installer. À lancer après **toute** modification de
@@ -32,7 +41,23 @@ node tools/s9_storage.js    # localStorage hostile (navigation privée) ne doit 
 node tools/s9_memory.js     # 30 minutes simulées : le tas ne doit pas dériver
 node tools/s9_multitouch.js # déplacement + action simultanés, deux points de contact réels
 node tools/s9_refresh.js    # la vitesse du jeu ne doit pas dépendre du taux de rafraîchissement
+node tools/shot_v3.js       # captures de contrôle de Trapeze City + enchaînement au clavier
 ```
+
+`shot_v3.js` fait deux choses. Il capture treize situations choisies — dont
+deux caméra collée contre une façade, qui prouvent le découpage au plan
+proche — et il **joue l'enchaînement complet au clavier** : pomper, lâcher,
+saisir, trois vols d'affilée, en dispatchant de vrais événements `keydown`.
+L'angle de lâcher n'y est pas codé en dur ; il est décidé image par image en
+rejouant la balistique du jeu depuis l'état courant. Un angle fixe ne vaut
+que pour une amplitude, et c'est en le découvrant que ce test a révélé
+l'amortissement bien trop fort du pendule. Il sort en échec si la traversée
+ne va pas jusqu'au bout.
+
+Il affiche aussi le temps passé dans `render()`, mesuré dans le jeu. C'est la
+seule mesure utile : le temps d'image vu du navigateur est plafonné par la
+synchronisation verticale et vaut 16,7 ms quoi qu'il arrive, y compris quand
+il reste dix fois la marge nécessaire.
 
 Ces scripts pilotent un vrai Chromium (le binaire préinstallé
 `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` dans l'environnement de

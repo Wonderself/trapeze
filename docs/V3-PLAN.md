@@ -365,6 +365,78 @@ passent, et ce qui reste hors de portée est écrit noir sur blanc.
 
 ---
 
-## 10. Les prompts
+## 10. État après S1
+
+**Livré** : `trapeze-city-v3.html`, 1533 lignes de JavaScript, un seul fichier,
+zéro dépendance, aucune étape de build. On se balance, on lâche, on vole,
+on rattrape la barre suivante, trois fois de suite, jusqu'à la fin du parcours.
+
+**Vérifié, pas supposé**
+
+| Vérification | Outil | Résultat |
+|---|---|---|
+| Syntaxe, chargement, parcours des états | `tools/check.js` | passe, boucle vivante sur Game Over |
+| Découpage au plan proche | `shot_v3.js`, captures `07` et `08` | caméra à 25 cm d'une façade, de face puis en rasant : aucun étalement |
+| Franchissabilité du parcours | `tools/reach_v3.js` | 3 vols, amplitude mini 87° / 96° / 107° sur 164° possibles |
+| Chaîne d'entrée complète | `shot_v3.js`, scénario `13` | pomper, lâcher, saisir au clavier, 3 vols, traversée bouclée |
+| Robustesse | fuzz de 12 000 images et 4 200 actions aléatoires | aucune exception, deux passages |
+| Coût du rendu | mesuré dans le jeu | 0,6 / 1,4 / 2,3 ms médian en basse / moyenne / haute |
+| Non-régression V1 et V2 | `tools/check.js` | les deux passent toujours, fichiers non modifiés |
+
+**Trois bugs réels trouvés, qu'aucune relecture n'aurait donnés**
+
+1. **L'impulsion plancher enfermait le pendule.** Elle *fixait* l'amplitude à
+   0,30 rad au lieu de garantir un minimum : chaque pompage y ramenait le
+   pendule et l'amplitude ne montait plus jamais. 185 appuis parfaits ne
+   servaient à rien. C'est l'ironie de la situation — le garde-fou censé
+   éviter le blocage était devenu le blocage.
+2. **Le budget de fenêtres était dépensé à l'envers.** Il était consommé dans
+   l'ordre du tri, donc par les façades lointaines, et les grandes façades du
+   premier plan finissaient nues. La répartition part maintenant des plus
+   proches, avec une trame plus grossière au loin.
+3. **L'amortissement mangeait 9 % d'énergie par seconde.** Invisible en
+   lisant le code (0,9992 par pas semble anodin), flagrant dès qu'on multiplie
+   par 120 pas par seconde. Ramené à 3 %.
+
+**Écarts assumés par rapport au plan**
+
+- **Densité relevée.** `render()` mesuré à 1,6 ms sur un budget de 16,7 laissait
+  dix fois la marge. Les budgets sont passés à 460 / 850 / 1400 faces et
+  360 / 520 / 700 m de distance. Laisser un décor artificiellement vide aurait
+  donné une fausse idée de ce que le socle peut porter en session 3.
+- **Niveau de détail plutôt que cache.** Le plan prévoyait un cache hors-écran
+  de la ville lointaine, invalidé à la rotation de la caméra. Remplacé par une
+  simple dégression : moins de faces et pas de fenêtres au loin. Aucun état à
+  invalider, donc aucun bug d'invalidation, pour un coût mesuré identique.
+- **Quatre rigs au lieu de deux.** Trois vols enchaînés valident ce que deux ne
+  valident pas : que la caméra, la saisie et l'état survivent à la répétition.
+  Le parcours complet à sept rigs reste à la session 2.
+- **Le sol n'est pas de la géométrie.** Un plan infini à y = 0 est exactement ce
+  que le tri par peintre gère le plus mal. Il est rempli en espace écran sous
+  la ligne d'horizon calculée : correct, et gratuit.
+
+**Deux décisions de conception à connaître pour la suite**
+
+- **Le pompage passe par l'énergie**, pas par un facteur ad hoc comme en Deluxe :
+  l'amplitude est déduite de l'énergie du pendule, donc un pompage vaut la même
+  chose où qu'on appuie dans la fenêtre. Il est verrouillé à un par demi-balancé,
+  armé au passage par le point bas. Résultat mesuré : 7,3 s pour atteindre le
+  grand soleil avec un timing juste, 13,7 s en martelant. Le martèlement marche
+  donc, mais deux fois moins bien — forgiving sans être gratuit.
+- **Les membres de l'acrobate sont tracés entre deux points projetés**, jamais
+  à partir d'angles. La convention d'angle de Deluxe (0 = vers le bas) avait
+  fini par produire des bras à l'envers ; ici cette classe d'erreur est
+  structurellement impossible.
+
+**Ce qui reste ouvert pour la session 2** : les figures et la cagnotte, le
+porteur, le filet, les étoiles de hype et le drone, les sept rigs, la machine
+à états des trois actes. Le compteur de vies (5) et l'écran de Game Over sont
+des béquilles temporaires, présentes pour que `check.js` traverse les trois
+jeux avec le même pont ; ils seront remplacés par le filet et la reprise au
+dernier toit, comme le prévoit le §7.
+
+---
+
+## 11. Les prompts
 
 Un prompt autonome par session, dans [`V3-PROMPTS.md`](V3-PROMPTS.md).
