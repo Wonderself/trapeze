@@ -16,7 +16,9 @@ const OUT=path.resolve(process.argv[2]||path.join(ROOT,'shots'));
 const EXE=process.env.CHROME_EXE||'/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 
 const SHOTS=[
-  {name:'01-titre', w:1280,h:720, run:null},
+  {name:'01-titre', w:1280,h:720, run:v=>{v.sim(900);}},
+  {name:'01b-cinematique', w:1280,h:720, run:v=>{v.start();v.sim(150);}},
+  {name:'01c-cinematique-fin', w:1280,h:720, run:v=>{v.start();v.sim(400);}},
   {name:'02-repos', w:1280,h:720, run:v=>{v.start();v.goRig(0);v.sim(60);}},
   {name:'03-balance', w:1280,h:720, run:v=>{v.start();v.goRig(0);v.setAmp(1.6);v.sim(94);}},
   {name:'04-grand-soleil', w:1280,h:720, run:v=>{v.start();v.goRig(1);v.setAmp(2.6);v.sim(120);}},

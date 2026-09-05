@@ -553,6 +553,108 @@ trame de lignes, porteur et drone en segments et boîtes. Les captures `14` à
 
 ---
 
-## 12. Les prompts
+## 12. État après S3
+
+**Livré** : la direction artistique et le post-traitement, dans le même
+`trapeze-city-v3.html` — 3 403 lignes, 149 Ko, un seul fichier, zéro
+dépendance, aucune police ni image externe. Ciel crépusculaire à nuages,
+néons roses et cyan avec lueur additive, édicules de toit, reflets de rue,
+lueur, frange chromatique, étalonnage, vignette, grain, bandes cinéma,
+ralenti sur réception ratée, traînée de figure, poussière de magnésie,
+logo TRAPEZE CITY dessiné au canvas, écran-titre en survol de ville et
+cinématique d'ouverture.
+
+**Le vrai sujet de cette session : le budget d'image**
+
+Le post-traitement a crevé le budget dès la première version — 20,7 ms en
+qualité haute contre 2,6 avant, soit 21 images par seconde. Deux mesures,
+et deux réécritures, l'ont ramené dans les clous.
+
+| Étape | Version 1 | Version finale | Ce qui a changé |
+|---|---|---|---|
+| Lueur | 8,3 ms | 2,5 ms | Ne relit plus le canevas fini. Les sources lumineuses sont connues — soleil, fenêtres, néons, particules, liseré — alors chacune dépose sa tache dans un tampon au quart de résolution **au moment où elle est dessinée**. |
+| Frange chromatique | 9,3 ms | ~0 ms | Fabriquée **en espace de lueur**, à 320 × 180, au lieu de deux copies plein écran. Une aberration ne se voit que sur les hautes lumières : c'est exactement là qu'elle est calculée. |
+| Étalonnage + vignette | 2 passes | 1 passe | Les deux multiplient l'image par une couleur. Il suffit que cette couleur varie du centre vers le bord : un seul dégradé radial fait les deux. |
+| Grain | 8,7 ms | 0,5 ms | Le carrelage du motif se refaisait à chaque image. Il est fait **une fois**, au redimensionnement, dans un canevas de la taille de l'écran. |
+
+**Deux pièges de mesure, à connaître pour la suite**
+
+1. **Le chronomètre autour de `render()` ment.** Il annonçait 4,8 ms pendant
+   que l'image en prenait 50. Le canevas 2D diffère son travail et le vide
+   en fin d'image : le coût tombe *après* la fenêtre de mesure. La seule
+   mesure fiable est le temps d'image réel. `shot_v3.js` affiche désormais
+   les deux, et le second seul fait foi.
+2. **Les passes plein écran ne s'additionnent pas, elles s'empilent.**
+   Mesurées une par une, toutes étaient « gratuites ». Ensemble : 44 ms.
+   Chaque changement de mode de composition sur le canevas principal force
+   un vidage. Sept passes sont devenues trois.
+
+**Mesures finales**, 1280 × 720, scène chargée, drone en vol :
+
+| Profil | Temps d'image | Images/s | Faces | Fenêtres |
+|---|---|---|---|---|
+| basse | 16,7 ms | **60** | 289 | 405 |
+| moyenne | 16,7 ms | **60** | 413 | 1 361 |
+| haute | 28,7 ms | 35 | 511 | 2 959 |
+
+**Le conteneur de développement n'a pas de GPU** : tout est rastérisé en
+logiciel, et une passe additive plein écran y coûte 6 ms là où elle est
+quasi gratuite sur une carte graphique. La qualité haute est donc mesurée
+dans le pire cas imaginable. Deux garde-fous, et ils fonctionnent :
+la lueur et la frange sont descendues d'un cran — **la qualité moyenne n'a
+plus de bloom**, comme le §8 l'exige d'un effet qui crève le budget — et la
+rétrogradation automatique de la session 1 a été vérifiée de bout en bout :
+partie lancée en haute, elle se stabilise en **moyenne à 60 images par
+seconde** sans intervention.
+
+**Quatre défauts trouvés en REGARDANT les captures**
+
+1. **L'étalonnage repeignait la ville en mauve pastel.** Deux rectangles
+   composés à pleine opacité : le `multiply` teintait jusqu'aux hautes
+   lumières et le `screen` relevait les noirs. Une ville de nuit ressortait
+   en plein jour. Ramené à 62 % d'un dégradé qui assombrit au lieu de lever.
+2. **La lueur des fenêtres noyait l'image.** Deux cents façades déposant
+   chacune une tache à pleine intensité, en composition additive : le
+   tampon saturait et la lueur éclairait la ville au lieu de l'auréoler.
+   Rayon et intensité bridés ; le gros de la lueur vient maintenant des
+   vraies sources.
+3. **Les halos de néon faisaient des disques de trois cents pixels.** Ils
+   étaient dimensionnés sur la LONGUEUR du bandeau. Un tube de néon
+   rayonne à quelques centimètres de lui-même : ils suivent désormais son
+   épaisseur.
+4. **L'écran-titre s'est trompé deux fois de distance.** À 210 m et 168 m
+   de haut, on ne voyait que du brouillard ; à 158 m, on était *dans* les
+   tours et l'image se remplissait d'une seule façade. La trame fait 918 m
+   de côté : à 340 m on est dehors, et la ville redevient une silhouette
+   découpée sur le couchant.
+
+**Écarts assumés par rapport au plan**
+
+- **La lueur n'a pas de seuil de luminance.** Le plan décrivait un bloom
+  classique : réduire l'image, seuiller, flouter, recomposer. Sans accès
+  pixel abordable, le seuil se paie par une relecture du canevas — 8,3 ms.
+  On ne seuille donc pas : **on sait déjà ce qui brille**, et chaque source
+  le déclare. Le résultat est plus contrôlable, et dix fois moins cher.
+- **La cinématique d'ouverture n'est pas une liste de points.** C'est une
+  interpolation amortie entre un plan large très haut et la place que la
+  caméra de jeu occuperait de toute façon. Elle se termine donc exactement
+  là où le jeu prend la main : aucun raccord à cacher, et rien à re-régler
+  si le cadrage de jeu change en session 4. Elle se saute d'une touche, et
+  `prefers-reduced-motion` la supprime.
+- **Le ralenti étire le temps de jeu, pas le pas de simulation.** On
+  nourrit l'accumulateur plus lentement ; la physique reste identique au
+  pas fixe près. Les outils, qui appellent `sim()` directement, ne le
+  voient pas — donc aucune mesure n'en dépend.
+
+**Ce qui reste ouvert pour la session 4** : le HUD façon jeu urbain (radar
+des toits, compteur de cagnotte typographié, chrono), les menus au canvas,
+l'audio synthétisé, les commandes tactiles multitouch, l'i18n complète et
+l'accessibilité. Les étoiles de hype, les cartons d'acte et l'écran de
+résultats ont désormais leur grammaire typographique : la session 4 les
+habille, elle ne les réinvente pas.
+
+---
+
+## 13. Les prompts
 
 Un prompt autonome par session, dans [`V3-PROMPTS.md`](V3-PROMPTS.md).

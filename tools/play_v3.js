@@ -199,10 +199,16 @@ function chaos(){
     if(!isFinite(P.x)||!isFinite(P.y)||!isFinite(P.z)||!isFinite(P.ang))
       throw new Error('etat non fini au pas '+f+' : '+JSON.stringify({x:P.x,y:P.y,ang:P.ang}));
   }
-  // La machine doit repartir proprement apres tout ce desordre.
-  V.menu();V.action();
-  const ok=V.state.gs==='playing';
-  return {acts:acts,seen:Object.keys(seen).sort().join(' '),restart:ok};
+  // La machine doit repartir proprement apres tout ce desordre : retour au
+  // menu, puis une partie neuve qui traverse la cinematique d'ouverture et
+  // rend la main au jeu.
+  V.menu();
+  if(V.state.gs!=='menu')return {acts:acts,seen:'',restart:false,why:'menu refuse'};
+  V.action();
+  const afterStart=V.state.gs;                 // 'intro' (ou 'playing' si mouvement reduit)
+  for(let i=0;i<900&&V.state.gs==='intro';i++)V.sim(1);
+  const ok=(afterStart==='intro'||afterStart==='playing')&&V.state.gs==='playing';
+  return {acts:acts,seen:Object.keys(seen).sort().join(' '),restart:ok,why:afterStart};
 }
 console.log('');
 console.log('  desordre : 60 000 pas, actions tirees au hasard');
