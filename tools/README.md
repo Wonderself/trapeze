@@ -10,7 +10,24 @@ node tools/play_v2.js                  # joueur automatique, doit franchir les 1
 node tools/monkey_v1.js                # 8000 entrées aléatoires (clavier, tap, transitions brutales)
 node tools/monkey_v2.js                # même principe pour V2, y compris réglages et sélection de niveau
 node tools/reach_v3.js                 # preuve que chaque barre de Trapeze City est atteignable
+node tools/play_v3.js [n]              # joueur automatique, doit boucler les 7 rigs de Trapeze City
 ```
+
+`play_v3.js` est le test qui décide si la session 2 tient : cinq profils de
+joueur différents doivent boucler la traversée des sept rigs sans
+intervention, en passant par `action()`, `release()` et `figure()` — les
+fonctions mêmes que les touches appellent. Il fait varier le pilote (patience
+au lâcher, longueur des figures, proportion de pompages ratés) parce que le
+jeu est déterministe : rejouer le même pilote cinq fois ne prouve rien de
+plus qu'une fois.
+
+Il enchaîne ensuite deux phases que la relecture de code ne remplace pas :
+60 000 pas d'actions tirées au hasard (lâcher à l'instant d'une prise, retour
+menu en plein vol, chute pendant un carton d'acte) qui doivent passer sans
+une seule exception et laisser la machine à états capable de repartir ; puis
+un scénario de chute qui vérifie que le filet rattrape, que la reprise se
+fait au dernier toit atteint, et que la chute coûte bien la cagnotte et du
+temps — jamais la partie.
 
 `reach_v3.js` rejoue la physique de `trapeze-city-v3.html` pour balayer, à
 chaque vol, le couple (amplitude, angle de lâcher). Il répond à la seule
@@ -44,18 +61,22 @@ node tools/s9_refresh.js    # la vitesse du jeu ne doit pas dépendre du taux de
 node tools/shot_v3.js       # captures de contrôle de Trapeze City + enchaînement au clavier
 ```
 
-`shot_v3.js` fait deux choses. Il capture treize situations choisies — dont
+`shot_v3.js` fait deux choses. Il capture dix-huit situations choisies — dont
 deux caméra collée contre une façade, qui prouvent le découpage au plan
-proche — et il **joue l'enchaînement complet au clavier** : pomper, lâcher,
-saisir, trois vols d'affilée, en dispatchant de vrais événements `keydown`.
+proche, et trois de la session 2 : une prise ratée avec reprise au filet, une
+réception au porteur, le drone de télévision en vol — et il **joue
+l'enchaînement complet au clavier** : ouvrir la traversée en pompant jusqu'à
+deux étoiles de hype, puis pomper, lâcher, saisir, six vols d'affilée, en
+dispatchant de vrais événements `keydown`.
 L'angle de lâcher n'y est pas codé en dur ; il est décidé image par image en
 rejouant la balistique du jeu depuis l'état courant. Un angle fixe ne vaut
 que pour une amplitude, et c'est en le découvrant que ce test a révélé
 l'amortissement bien trop fort du pendule. Il sort en échec si la traversée
 ne va pas jusqu'au bout.
 
-Il affiche aussi le temps passé dans `render()`, mesuré dans le jeu. C'est la
-seule mesure utile : le temps d'image vu du navigateur est plafonné par la
+Il affiche aussi le temps passé dans `render()`, mesuré dans le jeu, **avec
+le drone en vol et les particules à l'écran** — une scène calme ne dit rien
+du pire cas. C'est la seule mesure utile : le temps d'image vu du navigateur est plafonné par la
 synchronisation verticale et vaut 16,7 ms quoi qu'il arrive, y compris quand
 il reste dix fois la marge nécessaire.
 

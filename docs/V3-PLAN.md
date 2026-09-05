@@ -437,6 +437,122 @@ dernier toit, comme le prévoit le §7.
 
 ---
 
-## 11. Les prompts
+## 11. État après S2
+
+**Livré** : le gameplay complet et la traversée, dans le même
+`trapeze-city-v3.html` — 2 750 lignes, 120 Ko, un seul fichier, zéro
+dépendance, aucune étape de build. Sept rigs, trois actes, figures et
+cagnotte, cinq étoiles de hype, drone de télévision, porteur, filet et
+reprise, vent latéral, écran de résultats.
+
+**Vérifié, pas supposé**
+
+| Vérification | Outil | Résultat |
+|---|---|---|
+| Syntaxe, chargement, parcours des états | `tools/check.js` | passe, boucle vivante sur Game Over |
+| Franchissabilité des 7 rigs | `tools/reach_v3.js` | 6 vols, amplitude mini 91° / 99° / 109° / 120° / 129° / 144° sur 164° possibles |
+| Traversée de bout en bout | `tools/play_v3.js` | **5 profils de joueur sur 5 bouclent les 7 rigs**, 51 à 84 s, 0 chute |
+| Désordre d'entrées | `tools/play_v3.js` | 60 000 pas, 41 880 actions au hasard, aucune exception, machine à états repart |
+| Filet et reprise | `tools/play_v3.js` | chute rattrapée, reprise au dernier toit, cagnotte perdue, +4 s au chrono |
+| Enchaînement complet AU CLAVIER | `tools/shot_v3.js` | porte des 2 étoiles ouverte en pompant, puis 6 vols, rig 7/7 |
+| Prise ratée, porteur, drone | `shot_v3.js`, captures `14`, `15`, `16`, **regardées** | trois défauts de rendu trouvés, voir plus bas |
+| Découpage au plan proche (non-régression S1) | captures `07` et `08` | caméra à 25 cm d'une façade : aucun étalement |
+| Coût du rendu, **drone en vol** | mesuré dans le jeu | 0,9 / 1,7 / 2,6 ms médian, p95 3,1 ms en haute, 60 ips |
+| Particules | instrumenté | pic 40 sur 340 en traversée complète |
+| Non-régression V1 et V2 | `tools/check.js` | les deux passent, fichiers non modifiés |
+| Non-régression jouabilité V2 | `tools/play_v2.js` | 12 niveaux sur 12 franchis, final atteint |
+
+**Cinq bugs réels, qu'aucune relecture n'aurait donnés**
+
+1. **Les deux derniers vols étaient infranchissables.** `reach_v3.js` l'a dit
+   au premier essai : le vol 6 n'avait *aucune* solution, le vol 5 en avait
+   109 sur un balayage complet. Le dénivelé coûte bien plus cher que l'écart —
+   14 m de montée annulaient 40 m de portée. Profil de hauteurs et écarts
+   recalés jusqu'à une progression régulière de 91° à 144°.
+2. **Le porteur était posé sur une trajectoire tirée au hasard.** Il était
+   placé au mi-parcours du vol qui visait le mieux — mais il y a trois cents
+   trajectoires gagnantes, et leurs mi-parcours s'étalent sur dix mètres de
+   hauteur. Le vol réel du joueur passait à 4,5–6,8 m de ses mains, pour un
+   rayon de 3,1. Il est maintenant placé sur la **médiane** du nuage : on
+   attrape en volant la bonne ligne, ce qui est une adresse, au lieu de
+   dépendre du tirage.
+3. **La réception au porteur visait un point où personne n'est.** La distance
+   était mesurée 1,55 m sous ses mains, alors que le porteur saisit le
+   voltigeur aux poignets — les mains des deux se rejoignent, le corps pend
+   dessous. 1,55 m d'erreur sur un rayon de 3,4.
+4. **Les étoiles de hype oscillaient au seuil et rejouaient leur
+   célébration.** Déduire l'étoile de la hype par une division la fait
+   clignoter dès que la jauge se stabilise sur un palier. Mesuré sur une
+   capture : 316 particules vivantes sur 340 et une traînée de confettis
+   longue de toute l'image, pour une hype qui ne bougeait plus. Hystérésis
+   de 4 points ; le pic est retombé à 40.
+5. **La caméra s'enfonçait dans une façade à chaque chute.** Sa place est
+   déduite du portique : correcte au niveau des toits, catastrophique quinze
+   mètres plus bas. La capture d'une prise ratée montrait l'intérieur d'un
+   immeuble. Sous le niveau des toits elle se cale maintenant sur l'acrobate
+   lui-même, à 13 m perpendiculairement au plan du vol.
+
+**Un outil réparé au passage** : `tools/play_v2.js` ne démarrait plus du tout
+— il cherchait `sandbox.js` dans un dossier temporaire d'une session passée,
+qui n'existe plus. Le test de non-régression de la jouabilité de V2 était donc
+muet depuis un moment. Chemins rendus relatifs au script ; il repasse, 12
+niveaux sur 12. `trapeze-stars-v2.html` n'a pas été touché.
+
+**Un défaut de conception trouvé par le pilote automatique**
+
+**Marteler le pompage ne coûte pas qu'un ralentissement.** La session 1 avait
+mesuré 7,3 s au timing juste contre 13,7 s en martelant, et concluait
+« forgiving sans être gratuit ». C'est plus sévère que ça : en martelant,
+l'amplitude s'installe dans un cycle qui oscille entre 1,7 et 2,8 rad **sans
+jamais tenir le maximum**, et un appui donné juste avant le lâcher casse la
+vitesse au pire moment. Le dernier vol en demande 2,52 : il n'est pas
+franchissable en martelant. Le pilote automatique s'est bloqué dessus
+pendant 200 s avant qu'on comprenne. C'est assumé — le pompage rythmé est la
+compétence que l'acte 1 enseigne, et le final est l'endroit où elle se paie.
+
+**Écarts assumés par rapport au plan**
+
+- **Le vent est figé au lâcher, pas continu.** Le plan demandait un vent
+  latéral qui décale la trajectoire. Le joueur ne peut pas se diriger en vol :
+  un vent qui varie pendant le vol serait une taxe, pas une difficulté. Il
+  oscille donc lentement, il est affiché en permanence, et sa valeur est figée
+  à l'instant du lâcher — **choisir son moment devient la parade**. Ramené de
+  0,95 à 0,70 m/s² après mesure : le vol final approche déjà à 1,43 m de la
+  barre au mieux, et un décalage de 2,3 m l'aurait rendu infranchissable.
+- **La relance du porteur est résolue, pas simulée.** Elle vise la barre
+  suivante en rejouant la balistique du jeu, vent compris. Le porteur est une
+  récompense ; en faire une deuxième difficulté aurait puni le joueur d'avoir
+  réussi.
+- **Le vol final porte le vent ET le porteur.** Le plan disait « porteur au 5 »
+  et « vent latéral au 6 » d'un côté, « le final : la tour, le vol le plus
+  long, avec le porteur » de l'autre. Les deux lectures se rejoignent sur le
+  dernier vol : il a les deux.
+- **Les vies et l'écran de Game Over ne sont plus du jeu.** Comme le §7 le
+  prévoyait, le filet les remplace : une chute coûte la cagnotte, de la hype
+  et 4 s, jamais la partie. Les deux restent déclarés et rendus uniquement
+  parce que `check.js` traverse les trois jeux avec le même pont de test.
+
+**Deux décisions de conception à connaître pour la suite**
+
+- **La cagnotte s'encaisse à la réception, et seulement là.** Une figure suivie
+  d'une chute ne vaut rien. Répéter la même figure dans une cagnotte la dévalue
+  (×0,62 par répétition), chaque figure déjà en réserve majore la suivante
+  (+10 %), et redresser le corps avant la prise donne une **sortie propre**
+  (×1,35) — le seul bonus du jeu qui récompense d'*arrêter* une figure au bon
+  moment plutôt que de la prolonger.
+- **Le porteur cale son balancé sur le départ du voltigeur**, comme au vrai
+  trapèze : sa phase est fixée au lâcher pour que ses bras soient tendus quand
+  le vol médian arrive au mi-parcours. La fenêtre récompense donc une
+  trajectoire juste au lieu de tirer au sort.
+
+**Ce qui reste ouvert pour la session 3** : toute la direction artistique et
+le post-traitement. Le rendu de la session 2 est fonctionnel et volontairement
+brut — étoiles de hype en aplat, cartons d'acte en bandes simples, filet en
+trame de lignes, porteur et drone en segments et boîtes. Les captures `14` à
+`19` montrent l'état exact à reprendre.
+
+---
+
+## 12. Les prompts
 
 Un prompt autonome par session, dans [`V3-PROMPTS.md`](V3-PROMPTS.md).

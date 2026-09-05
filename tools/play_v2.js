@@ -1,8 +1,10 @@
 // Test de jouabilite V2 : un joueur automatique doit franchir un niveau.
 // Il ne triche pas — il passe par les memes entrees que le joueur humain.
 const fs=require('fs'),vm=require('vm'),path=require('path');
-const base=require('/tmp/claude-0/-home-user-trapeze/32d58d16-d375-5737-889c-76f1f8bd7c31/scratchpad/sandbox.js');
-const file='/home/user/trapeze/trapeze-stars-v2.html';
+// Chemins relatifs au script : l'outil pointait vers un dossier temporaire
+// d'une session passee, qui n'existe plus. Il ne demarrait plus du tout.
+const base=require(path.join(__dirname,'sandbox.js'));
+const file=path.join(__dirname,'..','trapeze-stars-v2.html');
 const html=fs.readFileSync(file,'utf8');
 const code=html.match(/<script>([\s\S]*?)<\/script>/)[1];
 

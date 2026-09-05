@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0a0418">
-<meta name="description" content="Trapeze City — le trapèze sur les toits d'une ville néon. Socle technique, session 1.">
+<meta name="description" content="Trapeze City — le trapèze sur les toits d'une ville néon. Sept rigs, trois actes, une traversée en direct.">
 <title>Trapeze City</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -47,6 +47,7 @@ body.touch #pad.on{display:block;}
 }
 .tbtn:active{transform:scale(0.92);background:rgba(255,46,136,0.30);}
 #tAct{right:calc(env(safe-area-inset-right,0px) + 20px);}
+#tFig{right:calc(env(safe-area-inset-right,0px) + 118px);width:72px;height:72px;bottom:calc(env(safe-area-inset-bottom,0px) + 30px);}
 #tRel{left:calc(env(safe-area-inset-left,0px) + 20px);}
 
 #rotate{
@@ -62,6 +63,7 @@ body.touch #pad.on{display:block;}
   <canvas id="c"></canvas>
   <div id="pad">
     <div class="tbtn" id="tRel">LÂCHER</div>
+    <div class="tbtn" id="tFig">FIGURE</div>
     <div class="tbtn" id="tAct">POMPER<br>SAISIR</div>
   </div>
   <button class="sysbtn" id="btnFull" title="Plein écran">⛶</button>
@@ -70,17 +72,22 @@ body.touch #pad.on{display:block;}
 <script>
 'use strict';
 /* ═══════════════════════════════════════════════════════════════════
-   TRAPEZE CITY — session 1 : socle technique
+   TRAPEZE CITY — sessions 1 et 2
 
    Un jeu de trapèze, sur les mêmes bases que Classic et Deluxe, posé sur
    les toits d'une ville. Le côté GTA est dans les graphismes et l'UI/UX,
    jamais dans les mécaniques : pas de véhicule, pas de poursuite, pas
    d'arme.
 
-   Cette session livre : la caméra 3D et sa projection (avec découpage au
-   plan proche), le rendu en couches, la génération de ville, les rigs de
-   trapèze, le pendule et le vol, la saisie de barre, l'acrobate, la
-   caméra de cadreur, la boucle à pas fixe et les profils de qualité.
+   Session 1 — le socle : caméra 3D et projection (avec découpage au plan
+   proche), rendu en couches, génération de ville, rigs de trapèze,
+   pendule plan placé en 3D, vol balistique, saisie de barre, acrobate,
+   caméra de cadreur, boucle à pas fixe, profils de qualité.
+
+   Session 2 — le jeu : figures et cagnotte encaissée à la réception,
+   cinq étoiles de hype avec multiplicateur, drone de télévision, porteur,
+   filet et reprise au dernier toit, vent latéral, les sept rigs du
+   parcours, la machine à états des trois actes et l'écran de résultats.
 
    Repère monde : X est, Y HAUT, Z nord. Une unité = un mètre.
    Ce n'est pas le repère de Deluxe, où Z était la profondeur d'avancée.
@@ -132,6 +139,63 @@ const CFG={
   GRAB_BUF:  10,     // pas de mémoire d'entrée
   GRIP_K:    [1.0,0.86,0.60],  // report de vitesse selon la qualité
 
+  /* ── Figures et cagnotte ───────────────────────────────────
+     La cagnotte n'est encaissée QU'À LA RÉCEPTION. Une figure faite
+     dans le vide et suivie d'une chute ne rapporte rien : c'est la
+     règle de Deluxe, et c'est elle qui donne un sens au risque. */
+  SPIN_ACC:  10.0,   // accélération de rotation en vol, rad/s²
+  SPIN_MAX:  11.5,   // vitesse de rotation maximale, rad/s (≈ 1,8 tour/s)
+  SPIN_DEC:  0.982,  // décélération quand la figure est relâchée, par pas
+  TRICK_PTS: 100,    // valeur d'un demi-tour
+  TRICK_REP: 0.62,   // dévaluation d'une figure déjà présente dans la cagnotte
+  TRICK_CHN: 0.10,   // bonus d'enchaînement, par figure déjà en cagnotte
+  CLEAN_W:   0.40,   // tolérance de sortie propre à la réception, en radians
+  CASH_Q:    [1.55,1.15,0.80],  // encaissement selon la qualité de prise
+
+  /* ── Étoiles de hype ───────────────────────────────────────
+     La chaleur du public de Deluxe, en langage de jeu urbain : cinq
+     étoiles au lieu de trois paliers. Elle se gagne en prenant des
+     risques et retombe toute seule dès qu'on joue petit. */
+  HYPE_MAX:  100,
+  STAR_STEP: 20,     // points de hype par étoile
+  STAR_HYST: 4,      // hystérésis : une étoile ne se reperd pas au seuil
+  HYPE_DEC:  0.0085, // fuite de base, par pas
+  HYPE_DECS: 0.0052, // fuite supplémentaire par étoile déjà gagnée
+  HYPE_AMP:  0.056,  // gain d'ampleur, par pas, au carré de l'amplitude
+  HYPE_PUMP: 1.0,    // gain d'un pompage réussi
+  HYPE_GIANT:12,     // gain du premier grand soleil sur un rig
+  HYPE_TRICK:1.8,
+  HYPE_CATCH:[15,8,3],
+  HYPE_PORT: 20,
+  HYPE_FALL: 0.40,   // ce qu'il reste de la hype après une chute
+  MULT:      [1,1.4,1.8,2.2,2.6,3.0],  // multiplicateur par étoile, jusqu'à ×3
+  GATE_STARS:2,      // étoiles à atteindre pour ouvrir la traversée
+  DRONE_ST:  3,      // étoiles à partir desquelles le drone de télé décolle
+
+  /* ── Filet et reprise ──────────────────────────────────────
+     Tomber ne coûte JAMAIS la partie : une démo ne punit pas. Ça coûte
+     la cagnotte en cours, de la hype, et du temps au chrono. */
+  NET_DROP:  15,     // le filet est tendu sous le plus bas des deux toits
+  NET_PEN:   4,      // pénalité de chute, en secondes
+  NET_HOLD:  76,     // pas passés dans le filet avant la reprise
+
+  /* ── Porteur ───────────────────────────────────────────────
+     Fenêtre annoncée, suspension, relance. La relance est RÉSOLUE vers
+     la barre suivante : le porteur est une récompense, jamais une
+     difficulté de plus. */
+  PORT_ROPE: 6.4,
+  PORT_R:    3.4,    // rayon de réception du porteur (celui d'une barre)
+  PORT_W:    0.62,   // demi-fenêtre d'annonce, en radians
+  PORT_HOLD: 52,     // pas de suspension avant la relance
+  PORT_MULT: 2.4,    // multiplicateur d'encaissement au porteur
+
+  /* ── Vent latéral ──────────────────────────────────────────
+     Il est ANNONCÉ et il oscille lentement : sa valeur est figée au
+     lâcher. Le joueur ne peut pas se diriger en vol, mais il peut
+     choisir son moment — c'est là qu'est la compétence. */
+  WIND_W:    0.0042, // pulsation du vent, par pas (période ≈ 12,5 s)
+
+
   /* ── Caméra de cadreur ─────────────────────────────────────
      Elle se place DE TROIS QUARTS par rapport au plan du balancé,
      jamais dedans : c'est ce qui donne à la fois la lisibilité du
@@ -163,22 +227,58 @@ const DEG=Math.PI/180;
    ───────────────────────────────────────────────────────────── */
 const I18N={
   fr:{
-    title:'TRAPEZE CITY', sub:'Session 1 — socle technique',
+    title:'TRAPEZE CITY', sub:'Traversée en direct',
     start:'Entrer en scène', hintStart:'ESPACE pour commencer',
     pump:'ESPACE : pomper', release:'S : lâcher', grab:'ESPACE : saisir',
+    figure:'F : figure',
     amp:'AMPLITUDE', giant:'GRAND SOLEIL', rig:'RIG',
     perfect:'PRISE PARFAITE', good:'BONNE PRISE', poor:'PRISE JUSTE',
     fall:'CHUTE', arrived:'TRAVERSÉE BOUCLÉE', again:'R pour recommencer',
     paused:'PAUSE', resume:'P pour reprendre',
+    /* Session 2 */
+    hype:'HYPE', bank:'CAGNOTTE', tricks:'figures', chrono:'TEMPS',
+    demi:'DEMI-TOUR', salto:'SALTO', vrille:'VRILLE',
+    clean:'SORTIE PROPRE', chain:'ENCHAÎNEMENT',
+    net:'FILET', lost:'CAGNOTTE PERDUE', back:'REPRISE AU DERNIER TOIT',
+    porteur:'PORTEUR !', portReady:'PORTEUR — BRAS TENDUS', portGo:'RELANCE !',
+    wind:'VENT', windCalm:'VENT FAIBLE',
+    drone:'DRONE DE TÉLÉVISION EN APPROCHE',
+    act1:'ACTE I', act1s:'L\u2019ENTRÉE EN SCÈNE',
+    act2:'ACTE II', act2s:'LA TRAVERSÉE',
+    act3:'ACTE III', act3s:'LE FINAL',
+    gate:'DEUX ÉTOILES DE HYPE POUR OUVRIR LA TRAVERSÉE',
+    gateOpen:'LA TRAVERSÉE EST OUVERTE',
+    results:'FIN DE TRAVERSÉE', rTime:'TEMPS TOTAL', rChain:'MEILLEUR ENCHAÎNEMENT',
+    rStars:'ÉTOILES MAXIMALES', rFalls:'CHUTES', rBank:'CAGNOTTE TOTALE',
+    rScore:'SCORE', rGrade:'NOTE', rAgain:'ESPACE pour rejouer',
+    bow:'SALUT',
   },
   en:{
-    title:'TRAPEZE CITY', sub:'Session 1 — technical core',
+    title:'TRAPEZE CITY', sub:'Live crossing',
     start:'Take the stage', hintStart:'SPACE to begin',
     pump:'SPACE: pump', release:'S: release', grab:'SPACE: catch',
+    figure:'F: trick',
     amp:'SWING', giant:'GIANT SWING', rig:'RIG',
     perfect:'PERFECT CATCH', good:'GOOD CATCH', poor:'CLOSE CATCH',
     fall:'FALL', arrived:'CROSSING COMPLETE', again:'R to restart',
     paused:'PAUSED', resume:'P to resume',
+    /* Session 2 */
+    hype:'HYPE', bank:'BANK', tricks:'tricks', chrono:'TIME',
+    demi:'HALF TURN', salto:'SOMERSAULT', vrille:'TWIST',
+    clean:'CLEAN EXIT', chain:'CHAIN',
+    net:'NET', lost:'BANK LOST', back:'BACK TO LAST ROOF',
+    porteur:'CAUGHT!', portReady:'CATCHER — ARMS OUT', portGo:'THROW!',
+    wind:'WIND', windCalm:'WIND LOW',
+    drone:'TV DRONE INBOUND',
+    act1:'ACT I', act1s:'TAKING THE STAGE',
+    act2:'ACT II', act2s:'THE CROSSING',
+    act3:'ACT III', act3s:'THE FINALE',
+    gate:'TWO HYPE STARS TO OPEN THE CROSSING',
+    gateOpen:'THE CROSSING IS OPEN',
+    results:'CROSSING OVER', rTime:'TOTAL TIME', rChain:'BEST CHAIN',
+    rStars:'PEAK STARS', rFalls:'FALLS', rBank:'TOTAL BANK',
+    rScore:'SCORE', rGrade:'GRADE', rAgain:'SPACE to play again',
+    bow:'BOW',
   },
 };
 let LANG=(navigator.language||'fr').slice(0,2)==='en'?'en':'fr';
@@ -368,6 +468,7 @@ const STRUCT_COLS=[
   {r:110,g:96,b:82},   // platelage du toit
   {r:150,g:132,b:96},  // barre de trapèze
   {r:30,g:26,b:44},    // socle, ombre portée
+  {r:126,g:136,b:158}, // coque du drone de télévision, gris clair
 ];
 const ALL_COLS=BASE_COLS.concat(STRUCT_COLS);
 
@@ -771,30 +872,43 @@ function buildCity(){
    la trame trop proches sont effacées, pour que la ligne se lise.
    ───────────────────────────────────────────────────────────── */
 const RIGS=[];
-function addRig(x,z,roofY,rope,side){
+function addRig(x,z,roofY,rope,cfg){
   RIGS.push({
     x:x, z:z, roofY:roofY, rope:rope,
     ax:x, ay:roofY+CFG.RIG_H, az:z,   // point d'ancrage
     dx:0, dz:1,                        // direction du plan de balancé
-    side:side||1,                      // côté de cadrage de la caméra
+    side:(cfg&&cfg.side)||1,           // côté de cadrage de la caméra
     ang:0, angV:0,                     // état de la barre au repos
     idx:RIGS.length,
+    // ── Difficulté, portée par le rig et non par un réglage caché ──
+    gw:(cfg&&cfg.gw)||1,               // resserrement de la fenêtre de prise
+    wind:(cfg&&cfg.wind)||0,           // vent latéral subi par le vol qui en part
+    port:(cfg&&cfg.port)?1:0,          // un porteur travaille sur ce vol
+    tower:(cfg&&cfg.tower)?1:0,        // la tour du final
+    giants:0,                          // grands soleils déjà encaissés sur ce rig
   });
 }
+
+/* Le parcours : SEPT RIGS, du toit du port au sommet de la tour du centre.
+   La progression est lisible dans le tableau lui-même — l'écart grandit à
+   chaque vol, la fenêtre de prise se resserre, le porteur arrive au
+   cinquième et le vent latéral au sixième. Rien n'est caché dans une
+   courbe de difficulté implicite.
+
+   Les hauteurs montent du port (au sud, bas) vers le centre (haut) :
+   c'est la silhouette de la ville générée, le parcours la suit. */
 function buildRoute(){
   RIGS.length=0;
-  // Quatre tours, trois vols. Écarts croissants, toits qui montent :
-  // la difficulté est dans les chiffres, pas dans un réglage caché.
   const pts=[
-    {x:-26, z:-88, h:74},
-    {x:-14, z:-66, h:76},
-    {x:  4, z:-45, h:79},
-    {x: 26, z:-23, h:82},
+    {x: -70.0, z:-158.0, h:56, gw:1.30},          // 1 · échauffement
+    {x: -61.3, z:-134.0, h:59, gw:1.20},          // 2
+    {x: -49.7, z:-109.1, h:63, gw:1.05},          // 3
+    {x: -34.7, z: -83.1, h:68, gw:0.92},          // 4
+    {x: -16.0, z: -56.5, h:74, gw:0.82, port:1},  // 5 · le porteur
+    {x:   6.5, z: -29.7, h:80, gw:0.74, wind:0.70, port:1}, // 6 · le vent, puis le final
+    {x:  33.0, z:  -3.2, h:87, gw:0.70, tower:1}, // 7 · la tour
   ];
-  for(let n=0;n<pts.length;n++){
-    const p=pts[n];
-    addRig(p.x,p.z,p.h,CFG.ROPE,(n%2===0)?1:1);
-  }
+  for(let n=0;n<pts.length;n++)addRig(pts[n].x,pts[n].z,pts[n].h,CFG.ROPE,pts[n]);
   // Direction du plan de balancé : vers le rig suivant. Le dernier reprend
   // la direction du précédent, pour que son portique reste cohérent.
   for(let n=0;n<RIGS.length;n++){
@@ -811,6 +925,13 @@ function buildRoute(){
       if(Math.hypot(tX[k]-RIGS[n].x,tZ[k]-RIGS[n].z)<27){tOcc[k]=0;break;}
     }
   }
+  buildPorteurs();
+}
+
+/* Écart et dénivelé d'un vol : sert au HUD, aux porteurs et aux tests. */
+function gapOf(n){
+  const a=RIGS[n], b=RIGS[n+1];
+  return b?Math.hypot(b.x-a.x,b.z-a.z):0;
 }
 // Position de la barre d'un rig pour un angle donné.
 // angle 0 : la barre pend à la verticale sous l'ancrage.
@@ -821,6 +942,243 @@ function barAt(rig,ang){
   _bx=rig.ax+rig.dx*s*rig.rope;
   _by=rig.ay-co*rig.rope;
   _bz=rig.az+rig.dz*s*rig.rope;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   10 bis. BALISTIQUE HORS LIGNE
+
+   Deux besoins, une seule physique : placer les porteurs sur la
+   trajectoire réelle d'un vol, et résoudre la relance d'un porteur vers
+   la barre suivante. Les deux rejouent EXACTEMENT le pas de simulation du
+   vol — même gravité, même traînée, même vent — pour qu'aucune de ces
+   aides ne repose sur une approximation qui dériverait du jeu.
+
+   Tout est appelé hors de la boucle chaude : au chargement pour les
+   porteurs, sur événement pour la relance.
+   ───────────────────────────────────────────────────────────── */
+let _fmiss=0, _fmx=0, _fmy=0, _fmz=0, _fmt=0;  // approche mini, point et pas de mi-vol
+// Rejoue un vol depuis un état de pendule (amp, angle de lâcher) et mesure
+// l'approche de la barre visée. Renseigne aussi le point de mi-parcours
+// horizontal, qui est là où un porteur doit tendre les bras.
+function simFlight(n,amp,rel,wind){
+  const rig=RIGS[n], tgt=RIGS[n+1];
+  if(!tgt){_fmiss=1e9;return 1e9;}
+  const w2=CFG.G_SWING/rig.rope;
+  let ang=amp, angV=0, guard=0;
+  while(guard++<6000){
+    angV+=-w2*Math.sin(ang)*DT;angV*=CFG.DAMP;ang+=angV*DT;
+    if(angV>0&&ang>=rel)break;
+  }
+  if(ang<rel-0.05){_fmiss=1e9;return 1e9;}
+  const c=Math.cos(ang), si=Math.sin(ang), v=angV*rig.rope;
+  const px=rig.dz, pz=-rig.dx;                    // normale horizontale du plan
+  let x=rig.ax+rig.dx*si*rig.rope, y=rig.ay-c*rig.rope, z=rig.az+rig.dz*si*rig.rope;
+  const sx=x, sz=z;
+  let vx=v*rig.dx*c, vy=v*si, vz=v*rig.dz*c;
+  const tx=tgt.ax, ty=tgt.ay-tgt.rope, tz=tgt.az;
+  const halfD=Math.hypot(tx-sx,tz-sz)*0.5;
+  let best=1e9, midDone=false;
+  _fmx=x;_fmy=y;_fmz=z;_fmt=0;
+  for(let i=0;i<1400;i++){
+    vy-=CFG.G_FLIGHT*DT;
+    if(wind){vx+=px*wind*DT;vz+=pz*wind*DT;}
+    vx*=CFG.AIR_DRAG;vy*=CFG.AIR_DRAG;vz*=CFG.AIR_DRAG;
+    x+=vx*DT;y+=vy*DT;z+=vz*DT;
+    if(!midDone&&Math.hypot(x-sx,z-sz)>=halfD){midDone=true;_fmx=x;_fmy=y;_fmz=z;_fmt=i+1;}
+    const d=Math.hypot(x-tx,y-ty,z-tz);
+    if(d<best)best=d;
+    if(y<ty-40)break;
+  }
+  _fmiss=best;return best;
+}
+
+/* Résout la vitesse de lancer qui mène d'un point à un autre, AVEC la
+   traînée et le vent du jeu. Il n'existe pas de formule fermée quand la
+   traînée est multiplicative : on balaie le temps de vol, on estime la
+   vitesse sans traînée, puis on corrige par deux itérations mesurées.
+   Le résultat est écrit dans _lvx/_lvy/_lvz. */
+let _lvx=0,_lvy=0,_lvz=0;
+function solveLaunch(sx,sy,sz,tx,ty,tz,px,pz,wind){
+  let bestErr=1e9;
+  for(let T=0.85;T<=3.0;T+=0.05){
+    const nst=Math.round(T/DT);
+    // Première estimation : balistique sans traînée.
+    let vx=(tx-sx)/T, vy=(ty-sy)/T+0.5*CFG.G_FLIGHT*T, vz=(tz-sz)/T;
+    for(let it=0;it<3;it++){
+      let x=sx,y=sy,z=sz,ax=vx,ay=vy,az=vz;
+      for(let i=0;i<nst;i++){
+        ay-=CFG.G_FLIGHT*DT;
+        if(wind){ax+=px*wind*DT;az+=pz*wind*DT;}
+        ax*=CFG.AIR_DRAG;ay*=CFG.AIR_DRAG;az*=CFG.AIR_DRAG;
+        x+=ax*DT;y+=ay*DT;z+=az*DT;
+      }
+      const ex=tx-x, ey=ty-y, ez=tz-z;
+      const err=Math.hypot(ex,ey,ez);
+      if(it===2||err<0.02){
+        if(err<bestErr){bestErr=err;_lvx=vx;_lvy=vy;_lvz=vz;}
+        break;
+      }
+      // La correction est amortie : le système est faiblement non linéaire,
+      // un pas plein oscille.
+      vx+=ex/T*0.92;vy+=ey/T*0.92;vz+=ez/T*0.92;
+    }
+    if(bestErr<0.05)break;
+  }
+  return bestErr;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   10 ter. LES PORTEURS
+
+   Fenêtre annoncée, suspension, relance — la mécanique de Deluxe,
+   transposée. Le porteur est pendu par les jarrets à son propre trapèze,
+   dans le PLAN DU VOL, et ses mains balaient un arc qui coupe la
+   trajectoire naturelle. Sa position n'est pas devinée : elle est
+   calculée en rejouant un vol nominal (simFlight ci-dessus) et en prenant
+   le point de mi-parcours. C'est ce qui garantit qu'il est réellement
+   sur le chemin.
+
+   Il ne pénalise jamais : hors fenêtre il rentre les bras, l'acrobate
+   passe et va chercher sa barre lui-même.
+   ───────────────────────────────────────────────────────────── */
+const PORTS=[];
+// Nuage des mi-parcours des trajectoires gagnantes. Dimensionne au plus
+// large : il n'est rempli qu'au chargement, jamais pendant une partie.
+const _pcMX=new Float64Array(1024), _pcMY=new Float64Array(1024);
+const _pcMZ=new Float64Array(1024), _pcMT=new Float64Array(1024);
+const _pcOrd=[];
+function buildPorteurs(){
+  PORTS.length=0;
+  for(let n=0;n<RIGS.length-1;n++){
+    if(!RIGS[n].port)continue;
+    // Où tendre les bras ? Pas au mi-parcours d'UNE trajectoire choisie au
+    // hasard parmi celles qui marchent : elles sont trois cents, et leurs
+    // mi-parcours s'étalent sur dix mètres de hauteur. Un porteur posé sur
+    // l'une d'elles est hors d'atteinte de presque toutes les autres — le
+    // défaut exact qu'on a mesuré ici.
+    // On relève donc TOUT le nuage et on prend sa MÉDIANE en hauteur :
+    // le porteur se place là où passe la moitié des vols réussis, et son
+    // rayon couvre le reste. Voler la bonne ligne redevient une adresse,
+    // au lieu d'être un tirage au sort.
+    let m=0;
+    for(let amp=1.30;amp<=CFG.AMP_MAX&&m<1024;amp+=0.10){
+      for(let rel=0.16;rel<=1.44&&m<1024;rel+=0.06){
+        if(simFlight(n,amp,rel,0)>=CFG.GRAB_R||!_fmt)continue;
+        _pcMX[m]=_fmx;_pcMY[m]=_fmy;_pcMZ[m]=_fmz;_pcMT[m]=_fmt;m++;
+      }
+    }
+    if(!m)continue;
+    _pcOrd.length=m;
+    for(let i=0;i<m;i++)_pcOrd[i]=i;
+    _pcOrd.sort(function(a,b){return _pcMY[a]-_pcMY[b];});
+    const med=_pcOrd[m>>1];
+    const rig=RIGS[n];
+    const angV=0.0165;
+    PORTS.push({
+      from:n,
+      // Ancrage : les mains à la hauteur médiane des vols gagnants.
+      ax:_pcMX[med], ay:_pcMY[med]+CFG.PORT_ROPE, az:_pcMZ[med],
+      dx:rig.dx, dz:rig.dz,
+      rope:CFG.PORT_ROPE,
+      phase:0, ang:0, angV:angV, amp:0.80,
+      // Calage : la phase donnée au lâcher pour que les bras soient tendus
+      // quand le vol médian arrive au mi-parcours. Le porteur se règle sur
+      // le voltigeur, comme au vrai trapèze — la fenêtre récompense donc
+      // une trajectoire juste, elle ne tire pas au sort.
+      lead:0.28-_pcMT[med]*angV,
+      mt:_pcMT[med], midY:_pcMY[med], spread:m,
+      ready:false, used:0, announced:0,
+    });
+  }
+}
+// Mains du porteur pour un angle donné. Il pend par les jarrets : ses
+// mains sont au bout de la corde, sous l'ancrage.
+let _hx=0,_hy=0,_hz=0;
+function portHands(c,ang){
+  const s=Math.sin(ang), co=Math.cos(ang);
+  _hx=c.ax+c.dx*s*c.rope;
+  _hy=c.ay-co*c.rope;
+  _hz=c.az+c.dz*s*c.rope;
+}
+function portOf(n){
+  for(let i=0;i<PORTS.length;i++)if(PORTS[i].from===n)return PORTS[i];
+  return null;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   10 quater. LISTES LIBRES : PARTICULES ET TEXTES FLOTTANTS
+
+   Aucune allocation dans la boucle chaude. Les particules vivent dans
+   des tableaux typés avec une pile d'indices libres ; les textes
+   flottants dans un anneau d'objets réutilisés. Rien n'est créé ni
+   supprimé pendant une image.
+   ───────────────────────────────────────────────────────────── */
+const PCAP=340;
+const pX=new Float64Array(PCAP), pY=new Float64Array(PCAP), pZ=new Float64Array(PCAP);
+const pVX=new Float64Array(PCAP), pVY=new Float64Array(PCAP), pVZ=new Float64Array(PCAP);
+const pLife=new Float64Array(PCAP), pMax=new Float64Array(PCAP), pR=new Float64Array(PCAP);
+const pCol=new Int32Array(PCAP);
+const pFree=new Int32Array(PCAP);
+let pFreeN=0, pLive=0, pLiveMax=0;
+const PART_COLS=['#25E5FF','#FF2E88','#FFD98A','#9CFF7A','#FFFFFF','#FF8A3D'];
+function partReset(){
+  pFreeN=PCAP;pLive=0;pLiveMax=0;
+  for(let i=0;i<PCAP;i++){pFree[i]=i;pLife[i]=0;}
+}
+function emit(x,y,z,vx,vy,vz,life,r,col){
+  if(pFreeN<=0)return;
+  const i=pFree[--pFreeN];
+  pX[i]=x;pY[i]=y;pZ[i]=z;
+  pVX[i]=vx;pVY[i]=vy;pVZ[i]=vz;
+  pLife[i]=life;pMax[i]=life;pR[i]=r;pCol[i]=col;
+  pLive++;
+  if(pLive>pLiveMax)pLiveMax=pLive;
+}
+// Gerbe isotrope. Le bruit vient d'un hachage entier : pas de Math.random
+// dans le chemin de rendu, et une gerbe identique se rejoue à l'identique.
+let _bseed=1;
+function burst(x,y,z,n,spd,col,life,r){
+  for(let i=0;i<n;i++){
+    _bseed=(_bseed*1664525+1013904223)>>>0;
+    const a=(_bseed/4294967296)*6.2832;
+    _bseed=(_bseed*1664525+1013904223)>>>0;
+    const b=((_bseed/4294967296)-0.5)*2.4;
+    _bseed=(_bseed*1664525+1013904223)>>>0;
+    const k=0.35+0.65*(_bseed/4294967296);
+    const ch=Math.cos(b);
+    emit(x,y,z,Math.cos(a)*ch*spd*k,Math.sin(b)*spd*k+spd*0.35,Math.sin(a)*ch*spd*k,
+      life*(0.6+0.6*k),r,col);
+  }
+}
+function stepParticles(){
+  for(let i=0;i<PCAP;i++){
+    if(pLife[i]<=0)continue;
+    pLife[i]--;
+    if(pLife[i]<=0){pFree[pFreeN++]=i;pLive--;continue;}
+    pVY[i]-=5.0*DT;
+    pVX[i]*=0.985;pVY[i]*=0.985;pVZ[i]*=0.985;
+    pX[i]+=pVX[i]*DT;pY[i]+=pVY[i]*DT;pZ[i]+=pVZ[i]*DT;
+  }
+}
+
+const FTMAX=14;
+const FT=[];
+for(let i=0;i<FTMAX;i++)FT.push({live:0,x:0,y:0,z:0,t:0,max:0,txt:'',col:'#fff',size:22});
+let ftNext=0;
+function ftReset(){for(let i=0;i<FTMAX;i++)FT[i].live=0;ftNext=0;}
+function ftext(x,y,z,txt,col,size){
+  // Anneau : le plus ancien cède sa place. Aucun objet n'est créé.
+  let f=null;
+  for(let i=0;i<FTMAX;i++){const o=FT[(ftNext+i)%FTMAX];if(!o.live){f=o;ftNext=(ftNext+i+1)%FTMAX;break;}}
+  if(!f){f=FT[ftNext];ftNext=(ftNext+1)%FTMAX;}
+  f.live=1;f.x=x;f.y=y;f.z=z;f.t=0;f.max=82;f.txt=txt;f.col=col||'#fff';f.size=size||22;
+}
+function stepTexts(){
+  for(let i=0;i<FTMAX;i++){
+    const f=FT[i];if(!f.live)continue;
+    f.t++;f.y+=0.030;
+    if(f.t>=f.max)f.live=0;
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -837,17 +1195,100 @@ function barAt(rig,ang){
    naturelle à tester : une distance entre deux points.
    ───────────────────────────────────────────────────────────── */
 const P={
-  state:'hang',        // 'hang' | 'fly' | 'fall'
+  state:'hang',        // 'hang' | 'fly' | 'held' | 'net'
   rig:0, dst:1,
   ang:0, angV:0,
   x:0,y:0,z:0,
   vx:0,vy:0,vz:0,
-  phi:0, spin:0,
-  amp:0, flyT:0, fallT:0,
+  phi:0, spin:0, spinDir:-1, spinAcc:0, halfs:0,
+  amp:0, flyT:0, netT:0, holdT:0,
   grabBuf:0, pumpCd:0, pumpArm:1,
+  trickBuf:0, trickHeld:0,
   pike:0, tuck:0,
+  windA:0, port:null,
   best:0,
 };
+
+/* ── Chrono, hype, cagnotte, bilan ───────────────────────────
+   Toutes les mesures de la traversée vivent ici. L'écran de résultats
+   ne recalcule rien : il lit. */
+let hype=0, gateOpen=0, act=1, actT=0;
+let bankVal=0, bankN=0;
+const bankIds=new Int32Array(96);      // figures en cagnotte, par identifiant
+let runSteps=0, penalty=0, falls=0, totalBank=0, maxStars=0, bestChain=0;
+let finT=0;                            // minutage du salut final
+
+const TRICK_KEYS=['demi','salto'];
+const ACT_KEYS=[['act1','act1s'],['act2','act2s'],['act3','act3s']];
+const ACT_CARD=200;
+
+/* Le compte d'étoiles est À HYSTÉRÉSIS, et ce n'est pas un raffinement :
+   déduire l'étoile de la hype par une simple division la fait osciller
+   autour du seuil, et chaque oscillation rejoue la célébration. Mesuré :
+   316 particules vivantes sur 340 et une traînée de confettis longue de
+   toute l'image, pour une hype qui ne bougeait plus. Une étoile se gagne
+   au seuil, elle ne se reperd que quatre points plus bas. */
+let starsNow=0;
+function hypeStars(){return starsNow;}
+function refreshStars(){
+  const before=starsNow;
+  while(starsNow<5&&hype>=(starsNow+1)*CFG.STAR_STEP)starsNow++;
+  while(starsNow>0&&hype<starsNow*CFG.STAR_STEP-CFG.STAR_HYST)starsNow--;
+  if(starsNow>maxStars)maxStars=starsNow;
+  if(starsNow>before){
+    shake(2+starsNow);
+    burst(P.x,P.y+1.2,P.z,4+starsNow*2,3.4,starsNow>=CFG.DRONE_ST?1:0,46,0.11);
+    if(starsNow===CFG.DRONE_ST)ftext(P.x,P.y+3.4,P.z,t('drone'),'#25E5FF',18);
+  }
+}
+function hypeMult(){return CFG.MULT[starsNow];}
+function runTime(){return runSteps/120+penalty;}
+
+function addHype(v){
+  hype=clamp(hype+v,0,CFG.HYPE_MAX);
+  refreshStars();
+}
+
+function addScore(pts){
+  const v=Math.round(pts);
+  score+=v;
+  if(score>SV.best){SV.best=score;persist();}
+  return v;
+}
+
+/* La cagnotte : une figure vaut ce qu'elle vaut UNE FOIS. La refaire dans
+   la même cagnotte la dévalue — c'est ce qui force la variété — et chaque
+   figure déjà en réserve majore la suivante : enchaîner paie.
+   Rien n'est encaissé tant que la réception n'est pas passée. */
+function bankTrick(id,pts){
+  let rep=0;
+  const kn=bankN<bankIds.length?bankN:bankIds.length;
+  for(let i=0;i<kn;i++)if(bankIds[i]===id)rep++;
+  const val=pts*Math.pow(CFG.TRICK_REP,rep)*(1+CFG.TRICK_CHN*bankN);
+  bankVal+=val;
+  if(bankN<bankIds.length)bankIds[bankN]=id;
+  bankN++;
+  addHype(CFG.HYPE_TRICK);
+  return val;
+}
+function cashBank(mult){
+  if(bankN>bestChain)bestChain=bankN;
+  if(bankVal<=0){bankN=0;return 0;}
+  const total=addScore(bankVal*mult*hypeMult());
+  totalBank+=total;
+  ftext(P.x,P.y+2.6,P.z,'+'+total,'#FFD98A',Math.min(34,20+total/220));
+  addHype(4+Math.min(14,bankN*2.4));
+  burst(P.x,P.y+1.0,P.z,Math.min(26,8+bankN*3),4.6,2,58,0.15);
+  bankVal=0;bankN=0;
+  return total;
+}
+function dropBank(){
+  if(bankVal>0)ftext(P.x,P.y+2.2,P.z,t('lost'),'rgba(255,190,190,0.85)',18);
+  bankVal=0;bankN=0;
+}
+
+let toast='', toastT=0, toastCol='#fff';
+function say(msg,col){toast=msg;toastT=110;toastCol=col||'#fff';}
 
 // Amplitude déduite de l'énergie. Deluxe manipulait l'amplitude par un
 // facteur ad hoc ; passer par l'énergie donne un pompage cohérent quel que
@@ -863,9 +1304,6 @@ function setAmp(rig,A){
   const s=P.angV>=0?1:-1;
   P.angV=s*Math.sqrt(Math.max(0,v2));
 }
-
-let toast='', toastT=0, toastCol='#fff';
-function say(msg,col){toast=msg;toastT=110;toastCol=col||'#fff';}
 
 // Pompage. L'impulsion plancher est la pièce indispensable : sans elle un
 // trapèze arrêté ne repart jamais et le joueur reste bloqué pour de bon.
@@ -890,8 +1328,14 @@ function pump(){
   // enfermait le pendule à 0,30 rad : chaque pompage le ramenait à la même
   // valeur et l'amplitude ne montait jamais.
   if(inWin&&na<CFG.PUMP_MIN)na=CFG.PUMP_MIN;
+  if(inWin){addHype(CFG.HYPE_PUMP);emit(P.x,P.y,P.z,0,1.2,0,26,0.07,0);}
   setAmp(rig,Math.min(CFG.AMP_MAX,na));
 }
+
+/* Vent latéral. Il est ANNONCÉ et il oscille lentement ; sa valeur est
+   FIGÉE AU LÂCHER. Le joueur ne se dirige pas en vol — mais il choisit
+   quand partir, et c'est là qu'est la compétence. */
+function windNow(rig){return rig.wind?rig.wind*Math.sin(frame*CFG.WIND_W):0;}
 
 function release(){
   if(P.state!=='hang')return;
@@ -906,8 +1350,16 @@ function release(){
   P.vx=v*rig.dx*c;P.vy=v*s;P.vz=v*rig.dz*c;
   P.phi=-P.ang;
   P.spin=-P.angV*0.55;
+  P.spinDir=P.spin<0?-1:1;
+  P.spinAcc=0;P.halfs=0;
   P.state='fly';P.flyT=0;
   P.dst=Math.min(RIGS.length-1,P.rig+1);
+  P.windA=windNow(rig);
+  // Le porteur cale son balancé sur le départ du voltigeur — c'est ce que
+  // fait un vrai porteur. La fenêtre n'est donc pas un coup de dé : elle
+  // récompense un vol parti sur la bonne trajectoire.
+  const pc=portOf(P.rig);
+  if(pc){pc.phase=pc.lead;pc.used=0;pc.announced=0;}
 }
 
 function tryGrab(){
@@ -915,6 +1367,7 @@ function tryGrab(){
   let best=-1, bd=CFG.GRAB_R;
   for(let n=0;n<RIGS.length;n++){
     if(n===P.rig)continue;
+    if(!gateOpen&&n>0)continue;      // acte 1 : la traversée n'est pas ouverte
     const rig=RIGS[n];
     barAt(rig,rig.ang);
     const d=Math.hypot(P.x-_bx,P.y-_by,P.z-_bz);
@@ -922,7 +1375,10 @@ function tryGrab(){
   }
   if(best<0)return false;
   const rig=RIGS[best];
-  const q=bd<CFG.GRAB_PERF?0:(bd<CFG.GRAB_GOOD?1:2);
+  // Fenêtre de prise resserrée rig après rig : c'est la progression de
+  // difficulté, et elle est écrite dans la table du parcours.
+  const q=bd<CFG.GRAB_PERF*rig.gw?0:(bd<CFG.GRAB_GOOD*rig.gw?1:2);
+  const fwd=best>P.rig;
   P.rig=best;P.ang=rig.ang;
   const c=Math.cos(P.ang), s=Math.sin(P.ang);
   // Seule la composante tangentielle de la vitesse est conservée : le
@@ -930,32 +1386,112 @@ function tryGrab(){
   // l'élan, sans qu'aucun malus artificiel n'ait à être ajouté.
   const vt=P.vx*rig.dx*c+P.vy*s+P.vz*rig.dz*c;
   P.angV=clamp(vt/rig.rope*CFG.GRIP_K[q],-CFG.ANGV_MAX,CFG.ANGV_MAX);
-  P.state='hang';P.grabBuf=0;P.spin=0;
+  P.state='hang';P.grabBuf=0;P.spin=0;P.port=null;P.windA=0;
+  P.dst=Math.min(RIGS.length-1,P.rig+1);
   say(q===0?t('perfect'):(q===1?t('good'):t('poor')),q===0?'#25E5FF':(q===1?'#9CFF7A':'#FFC46E'));
-  score+=q===0?300:(q===1?180:90);
+  addScore(q===0?300:(q===1?180:90));
+  addHype(CFG.HYPE_CATCH[q]);
   shake(q===0?3:1.6);
-  if(best>=RIGS.length-1&&gs==='playing'){gs='levelcomplete';say(t('arrived'),'#FF2E88');}
+  burst(P.x,P.y,P.z,q===0?12:6,3.2,q===0?0:4,40,0.10);
+  // Sortie propre : le corps est redressé au moment de la prise. Une
+  // vraie exigence de trapèze, et le seul bonus qui récompense d'ARRÊTER
+  // une figure au bon moment plutôt que de la prolonger.
+  let ex=P.phi+P.ang;
+  while(ex>Math.PI)ex-=2*Math.PI;
+  while(ex<-Math.PI)ex+=2*Math.PI;
+  if(bankN>0&&Math.abs(ex)<CFG.CLEAN_W){
+    bankVal*=1.35;
+    ftext(P.x,P.y+3.2,P.z,t('clean'),'#9CFF7A',20);
+    addHype(4);
+  }
+  // La cagnotte n'est encaissée QU'ICI : la réception est passée.
+  cashBank(CFG.CASH_Q[q]);
+  P.phi=-P.ang;
+  if(fwd&&P.rig>=RIGS.length-2)setAct(3);
+  if(P.rig>=RIGS.length-1&&gs==='playing')startFinale();
   return true;
 }
 
-function fallStart(){
-  if(P.state==='fall')return;
-  P.state='fall';P.fallT=0;
-  say(t('fall'),'#FF5B6E');
-  shake(6);
+/* ── Le porteur : suspension puis relance ────────────────── */
+function portCatch(c){
+  c.used=1;
+  portHands(c,c.ang);
+  P.state='held';P.holdT=CFG.PORT_HOLD;P.port=c;
+  P.x=_hx;P.y=_hy;P.z=_hz;
+  P.vx=0;P.vy=0;P.vz=0;P.spin=0;P.spinAcc=0;
+  P.phi=0;
+  say(t('porteur'),'#FFD98A');
+  addScore(500);
+  addHype(CFG.HYPE_PORT);
+  // Encaissement au porteur : le meilleur multiplicateur du jeu.
+  cashBank(CFG.PORT_MULT);
+  shake(8);
+  burst(P.x,P.y,P.z,20,5.0,2,58,0.16);
 }
-function respawn(){
-  const rig=RIGS[P.rig];
-  P.state='hang';P.ang=0;P.angV=0;P.phi=0;P.spin=0;
-  barAt(rig,0);P.x=_bx;P.y=_by;P.z=_bz;
-  P.vx=P.vy=P.vz=0;P.flyT=0;P.fallT=0;
+function portThrow(){
+  const c=P.port;
+  P.port=null;
+  const tgt=RIGS[P.dst];
+  if(!c||!tgt){P.state='fly';P.flyT=0;return;}
+  portHands(c,c.ang);
+  const px=c.dz, pz=-c.dx;
+  // La relance est RÉSOLUE vers la barre visée, vent compris : le porteur
+  // est une récompense, il ne rajoute pas une difficulté.
+  solveLaunch(_hx,_hy,_hz,tgt.ax,tgt.ay-tgt.rope,tgt.az,px,pz,P.windA);
+  P.x=_hx;P.y=_hy;P.z=_hz;
+  P.vx=_lvx;P.vy=_lvy;P.vz=_lvz;
+  P.state='fly';P.flyT=0;
+  P.spin=-1.1;P.spinDir=-1;P.spinAcc=0;
+  ftext(P.x,P.y+2.2,P.z,t('portGo'),'#25E5FF',22);
+  shake(4);
+}
+function stepPorteurs(){
+  for(let i=0;i<PORTS.length;i++){
+    const c=PORTS[i];
+    c.phase+=c.angV;
+    c.ang=Math.sin(c.phase)*c.amp;
+    // Bras tendus dans la moitié avant de l'arc, quand il revient vers le
+    // voltigeur. C'est la fenêtre, et elle se voit : hors fenêtre il rentre
+    // les bras et l'acrobate passe.
+    c.ready=!c.used&&Math.cos(c.phase)>0&&c.ang>-0.25;
+  }
+}
+
+/* ── Le filet : tomber coûte la cagnotte et du temps, jamais la partie ── */
+function netYNow(){
+  const a=RIGS[P.rig], b=RIGS[P.dst]||a;
+  return Math.min(a.roofY,b.roofY)-CFG.NET_DROP;
+}
+function hitNet(){
+  if(P.state==='net')return;
+  const ny=netYNow();
+  dropBank();
+  P.state='net';P.netT=CFG.NET_HOLD;P.port=null;
+  P.y=ny;P.vy=Math.min(9,Math.abs(P.vy)*0.34+2.4);
+  P.vx*=0.22;P.vz*=0.22;P.spin=0;P.spinAcc=0;P.windA=0;
+  hype*=CFG.HYPE_FALL;refreshStars();
+  falls++;penalty+=CFG.NET_PEN;
+  say(t('net'),'#FF5B6E');
+  ftext(P.x,ny+3.0,P.z,t('back'),'rgba(255,255,255,0.78)',17);
+  shake(7);
+  burst(P.x,ny,P.z,18,3.4,4,54,0.12);
 }
 // Conservé sous ce nom pour rester compatible avec tools/check.js, qui
 // vérifie sur les trois jeux que la boucle survit à la perte d'une vie.
-function loseLife(){
-  lives--;
-  if(lives<=0){lives=0;gs='gameover';return;}
-  respawn();
+// Ici une chute ne coûte plus de vie : le filet rattrape, on repart du
+// dernier toit atteint. C'est la règle du §7 du plan.
+function loseLife(){hitNet();}
+
+function respawn(){
+  const rig=RIGS[P.rig];
+  P.state='hang';P.ang=0;P.angV=0;P.phi=0;P.spin=0;P.spinAcc=0;
+  barAt(rig,0);P.x=_bx;P.y=_by;P.z=_bz;
+  P.vx=P.vy=P.vz=0;P.flyT=0;P.netT=0;P.holdT=0;
+  P.dst=Math.min(RIGS.length-1,P.rig+1);
+  P.port=null;P.windA=0;P.grabBuf=0;P.trickBuf=0;P.trickHeld=0;
+  P.pumpCd=0;P.pumpArm=1;
+  const pc=portOf(P.rig);
+  if(pc){pc.used=0;pc.announced=0;}
 }
 
 function shake(a){if(!reducedMotion)CAM.shake=Math.max(CAM.shake,a);}
@@ -965,7 +1501,13 @@ const DT=1/120;
 function stepPlayer(){
   if(P.pumpCd>0)P.pumpCd--;
   if(P.grabBuf>0)P.grabBuf--;
+  if(P.trickBuf>0)P.trickBuf--;
   const rig=RIGS[P.rig];
+
+  // Fuite de hype : jouer prudemment la fait retomber toute seule. Plus on
+  // a d'étoiles, plus il faut en faire pour les garder.
+  hype=Math.max(0,hype-(CFG.HYPE_DEC+CFG.HYPE_DECS*starsNow));
+  refreshStars();
 
   if(P.state==='hang'){
     const w2=CFG.G_SWING/rig.rope;
@@ -980,33 +1522,129 @@ function stepPlayer(){
     P.x=_bx;P.y=_by;P.z=_bz;
     P.phi=-P.ang;
     P.amp=ampOf(P.ang,P.angV,rig.rope);
+    // L'ampleur du balancé nourrit la hype : le public regarde la taille du
+    // geste, pas le nombre d'appuis.
+    const k=P.amp/CFG.AMP_MAX;
+    addHype(CFG.HYPE_AMP*k*k);
+    // Grand soleil : compté une fois par passage, et à rendement
+    // décroissant sur un même rig — sinon rester à tourner sur place
+    // remplacerait la traversée.
+    if(P.amp>=CFG.GIANT&&!rig.giantOn){
+      rig.giantOn=1;rig.giants++;
+      const dec=Math.pow(0.45,rig.giants-1);
+      addHype(CFG.HYPE_GIANT*dec);
+      addScore(400*dec);
+      if(rig.giants<=2){say(t('giant'),'#FF2E88');shake(4);
+        burst(P.x,P.y,P.z,14,3.6,1,50,0.12);}
+    }else if(P.amp<CFG.GIANT*0.86){rig.giantOn=0;}
     // Cambré à l'arrière du balancé, groupé à l'avant : la pose raconte
     // le sens du mouvement, ce qui aide à sentir quand pomper.
     P.pike=clamp(P.angV*0.17,-0.55,0.55);
     P.tuck=0;
     // Réarmement au passage par le point bas.
     if(Math.abs(P.ang)<0.30*Math.max(P.amp,0.25))P.pumpArm=1;
+
   }else if(P.state==='fly'){
     P.flyT++;
     P.vy-=CFG.G_FLIGHT*DT;
+    if(P.windA){
+      // Le vent pousse perpendiculairement au plan du vol : il décale la
+      // trajectoire sans la ralentir.
+      const px=rig.dz, pz=-rig.dx;
+      P.vx+=px*P.windA*DT;P.vz+=pz*P.windA*DT;
+    }
     P.vx*=CFG.AIR_DRAG;P.vy*=CFG.AIR_DRAG;P.vz*=CFG.AIR_DRAG;
     P.x+=P.vx*DT;P.y+=P.vy*DT;P.z+=P.vz*DT;
-    P.phi+=P.spin*DT;
-    P.tuck=clamp(Math.abs(P.spin)*0.5,0,1);
-    P.pike=0;
-    if(P.grabBuf>0)tryGrab();
-    if(P.state==='fly'){
-      const floor=RIGS[P.dst]?Math.min(rig.roofY,RIGS[P.dst].roofY):rig.roofY;
-      if(P.y<floor+CFG.FALL_Y||P.flyT>900)fallStart();
+
+    // Figures : chaque demi-tour bouclé tombe dans la cagnotte. Une
+    // rotation entamée et non terminée ne vaut rien.
+    if(P.trickHeld||P.trickBuf>0){
+      P.spin+=P.spinDir*CFG.SPIN_ACC*DT;
+      if(P.spin>CFG.SPIN_MAX)P.spin=CFG.SPIN_MAX;
+      if(P.spin<-CFG.SPIN_MAX)P.spin=-CFG.SPIN_MAX;
+    }else if(Math.abs(P.spin)>0.05){P.spin*=CFG.SPIN_DEC;}
+    const h0=(P.spinAcc/Math.PI)|0;
+    P.spinAcc+=Math.abs(P.spin)*DT;
+    const h1=(P.spinAcc/Math.PI)|0;
+    if(h1>h0){
+      P.halfs=h1;
+      const id=(h1%2)===0?1:0;         // demi-tour, puis salto bouclé
+      const v=bankTrick(id,CFG.TRICK_PTS*(h1<=1?1:1.2));
+      ftext(P.x,P.y+1.8,P.z,t(TRICK_KEYS[id])+' +'+Math.round(v),'#25E5FF',17);
+      emit(P.x,P.y,P.z,0,1.0,0,30,0.07,0);
     }
-  }else{
-    P.fallT++;
-    P.vy-=CFG.G_FLIGHT*DT;
-    P.x+=P.vx*DT;P.y+=P.vy*DT;P.z+=P.vz*DT;
     P.phi+=P.spin*DT;
-    if(P.fallT>96)loseLife();
+    P.tuck=clamp(Math.abs(P.spin)/8,0,1);
+    P.pike=0;
+
+    // Le porteur, s'il travaille sur ce vol.
+    const pc=portOf(P.rig);
+    if(pc&&!pc.used){
+      portHands(pc,pc.ang);
+      const d=Math.hypot(P.x-_hx,P.y-_hy,P.z-_hz);
+      if(!pc.announced&&d<11){pc.announced=1;ftext(_hx,_hy+2.2,_hz,t('portReady'),'#FFD98A',17);}
+      if(pc.ready&&d<CFG.PORT_R)portCatch(pc);
+    }
+
+    if(P.state==='fly'){
+      if(P.grabBuf>0)tryGrab();
+      if(P.state==='fly'&&(P.y<netYNow()||P.flyT>900))hitNet();
+    }
+
+  }else if(P.state==='held'){
+    // Suspendu au porteur : il continue de balancer et l'emporte avec lui.
+    const c=P.port;
+    if(!c){P.state='fly';P.flyT=0;}
+    else{
+      portHands(c,c.ang);
+      P.x=_hx;P.y=_hy;P.z=_hz;
+      P.phi=lerp(P.phi,c.ang,0.12);
+      P.tuck=0;P.pike=clamp(c.ang*0.4,-0.5,0.5);
+      P.holdT--;
+      if(P.holdT<=0)portThrow();
+    }
+
+  }else{   // 'net'
+    const ny=netYNow();
+    P.netT--;
+    P.vy-=CFG.G_FLIGHT*0.45*DT;
+    P.x+=P.vx*DT;P.y+=P.vy*DT;P.z+=P.vz*DT;
+    if(P.y<ny){P.y=ny;P.vy=Math.abs(P.vy)*0.42;P.vx*=0.6;P.vz*=0.6;}
+    P.phi=lerp(P.phi,0,0.08);
+    P.tuck=lerp(P.tuck,0.35,0.06);
+    if(P.netT<=0)respawn();
   }
   if(P.amp>P.best)P.best=P.amp;
+}
+
+/* ── Le drone de télévision ──────────────────────────────────
+   L'équivalent visuel de l'hélicoptère d'un jeu urbain, mais c'est une
+   caméra de diffusion, pas une menace : il tourne autour de l'acrobate
+   avec du retard, il ne gêne rien et il repart quand la hype retombe. */
+const DRONE={live:0,fade:0,t:0,ang:0,rot:0,x:0,y:0,z:0,tx:0,ty:0,tz:0};
+function stepDrone(){
+  const want=(gs==='playing'&&hypeStars()>=CFG.DRONE_ST)?1:0;
+  DRONE.fade=clamp(DRONE.fade+(want?0.010:-0.008),0,1);
+  if(DRONE.fade<=0){DRONE.live=0;return;}
+  DRONE.t++;
+  DRONE.rot+=0.62;
+  // Une orbite libre le fait sortir du cadre les trois quarts du temps —
+  // mesuré : projeté en (−264, −123) sur une image de 1600 × 900. Un drone
+  // de diffusion qu'on ne voit jamais ne raconte rien.
+  // Il se tient donc DERRIÈRE l'acrobate vu de la caméra, et dérive
+  // lentement de part et d'autre : toujours dans le cadre, et jamais entre
+  // la caméra et le geste, donc jamais gênant.
+  const camA=Math.atan2(CAM.z-P.z,CAM.x-P.x);
+  DRONE.ang=camA+Math.PI+Math.sin(DRONE.t*0.0042)*0.90;
+  const r=10.0+2.4*Math.sin(DRONE.t*0.0105);
+  DRONE.tx=P.x+Math.cos(DRONE.ang)*r;
+  DRONE.ty=P.y+4.6+1.3*Math.sin(DRONE.t*0.017);
+  DRONE.tz=P.z+Math.sin(DRONE.ang)*r;
+  if(!DRONE.live){DRONE.live=1;DRONE.x=DRONE.tx;DRONE.y=DRONE.ty;DRONE.z=DRONE.tz;}
+  // Retard élastique : il court après l'acrobate, il ne le colle pas.
+  DRONE.x=lerp(DRONE.x,DRONE.tx,0.034);
+  DRONE.y=lerp(DRONE.y,DRONE.ty,0.046);
+  DRONE.z=lerp(DRONE.z,DRONE.tz,0.034);
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -1025,8 +1663,12 @@ let camFrozen=false;
 function stepCamera(){
   if(camFrozen)return;
   const rig=RIGS[P.rig];
+  // Le porteur et le filet sont des moments de vol : la caméra doit les
+  // cadrer comme tels, sinon elle se recolle au rig de départ en plein
+  // milieu de l'action.
+  const inAir=(P.state==='fly'||P.state==='held');
   let dx=rig.dx, dz=rig.dz;
-  if(P.state==='fly'&&RIGS[P.dst]){
+  if(inAir&&RIGS[P.dst]){
     const b=RIGS[P.dst];
     dx+=b.dx;dz+=b.dz;
     const l=Math.hypot(dx,dz)||1;dx/=l;dz/=l;
@@ -1055,7 +1697,8 @@ function stepCamera(){
   const halfH=rig.rope*Math.sin(Math.min(amp,Math.PI*0.5))+1.6;
   const pull=Math.pow(ampK,0.7)*0.85;
   let ax=lerp(P.x,rig.ax,pull), ay=lerp(P.y-1.0,arcY,pull), az=lerp(P.z,rig.az,pull);
-  if(P.state==='fly'&&RIGS[P.dst]){
+  if(P.state==='net'){ax=P.x;ay=P.y+1.4;az=P.z;}
+  if(inAir&&RIGS[P.dst]){
     const b=RIGS[P.dst];barAt(b,b.ang);
     ax=lerp(ax,_bx,0.42);ay=lerp(ay,_by,0.46);az=lerp(az,_bz,0.42);
   }
@@ -1067,7 +1710,7 @@ function stepCamera(){
   const hTan=Math.tan(CAM.fov*0.5);
   const base=Math.hypot(CFG.CAM_SIDE,CFG.CAM_BACK);
   let want=Math.max(base,halfV/vTan,halfH/hTan);
-  if(P.state==='fly'&&RIGS[P.dst]){
+  if(inAir&&RIGS[P.dst]){
     // En vol, l'acrobate et la barre visée doivent tenir ensemble dans le cadre.
     const b=RIGS[P.dst];barAt(b,b.ang);
     const spread=Math.hypot(_bx-P.x,_by-P.y,_bz-P.z)*0.60;
@@ -1075,9 +1718,31 @@ function stepCamera(){
   }
   const dist=want/base;
   const side=rig.side;
-  const tx=ax+nx*CFG.CAM_SIDE*side*dist-ux*CFG.CAM_BACK*dist;
-  const ty=ay+CFG.CAM_UP*Math.sqrt(dist)*(1-0.45*flyK);
-  const tz=az+nz*CFG.CAM_SIDE*side*dist-uz*CFG.CAM_BACK*dist;
+  let tx=ax+nx*CFG.CAM_SIDE*side*dist-ux*CFG.CAM_BACK*dist;
+  let ty=ay+CFG.CAM_UP*Math.sqrt(dist)*(1-0.45*flyK);
+  let tz=az+nz*CFG.CAM_SIDE*side*dist-uz*CFG.CAM_BACK*dist;
+
+  /* CADRAGE DE CHUTE. Une place déduite du portique est bonne au niveau
+     des toits et catastrophique quinze mètres plus bas : elle enfonce la
+     caméra dans une façade, et on regarde le filet à travers l'intérieur
+     d'un immeuble. C'est exactement ce qu'a montré la capture d'une prise
+     ratée.
+     Sous le niveau des toits, on se raccroche donc au COULOIR du parcours,
+     qui est dégagé par construction — les tours de la trame sont effacées
+     à moins de 27 m de chaque rig, et aucun segment ne dépasse 37,5 m. */
+  const dstRig=RIGS[P.dst]||rig;
+  const roofLow=Math.min(rig.roofY,dstRig.roofY);
+  if(P.state==='net'||P.y<roofLow-2){
+    // La caméra se cale sur L'ACROBATE, pas sur le milieu du segment : un
+    // vol parti à l'envers l'emmène à cinquante mètres de la ligne, et
+    // viser le segment le laisse alors hors champ. À treize mètres de lui,
+    // perpendiculairement au plan du vol et neuf mètres plus haut, il est
+    // cadré quoi qu'il arrive.
+    tx=P.x+nx*13*side;
+    ty=P.y+9;
+    tz=P.z+nz*13*side;
+    ax=P.x;ay=P.y+1.0;az=P.z;
+  }
   if(!CAMS.ready){
     CAMS.px=tx;CAMS.py=ty;CAMS.pz=tz;CAMS.lx=ax;CAMS.ly=ay;CAMS.lz=az;CAMS.ready=true;
   }
@@ -1199,6 +1864,12 @@ function collectRigs(){
     pushBoxDir(rig.ax,rig.ay+0.2,rig.az,px,pz,2.2,0.22,0.22,MAT_STRUCT);
     // Plateforme de départ, en retrait dans le plan du balancé.
     pushBox(rig.x-rig.dx*5.4,rig.z-rig.dz*5.4,1.7,1.7,rig.roofY+0.4,rig.roofY+2.0,MAT_STRUCT+1,-1);
+    // La tour du final porte un mât : c'est le point d'arrivée, il doit se
+    // repérer depuis n'importe où sur le parcours.
+    if(rig.tower){
+      pushBox(rig.x,rig.z,1.5,1.5,rig.roofY+0.25,rig.roofY+17,MAT_STRUCT+1,-1);
+      pushBox(rig.x,rig.z,0.45,0.45,rig.roofY+17,rig.roofY+30,MAT_STRUCT,-1);
+    }
   }
 }
 
@@ -1302,12 +1973,223 @@ function drawBar(rig,ang){
 }
 
 /* ─────────────────────────────────────────────────────────────
+   15 bis. LE FILET, LE PORTEUR, LE DRONE, LES PARTICULES
+
+   Tout ce qui s'ajoute au décor de la session 1. Le filet et le porteur
+   sont tracés en segments projetés, comme l'acrobate : ils sont trop fins
+   pour mériter des faces, et leur épaisseur suit l'échelle de projection.
+   Le drone, lui, est un volume : il passe par le tampon de faces et se
+   trie donc correctement avec la ville.
+   ───────────────────────────────────────────────────────────── */
+
+/* Le filet du numéro, tendu sous le vol en cours. Il n'est pas dessiné
+   sur toute la traversée : seulement sous le segment courant, là où il
+   sert. Une grille de mailles projetées, deux passes de lignes. */
+function drawNet(){
+  const a=RIGS[P.rig], b=RIGS[P.dst]||a;
+  const ny=netYNow();
+  const dx=b.x-a.x, dz=b.z-a.z;
+  const L=Math.hypot(dx,dz)||1;
+  const ux=dx/L, uz=dz/L, px=uz, pz=-ux;
+  // Le panneau couvre le segment ET l'acrobate. Un lâcher parti vers
+  // l'arrière l'emmène derrière son propre rig : le filet le rattrapait
+  // bien, mais il n'était dessiné nulle part sous lui. On étend donc la
+  // nappe jusqu'à lui au lieu de la laisser accrochée au segment.
+  const tP=(P.x-a.x)*ux+(P.z-a.z)*uz;
+  const wP=(P.x-a.x)*px+(P.z-a.z)*pz;
+  const t0=Math.min(-7,tP-10), t1=Math.max(L+7,tP+10);
+  const HALF=Math.max(11,Math.abs(wP)+8);
+  const near=(P.state==='net')?1:0;
+  CX.strokeStyle=near?'rgba(240,236,220,0.55)':'rgba(226,214,196,0.28)';
+  CX.lineWidth=Math.max(0.6,1.1*DPR);
+  CX.beginPath();
+  const N=7, M=5;
+  for(let i=0;i<=N;i++){
+    const tt=t0+(t1-t0)*(i/N);
+    let started=false;
+    for(let j=0;j<=M;j++){
+      const w=-HALF+2*HALF*(j/M);
+      if(!project(a.x+ux*tt+px*w,ny,a.z+uz*tt+pz*w)){started=false;continue;}
+      if(!started){CX.moveTo(_px,_py);started=true;}else CX.lineTo(_px,_py);
+    }
+  }
+  for(let j=0;j<=M;j++){
+    const w=-HALF+2*HALF*(j/M);
+    let started=false;
+    for(let i=0;i<=N;i++){
+      const tt=t0+(t1-t0)*(i/N);
+      if(!project(a.x+ux*tt+px*w,ny,a.z+uz*tt+pz*w)){started=false;continue;}
+      if(!started){CX.moveTo(_px,_py);started=true;}else CX.lineTo(_px,_py);
+    }
+  }
+  CX.stroke();
+}
+
+/* Le porteur. Pendu par les jarrets à son propre trapèze, dans le plan du
+   vol. Ses bras sont TENDUS pendant la fenêtre et RENTRÉS en dehors :
+   l'annonce est dans la pose, pas seulement dans un texte. */
+const _PJX=new Float64Array(8), _PJY=new Float64Array(8), _PJK=new Float64Array(8);
+function pjoint(i,x,y,z){
+  if(!project(x,y,z)){_PJK[i]=0;return false;}
+  _PJX[i]=_px;_PJY[i]=_py;_PJK[i]=_pk;return true;
+}
+function pseg(i,j,rad,col){
+  const k=(_PJK[i]+_PJK[j])*0.5;
+  if(k<=0)return;
+  CX.strokeStyle=col;CX.lineWidth=Math.max(1,rad*2*k);
+  CX.beginPath();CX.moveTo(_PJX[i],_PJY[i]);CX.lineTo(_PJX[j],_PJY[j]);CX.stroke();
+}
+function drawPorteur(c){
+  const s=Math.sin(c.ang), co=Math.cos(c.ang);
+  const ux=c.dx*s, uy=-co, uz=c.dz*s;          // direction ancrage → mains
+  const hang=c.rope-1.9;                        // la barre, puis le corps
+  const bx=c.ax+ux*hang, by=c.ay+uy*hang, bz=c.az+uz*hang;
+  const nx=c.dz*0.62, nz=-c.dx*0.62;
+  // Câbles vers les deux tours : c'est ce qui explique qu'il tient en l'air.
+  const A=RIGS[c.from], B=RIGS[c.from+1];
+  CX.strokeStyle='rgba(226,214,196,0.24)';
+  CX.lineWidth=Math.max(0.6,1.0*DPR);
+  CX.beginPath();
+  if(project(c.ax,c.ay,c.az)){
+    const gx=_px, gy=_py;
+    if(project(A.ax,A.ay+0.4,A.az)){CX.moveTo(gx,gy);CX.lineTo(_px,_py);}
+    if(B&&project(B.ax,B.ay+0.4,B.az)){CX.moveTo(gx,gy);CX.lineTo(_px,_py);}
+  }
+  CX.stroke();
+  // Câbles du trapèze du porteur, puis sa barre.
+  CX.strokeStyle='rgba(226,214,196,0.55)';
+  CX.beginPath();
+  if(project(c.ax+nx,c.ay,c.az+nz)){
+    const p1x=_px,p1y=_py;
+    if(project(bx+nx,by,bz+nz)){CX.moveTo(p1x,p1y);CX.lineTo(_px,_py);}
+  }
+  if(project(c.ax-nx,c.ay,c.az-nz)){
+    const p2x=_px,p2y=_py;
+    if(project(bx-nx,by,bz-nz)){CX.moveTo(p2x,p2y);CX.lineTo(_px,_py);}
+  }
+  CX.stroke();
+  if(!pjoint(0,bx+nx,by,bz+nz))return;
+  if(!pjoint(1,bx-nx,by,bz-nz))return;
+  pseg(0,1,0.10,'#D8C28A');
+  // Corps : jarrets à la barre, tronc vers le bas, bras selon la fenêtre.
+  const kx=bx, ky=by, kz=bz;
+  const hipX=c.ax+ux*(hang+0.62), hipY=c.ay+uy*(hang+0.62), hipZ=c.az+uz*(hang+0.62);
+  const shX=c.ax+ux*(hang+1.42), shY=c.ay+uy*(hang+1.42), shZ=c.az+uz*(hang+1.42);
+  // Bras tendus vers l'amont, là d'où arrive le voltigeur.
+  const reach=c.ready?1:0.34;
+  const hx=shX+ux*0.50*reach-c.dx*0.30*reach, hy=shY+uy*0.50*reach, hz2=shZ+uz*0.50*reach-c.dz*0.30*reach;
+  if(!pjoint(2,kx,ky,kz))return;
+  if(!pjoint(3,hipX,hipY,hipZ))return;
+  if(!pjoint(4,shX,shY,shZ))return;
+  if(!pjoint(5,hx,hy,hz2))return;
+  const suit=c.ready?'#2FB8D8':'#1E6C80';
+  pseg(2,3,0.10,suit);
+  pseg(3,4,0.145,suit);
+  pseg(4,5,0.085,c.ready?'#F2C79B':'#C9A886');
+  // Tête, et le halo qui signe la fenêtre ouverte.
+  if(pjoint(6,shX+ux*0.30,shY+uy*0.30,shZ+uz*0.30)){
+    CX.fillStyle='#F2C79B';
+    CX.beginPath();CX.arc(_PJX[6],_PJY[6],Math.max(1,0.14*_PJK[6]),0,6.2832);CX.fill();
+  }
+  if(c.ready&&_PJK[5]>0){
+    CX.fillStyle='rgba(255,217,138,0.22)';
+    CX.beginPath();CX.arc(_PJX[5],_PJY[5],Math.max(2,CFG.PORT_R*0.55*_PJK[5]),0,6.2832);CX.fill();
+  }
+}
+
+/* Le drone. Un volume dans le tampon de faces (il se trie donc avec la
+   ville), plus ses hélices et son feu, tracés en superposition. */
+function collectDrone(){
+  if(!DRONE.live||DRONE.fade<=0.02)return;
+  const dx=Math.cos(DRONE.ang+Math.PI*0.5), dz=Math.sin(DRONE.ang+Math.PI*0.5);
+  const col=MAT_STRUCT+5;
+  pushBoxDir(DRONE.x,DRONE.y,DRONE.z,dx,dz,0.62,0.40,0.20,col);
+  if(QUAL.name!=='low'){
+    pushBoxDir(DRONE.x,DRONE.y+0.16,DRONE.z,dx,dz,0.96,0.07,0.045,MAT_STRUCT);
+    pushBoxDir(DRONE.x,DRONE.y+0.16,DRONE.z,-dz,dx,0.96,0.07,0.045,MAT_STRUCT);
+  }
+}
+function drawDroneBits(){
+  if(!DRONE.live||DRONE.fade<=0.02)return;
+  const dx=Math.cos(DRONE.ang+Math.PI*0.5), dz=Math.sin(DRONE.ang+Math.PI*0.5);
+  const px=-dz, pz=dx;
+  const a=DRONE.fade;
+  for(let i=0;i<4;i++){
+    const sx=(i<2?1:-1)*0.78, sy=((i%2)?1:-1)*0.78;
+    const rx=DRONE.x+dx*sx+px*sy, ry=DRONE.y+0.22, rz=DRONE.z+dz*sx+pz*sy;
+    if(!project(rx,ry,rz))continue;
+    const r=Math.max(1.6,0.42*_pk);
+    CX.strokeStyle='rgba(180,210,255,'+(0.30*a).toFixed(3)+')';
+    CX.lineWidth=Math.max(1,0.9*DPR);
+    CX.beginPath();CX.ellipse(_px,_py,r,r*0.30,0,0,6.2832);CX.stroke();
+    // Deux pales figées par l'échantillonnage : c'est le rendu d'une hélice
+    // qui tourne plus vite que l'image, et c'est exactement ce qu'on voit.
+    const ph=DRONE.rot+i*1.7;
+    CX.beginPath();
+    CX.moveTo(_px-Math.cos(ph)*r,_py-Math.sin(ph)*r*0.30);
+    CX.lineTo(_px+Math.cos(ph)*r,_py+Math.sin(ph)*r*0.30);
+    CX.stroke();
+  }
+  // Feu de position et objectif tourné vers l'acrobate.
+  if(project(DRONE.x,DRONE.y-0.26,DRONE.z)){
+    const blink=(DRONE.t%74)<30?1:0.15;
+    CX.fillStyle='rgba(255,60,90,'+(a*blink*0.9).toFixed(3)+')';
+    CX.beginPath();CX.arc(_px,_py,Math.max(1.2,0.13*_pk),0,6.2832);CX.fill();
+    const g=CX.createRadialGradient(_px,_py,0,_px,_py,Math.max(6,0.9*_pk));
+    g.addColorStop(0,'rgba(255,80,110,'+(a*blink*0.30).toFixed(3)+')');
+    g.addColorStop(1,'rgba(255,80,110,0)');
+    CX.fillStyle=g;CX.beginPath();CX.arc(_px,_py,Math.max(6,0.9*_pk),0,6.2832);CX.fill();
+  }
+}
+
+/* Particules : un chemin par teinte, six remplissages au maximum pour
+   toute la nuée. Aucune chaîne construite, aucun objet créé. */
+function drawParticles(){
+  if(pLive<=0)return;
+  for(let c=0;c<PART_COLS.length;c++){
+    let any=false;
+    CX.beginPath();
+    for(let i=0;i<PCAP;i++){
+      if(pLife[i]<=0||pCol[i]!==c)continue;
+      if(!project(pX[i],pY[i],pZ[i]))continue;
+      const k=pLife[i]/pMax[i];
+      const r=Math.max(0.7,pR[i]*_pk*(0.35+0.65*k));
+      CX.moveTo(_px+r,_py);
+      CX.arc(_px,_py,r,0,6.2832);
+      any=true;
+    }
+    if(any){CX.globalAlpha=0.85;CX.fillStyle=PART_COLS[c];CX.fill();CX.globalAlpha=1;}
+  }
+}
+
+/* Textes flottants. Ils appartiennent au monde (ils sont projetés) mais
+   sont tracés à plat : c'est la convention de Deluxe, elle reste lisible
+   quelle que soit l'orientation de la caméra. */
+function drawFloatTexts(){
+  CX.textAlign='center';CX.textBaseline='middle';
+  for(let i=0;i<FTMAX;i++){
+    const f=FT[i];if(!f.live)continue;
+    if(!project(f.x,f.y,f.z))continue;
+    const k=1-f.t/f.max;
+    const sz=Math.max(9,Math.min(46,f.size*uiScale*0.55*Math.min(2.2,_pk*0.06+0.5)));
+    CX.globalAlpha=k<0.28?k/0.28:1;
+    CX.font='800 '+Math.round(sz)+'px '+FONT;
+    CX.lineJoin='round';CX.lineWidth=Math.max(2,sz*0.22);
+    CX.strokeStyle='rgba(6,2,16,0.72)';CX.strokeText(f.txt,_px,_py);
+    CX.fillStyle=f.col;CX.fillText(f.txt,_px,_py);
+  }
+  CX.globalAlpha=1;
+}
+
+/* ─────────────────────────────────────────────────────────────
    16. RENDU
    Ordre strict : ciel, sol, volumes triés, et l'acrobate INSÉRÉ dans la
    pile triée à sa propre profondeur — pas plaqué devant tout le monde.
    ───────────────────────────────────────────────────────────── */
-const ovD=new Float64Array(16), ovT=new Int32Array(16), ovN=new Int32Array(16);
+const OVCAP=32;
+const ovD=new Float64Array(OVCAP), ovT=new Int32Array(OVCAP), ovN=new Int32Array(OVCAP);
 const ovOrder=[];
+// Types de superposition : 0 barre, 1 acrobate, 2 porteur, 3 filet.
 function render(){
   camPrepare();
   CX.setTransform(1,0,0,1,0,0);
@@ -1315,15 +2197,26 @@ function render(){
   facesReset();
   collectCity();
   collectRigs();
+  collectDrone();
   sortFaces();
 
-  // Superpositions : les barres de chaque rig, et l'acrobate.
+  // Superpositions : chacune est INSÉRÉE à sa propre profondeur dans la
+  // pile triée, jamais plaquée devant tout le monde.
   let on=0;
-  for(let n=0;n<RIGS.length;n++){
+  for(let n=0;n<RIGS.length&&on<OVCAP-4;n++){
     const rig=RIGS[n];
     if(n===P.rig&&P.state==='hang')continue;   // dessinée avec l'acrobate
     barAt(rig,rig.ang);
     ovD[on]=eyeZ(_bx,_by,_bz);ovT[on]=0;ovN[on]=n;on++;
+  }
+  for(let i=0;i<PORTS.length&&on<OVCAP-2;i++){
+    const c=PORTS[i];
+    portHands(c,c.ang);
+    ovD[on]=eyeZ(_hx,_hy,_hz);ovT[on]=2;ovN[on]=i;on++;
+  }
+  if(gs==='playing'||gs==='finale'){
+    const a=RIGS[P.rig], b=RIGS[P.dst]||a;
+    ovD[on]=eyeZ((a.x+b.x)*0.5,netYNow(),(a.z+b.z)*0.5);ovT[on]=3;ovN[on]=0;on++;
   }
   ovD[on]=eyeZ(P.x,P.y-0.9,P.z);ovT[on]=1;ovN[on]=P.rig;on++;
   ovOrder.length=on;
@@ -1335,13 +2228,21 @@ function render(){
     const o=ovOrder[i];
     const cut=faceSplit(ovD[o]);
     if(cut>cursor){drawFaceRange(cursor,cut);cursor=cut;}
-    if(ovT[o]===0)drawBar(RIGS[ovN[o]],RIGS[ovN[o]].ang);
+    const ty=ovT[o];
+    if(ty===0)drawBar(RIGS[ovN[o]],RIGS[ovN[o]].ang);
+    else if(ty===2)drawPorteur(PORTS[ovN[o]]);
+    else if(ty===3)drawNet();
     else{
       if(P.state==='hang')drawBar(RIGS[P.rig],P.ang);
       drawAcrobat();
     }
   }
   if(cursor<fn)drawFaceRange(cursor,fn);
+
+  // Couche des billboards : hélices du drone, particules, textes du monde.
+  drawDroneBits();
+  drawParticles();
+  drawFloatTexts();
 
   drawHUD();
 }
@@ -1352,8 +2253,13 @@ function render(){
    est le lot de la session 4. Ici : le strict nécessaire pour piloter et
    pour vérifier le socle.
    ───────────────────────────────────────────────────────────── */
-let gs='menu';            // 'menu' | 'playing' | 'gameover' | 'levelcomplete'
+let gs='menu';            // 'menu' | 'playing' | 'finale' | 'levelcomplete' | 'gameover'
 let paused=false;
+// `lives` et l'état 'gameover' ne servent plus au jeu : une chute ne coûte
+// plus de vie, le filet rattrape et on repart du dernier toit. Les deux
+// restent déclarés et rendus parce que tools/check.js traverse les trois
+// jeux avec le même pont de test et force cet état ; le jeu, lui, n'y entre
+// jamais de lui-même.
 let lives=5, score=0, level=1, frame=0;
 let debugOn=false, fps=60, faceAvg=0;
 
@@ -1365,17 +2271,71 @@ function outlineText(txt,x,y,size,col,weight,align){
   CX.strokeStyle='rgba(6,2,16,0.72)';CX.strokeText(txt,x,y);
   CX.fillStyle=col;CX.fillText(txt,x,y);
 }
+
+// Le chrono n'est reformaté qu'au dixième de seconde : une chaîne par
+// image pour un affichage qui ne change pas serait du gaspillage pur.
+let _tStr='0:00.0', _tKey=-1;
+function timeStr(sec){
+  const k=(sec*10)|0;
+  if(k!==_tKey){
+    _tKey=k;
+    const m=(k/600)|0, r=k-m*600;
+    const ss=(r/10)|0;
+    _tStr=m+':'+(ss<10?'0':'')+ss+'.'+(r%10);
+  }
+  return _tStr;
+}
+
+// Étoile à cinq branches. Le rendu définitif est le lot de la session 4 ;
+// ici la forme est juste, la finition ne l'est pas encore.
+function starPath(cx,cy,r){
+  CX.beginPath();
+  for(let i=0;i<10;i++){
+    const a=-Math.PI*0.5+i*Math.PI/5;
+    const rr=(i%2)?r*0.44:r;
+    const x=cx+Math.cos(a)*rr, y=cy+Math.sin(a)*rr;
+    if(i)CX.lineTo(x,y);else CX.moveTo(x,y);
+  }
+  CX.closePath();
+}
+// x est le bord DROIT de la rangee : c'est la colonne du HUD qui commande,
+// et une rangee de cinq etoiles ne doit jamais deborder de l'ecran.
+function drawHypeStars(xRight,y,r,gap){
+  const x=xRight-r-4*(2*r+gap);
+  const st=hypeStars();
+  // Fraction de l'étoile en cours : la jauge doit se lire AVANT de gagner
+  // l'étoile, sinon le joueur ne sait pas s'il progresse.
+  const frac=clamp((hype-st*CFG.STAR_STEP)/CFG.STAR_STEP,0,1);
+  for(let i=0;i<5;i++){
+    const cx=x+i*(r*2+gap);
+    starPath(cx,y,r);
+    CX.fillStyle='rgba(10,4,26,0.55)';CX.fill();
+    CX.lineWidth=Math.max(1,1.4*uiScale);
+    CX.strokeStyle=i<st?'rgba(255,217,138,0.95)':'rgba(255,255,255,0.26)';CX.stroke();
+    if(i<st){starPath(cx,y,r*0.92);CX.fillStyle='#FFD98A';CX.fill();}
+    else if(i===st&&frac>0.02){
+      CX.save();CX.beginPath();
+      CX.rect(cx-r,y+r-2*r*frac,2*r,2*r*frac);CX.clip();
+      starPath(cx,y,r*0.92);CX.fillStyle='rgba(255,217,138,0.42)';CX.fill();
+      CX.restore();
+    }
+  }
+}
+
 function drawHUD(){
   const u=uiScale;
   if(gs==='menu'){
     CX.fillStyle='rgba(8,3,22,0.52)';CX.fillRect(0,0,SW,SH);
-    outlineText(t('title'),HW,SH*0.40,44,'#FFFFFF',900);
-    outlineText(t('sub'),HW,SH*0.40+40*u,15,'rgba(255,255,255,0.62)',700);
+    outlineText(t('title'),HW,SH*0.38,44,'#FFFFFF',900);
+    outlineText(t('sub'),HW,SH*0.38+40*u,15,'rgba(255,255,255,0.62)',700);
     outlineText(t('hintStart'),HW,SH*0.60,18,'#25E5FF',800);
-    outlineText(t('pump')+'   ·   '+t('release'),HW,SH*0.60+30*u,13,'rgba(255,255,255,0.5)',700);
+    outlineText(t('pump')+'   ·   '+t('release')+'   ·   '+t('figure'),
+      HW,SH*0.60+30*u,13,'rgba(255,255,255,0.5)',700);
     return;
   }
-  // Jauge d'amplitude, à gauche.
+  if(gs==='levelcomplete'){drawResults();return;}
+
+  // ── Jauge d'amplitude, à gauche ──
   const gx=26*u, gy=SH-38*u, gw=Math.min(SW*0.34,240*u), gh=9*u;
   CX.fillStyle='rgba(8,3,22,0.55)';CX.fillRect(gx,gy,gw,gh);
   const k=clamp(P.amp/CFG.AMP_MAX,0,1);
@@ -1385,17 +2345,69 @@ function drawHUD(){
   CX.fillRect(gx+gw*(CFG.GIANT/CFG.AMP_MAX),gy-3*u,2*u,gh+6*u);
   outlineText(P.amp>=CFG.GIANT?t('giant'):t('amp'),gx,gy-13*u,11,
     P.amp>=CFG.GIANT?'#FF2E88':'rgba(255,255,255,0.72)',800,'left');
-  // Rig courant et score, à droite. Le bouton plein écran est un élément
-  // HTML posé par-dessus le canvas : il faut lui laisser sa place, sinon le
-  // texte passe dessous en portrait.
-  const rx=SW-(46*DPR+10*u);
-  outlineText(t('rig')+' '+(P.rig+1)+'/'+RIGS.length,rx,34*u,16,'#FFFFFF',800,'right');
-  outlineText(String(score),rx,58*u,20,'#FFD98A',900,'right');
 
-  if(toastT>0&&gs==='playing')outlineText(toast,HW,SH*0.24,22,toastCol,900);
-  // Rappel contextuel de la commande utile à l'instant.
+  // ── Étoiles de hype et multiplicateur, en haut à droite ──
+  // Le bouton plein écran est un élément HTML posé par-dessus le canvas :
+  // il faut lui laisser sa place, sinon le HUD passe dessous en portrait.
+  const rx=SW-(46*DPR+10*u);
+  drawHypeStars(rx,20*u,7*u,3*u);
+  const st=hypeStars();
+  if(st>0)outlineText('×'+hypeMult().toFixed(1),rx,40*u,13,'#FFD98A',900,'right');
+  // ── Cagnotte, façon compteur de fric ──
+  outlineText('$'+score,rx,64*u,22,'#9CFF7A',900,'right');
+  if(bankVal>0){
+    outlineText('+'+Math.round(bankVal)+' × '+(hypeMult()).toFixed(1),
+      rx,86*u,14,'#FFD98A',800,'right');
+    outlineText(bankN+' '+t('tricks'),rx,102*u,11,'rgba(255,255,255,0.55)',700,'right');
+  }
+
+  // ── Chrono et rig, en haut à gauche ──
+  outlineText(timeStr(runTime()),22*u,22*u,20,'#FFFFFF',900,'left');
+  outlineText(t('rig')+' '+(P.rig+1)+'/'+RIGS.length
+    +'   ·   '+t(ACT_KEYS[act-1][0]),22*u,42*u,12,'rgba(255,255,255,0.6)',800,'left');
+  if(falls>0)outlineText(t('rFalls')+' '+falls,22*u,58*u,11,'rgba(255,140,150,0.7)',700,'left');
+
+  // ── Vent, quand le rig courant en subit un ──
+  const wr=RIGS[P.rig];
+  if(wr&&wr.wind){
+    const w=(P.state==='fly'||P.state==='held')?P.windA:windNow(wr);
+    const wk=clamp(Math.abs(w)/wr.wind,0,1);
+    const wx=HW, wy=SH-56*u, ww=90*u;
+    CX.fillStyle='rgba(8,3,22,0.5)';CX.fillRect(wx-ww*0.5,wy,ww,6*u);
+    CX.fillStyle=wk<0.25?'#9CFF7A':(wk<0.6?'#FFD98A':'#FF5B6E');
+    CX.fillRect(wx,wy,ww*0.5*(w/(wr.wind||1)),6*u);
+    CX.fillStyle='rgba(255,255,255,0.5)';CX.fillRect(wx-1*u,wy-3*u,2*u,12*u);
+    outlineText(wk<0.25?t('windCalm'):t('wind'),wx,wy-11*u,11,
+      wk<0.25?'#9CFF7A':'rgba(255,255,255,0.72)',800);
+  }
+
+  if(toastT>0&&(gs==='playing'||gs==='finale'))outlineText(toast,HW,SH*0.22,22,toastCol,900);
+
+  // ── Acte 1 : la porte des deux étoiles ──
+  if(gs==='playing'&&!gateOpen)
+    outlineText(t('gate'),HW,SH*0.30,15,'rgba(255,217,138,0.88)',800);
+
+  // ── Carton d'acte ──
+  if(actT>0){
+    const p2=1-actT/ACT_CARD;
+    // Entrée, tenue, sortie : trois temps, comme un carton de mission.
+    const al=p2<0.14?p2/0.14:(p2>0.82?(1-p2)/0.18:1);
+    CX.globalAlpha=clamp(al,0,1);
+    const bh=SH*0.13;
+    CX.fillStyle='rgba(6,2,16,0.78)';
+    CX.fillRect(0,HH-bh,SW,bh*2);
+    CX.fillStyle='#FF2E88';CX.fillRect(0,HH-bh,SW,2*u);
+    CX.fillRect(0,HH+bh-2*u,SW,2*u);
+    outlineText(t(ACT_KEYS[act-1][0]),HW,HH-16*u,30,'#FFFFFF',900);
+    outlineText(t(ACT_KEYS[act-1][1]),HW,HH+18*u,17,'#FFD98A',800);
+    CX.globalAlpha=1;
+  }
+
+  // ── Rappel contextuel de la commande utile à l'instant ──
   if(gs==='playing'&&!paused){
-    const hint=P.state==='fly'?t('grab'):(P.state==='hang'?t('pump')+'   ·   '+t('release'):'');
+    let hint='';
+    if(P.state==='fly')hint=t('grab')+'   ·   '+t('figure');
+    else if(P.state==='hang')hint=t('pump')+'   ·   '+t('release');
     if(hint)outlineText(hint,HW,SH-22*u,12,'rgba(255,255,255,0.42)',700);
   }
   if(paused){
@@ -1403,37 +2415,115 @@ function drawHUD(){
     outlineText(t('paused'),HW,HH-12*u,32,'#FFF',900);
     outlineText(t('resume'),HW,HH+22*u,14,'rgba(255,255,255,0.6)',700);
   }
-  if(gs==='gameover'||gs==='levelcomplete'){
+  if(gs==='finale'){
+    // Bandes cinéma : le numéro se termine, on sort du jeu et on entre
+    // dans le spectacle.
+    const bh=SH*0.10*clamp(finT/40,0,1);
+    CX.fillStyle='rgba(4,1,12,0.92)';
+    CX.fillRect(0,0,SW,bh);CX.fillRect(0,SH-bh,SW,bh);
+    outlineText(t('arrived'),HW,SH*0.30,30,'#25E5FF',900);
+  }
+  if(gs==='gameover'){
     CX.fillStyle='rgba(8,3,22,0.6)';CX.fillRect(0,0,SW,SH);
-    outlineText(gs==='levelcomplete'?t('arrived'):t('fall'),HW,HH-14*u,30,
-      gs==='levelcomplete'?'#25E5FF':'#FF5B6E',900);
+    outlineText(t('fall'),HW,HH-14*u,30,'#FF5B6E',900);
     outlineText(t('again'),HW,HH+22*u,14,'rgba(255,255,255,0.62)',700);
   }
   if(debugOn){
-    CX.fillStyle='rgba(0,0,0,0.55)';CX.fillRect(0,0,232*u,116*u);
+    CX.fillStyle='rgba(0,0,0,0.55)';CX.fillRect(0,0,244*u,150*u);
     const L=['fps '+fps.toFixed(0)+'   faces '+drawnFaces+(fnDropped?' (+'+fnDropped+' perdues)':''),
       'qual '+QUAL.name+'   dpr '+DPR.toFixed(2)+'   '+SW+'x'+SH,
-      'etat '+P.state+'   rig '+(P.rig+1)+'/'+RIGS.length,
+      'etat '+P.state+'   rig '+(P.rig+1)+'/'+RIGS.length+'   acte '+act,
       'ang '+P.ang.toFixed(2)+'  angV '+P.angV.toFixed(2)+'  amp '+P.amp.toFixed(2),
       'pos '+P.x.toFixed(1)+' '+P.y.toFixed(1)+' '+P.z.toFixed(1),
+      'hype '+hype.toFixed(0)+' ('+hypeStars()+'*)  cagnotte '+Math.round(bankVal)+'/'+bankN,
+      'part '+pLive+'/'+pLiveMax+'   drone '+DRONE.fade.toFixed(2)+'   vent '+P.windA.toFixed(2),
       'cam yaw '+(CAM.yaw*180/Math.PI).toFixed(0)+'  pitch '+(CAM.pitch*180/Math.PI).toFixed(0)
         +'  fov '+(CAM.fov*180/Math.PI).toFixed(0)];
     for(let i=0;i<L.length;i++)outlineText(L[i],8*u,(14+i*17)*u,11,'#9CFF7A',700,'left');
   }
 }
 
+/* Écran de résultats. Il ne recalcule rien : toutes ces mesures ont été
+   tenues pendant la traversée. */
+const RES_K=['rTime','rChain','rStars','rFalls','rBank','rScore'];
+function gradeOf(){
+  // Trois critères lisibles, annoncés : finir, tomber peu, aller vite.
+  if(falls===0&&runTime()<=120&&maxStars>=4)return 3;
+  if(falls<=2)return 2;
+  return 1;
+}
+function drawResults(){
+  const u=uiScale;
+  CX.fillStyle='rgba(6,2,16,0.86)';CX.fillRect(0,0,SW,SH);
+  const bh=SH*0.09;
+  CX.fillStyle='rgba(2,0,8,0.95)';CX.fillRect(0,0,SW,bh);CX.fillRect(0,SH-bh,SW,bh);
+  CX.fillStyle='#FF2E88';CX.fillRect(0,bh,SW,2*u);CX.fillRect(0,SH-bh-2*u,SW,2*u);
+  outlineText(t('results'),HW,SH*0.19,34,'#FFFFFF',900);
+  const y0=SH*0.32, dy=Math.min(30*u,SH*0.075);
+  const vals=[timeStr(runTime()),
+    bestChain+' '+t('tricks'),
+    maxStars+' / 5',
+    String(falls),
+    '$'+totalBank,
+    '$'+score];
+  for(let i=0;i<RES_K.length;i++){
+    const y=y0+i*dy;
+    outlineText(t(RES_K[i]),HW-14*u,y,14,'rgba(255,255,255,0.58)',700,'right');
+    outlineText(vals[i],HW+14*u,y,16,'#FFFFFF',900,'left');
+  }
+  // Note sur trois, en étoiles.
+  const g=gradeOf(), sr=13*u;
+  const gy2=y0+RES_K.length*dy+22*u;
+  outlineText(t('rGrade'),HW,gy2-20*u,12,'rgba(255,255,255,0.5)',800);
+  for(let i=0;i<3;i++){
+    const cx=HW+(i-1)*(sr*2.4);
+    starPath(cx,gy2+6*u,sr);
+    CX.fillStyle=i<g?'#FFD98A':'rgba(255,255,255,0.10)';CX.fill();
+    CX.lineWidth=Math.max(1,1.5*u);
+    CX.strokeStyle=i<g?'rgba(255,217,138,0.9)':'rgba(255,255,255,0.25)';CX.stroke();
+  }
+  outlineText(t('rAgain'),HW,SH-bh*0.5,14,'#25E5FF',800);
+}
+
 /* ─────────────────────────────────────────────────────────────
-   18. TRANSITIONS
-   Noms conservés (startGame, togglePause, toMenu, loseLife) pour que
-   tools/check.js traverse les trois jeux avec le même pont de test.
+   18. LA MACHINE À ÉTATS DE LA TRAVERSÉE
+
+   Trois actes, et une règle : les transitions sont MONOTONES et ne
+   dépendent que de l'état courant. Une chute pendant un carton, un
+   lâcher à l'instant d'une prise, un retour au menu en plein vol — rien
+   de tout cela ne peut coincer la machine, parce qu'aucune transition
+   n'attend qu'une autre soit finie.
+
+   Noms conservés (startGame, togglePause, toMenu, loseLife, startFinale)
+   pour que tools/check.js traverse les trois jeux avec le même pont.
    ───────────────────────────────────────────────────────────── */
+function setAct(n){
+  if(n<=act)return;      // monotone : un acte ne se rejoue jamais
+  act=n;actT=ACT_CARD;
+}
 function startGame(){
   gs='playing';paused=false;
   lives=5;score=0;level=1;
-  P.rig=0;P.dst=1;P.best=0;
+  hype=0;starsNow=0;gateOpen=0;act=1;actT=ACT_CARD;
+  bankVal=0;bankN=0;
+  runSteps=0;penalty=0;falls=0;totalBank=0;maxStars=0;bestChain=0;finT=0;
+  for(let n=0;n<RIGS.length;n++){RIGS[n].giants=0;RIGS[n].giantOn=0;RIGS[n].ang=0;RIGS[n].angV=0;}
+  for(let i=0;i<PORTS.length;i++){const c=PORTS[i];c.used=0;c.announced=0;c.phase=0;c.ready=false;}
+  DRONE.live=0;DRONE.fade=0;
+  partReset();ftReset();
+  P.rig=0;P.dst=1;P.best=0;P.amp=0;
   respawn();
   CAMS.ready=false;
   toastT=0;
+}
+// La réception qui boucle le numéro : un temps de salut, puis le bilan.
+function startFinale(){
+  if(gs==='levelcomplete'||gs==='finale')return;
+  gs='finale';finT=0;
+  say(t('arrived'),'#25E5FF');
+  ftext(P.x,P.y+3.0,P.z,t('bow'),'#FFD98A',26);
+  burst(P.x,P.y+1.0,P.z,34,5.4,1,90,0.16);
+  shake(9);
 }
 function toMenu(){gs='menu';paused=false;}
 function togglePause(){if(gs==='playing')paused=!paused;}
@@ -1446,6 +2536,7 @@ function togglePause(){if(gs==='playing')paused=!paused;}
 function action(){
   if(gs==='menu'){startGame();return;}
   if(gs==='gameover'||gs==='levelcomplete'){startGame();return;}
+  if(gs==='finale'){gs='levelcomplete';return;}   // passer le salut
   if(paused)return;
   if(P.state==='hang')pump();
   else P.grabBuf=CFG.GRAB_BUF;
@@ -1454,10 +2545,18 @@ function doRelease(){
   if(gs!=='playing'||paused)return;
   release();
 }
+// Figure. Maintenue, elle accélère la rotation ; une simple pression
+// suffit à en lancer une, pour que le jeu reste jouable sans keyup.
+function figure(){
+  if(gs!=='playing'||paused)return;
+  P.trickHeld=1;P.trickBuf=CFG.GRAB_BUF;
+}
+function figureEnd(){P.trickHeld=0;}
 window.addEventListener('keydown',function(e){
   const k=e.key;
   if(k===' '||k==='Spacebar'||k==='w'||k==='z'||k==='ArrowUp'){e.preventDefault();action();return;}
   if(k==='s'||k==='ArrowDown'||k==='Shift'){e.preventDefault();doRelease();return;}
+  if(k==='f'||k==='F'||k==='x'||k==='ArrowLeft'||k==='ArrowRight'){e.preventDefault();figure();return;}
   if(k==='p'||k==='P'){togglePause();return;}
   if(k==='r'||k==='R'){startGame();return;}
   if(k==='Escape'){toMenu();return;}
@@ -1465,6 +2564,10 @@ window.addEventListener('keydown',function(e){
   if(k==='1'){setQuality('low');return;}
   if(k==='2'){setQuality('med');return;}
   if(k==='3'){setQuality('high');return;}
+});
+window.addEventListener('keyup',function(e){
+  const k=e.key;
+  if(k==='f'||k==='F'||k==='x'||k==='ArrowLeft'||k==='ArrowRight')figureEnd();
 });
 // Regard libre. Il revient de lui-même : on ne laisse jamais le joueur
 // coincé face à un mur.
@@ -1488,10 +2591,17 @@ CV.addEventListener('click',function(){if(gs!=='playing')action();});
 
 (function bindTouch(){
   const a=document.getElementById('tAct'), r=document.getElementById('tRel');
+  const f=document.getElementById('tFig');
   const pad=document.getElementById('pad');
   if(pad&&pad.classList&&isTouch)pad.classList.add('on');
   if(a)a.addEventListener('pointerdown',function(e){e.preventDefault();action();});
   if(r)r.addEventListener('pointerdown',function(e){e.preventDefault();doRelease();});
+  if(f){
+    f.addEventListener('pointerdown',function(e){e.preventDefault();figure();});
+    f.addEventListener('pointerup',function(e){e.preventDefault();figureEnd();});
+    f.addEventListener('pointercancel',figureEnd);
+    f.addEventListener('pointerleave',figureEnd);
+  }
 })();
 (function bindFull(){
   const b=document.getElementById('btnFull');
@@ -1518,7 +2628,29 @@ let acc=0, lastT=0, fpsAcc=0, fpsN=0;
 function step(){
   frame++;
   if(toastT>0)toastT--;
-  if(gs==='playing'&&!paused)stepPlayer();
+  if(actT>0)actT--;
+  if(gs==='playing'&&!paused){
+    runSteps++;
+    stepPorteurs();
+    stepPlayer();
+    // La porte de l'acte 1 : deux étoiles de hype ouvrent la traversée.
+    // Elle est testée ICI et pas dans addHype, pour qu'elle ne dépende
+    // d'aucun chemin d'événement particulier — c'est ce qui la rend
+    // insensible à l'ordre des choses.
+    if(!gateOpen&&hypeStars()>=CFG.GATE_STARS){
+      gateOpen=1;setAct(2);
+      say(t('gateOpen'),'#25E5FF');
+      burst(P.x,P.y+1.2,P.z,20,4.4,1,64,0.14);
+    }
+  }else if(gs==='finale'&&!paused){
+    finT++;
+    stepPorteurs();
+    stepPlayer();               // le salut : l'acrobate continue de balancer
+    if(finT>240)gs='levelcomplete';
+  }
+  stepParticles();
+  stepTexts();
+  stepDrone();
   stepCamera();
 }
 function frameLoop(now){
@@ -1564,17 +2696,36 @@ function init(){
 // Pont exposé pour les outils : shot_v3.js et le pilote automatique de la
 // session 2 en dépendent, et il évite de deviner l'état depuis l'extérieur.
 window.__v3={
-  CFG:CFG,P:P,CAM:CAM,RIGS:RIGS,
+  CFG:CFG,P:P,CAM:CAM,RIGS:RIGS,PORTS:PORTS,
   get state(){return{gs:gs,paused:paused,score:score,lives:lives,
-    rig:P.rig,pstate:P.state,amp:P.amp,ang:P.ang,angV:P.angV,
-    x:P.x,y:P.y,z:P.z,faces:drawnFaces,dropped:fnDropped,winFaces:winFaces,winDrawn:winDrawn,fps:fps,
+    rig:P.rig,dst:P.dst,pstate:P.state,amp:P.amp,ang:P.ang,angV:P.angV,
+    x:P.x,y:P.y,z:P.z,
+    // Session 2 : tout ce dont le pilote automatique et les captures
+    // ont besoin, pour qu'aucun outil n'ait à deviner un état interne.
+    hype:hype,stars:hypeStars(),mult:hypeMult(),bank:bankVal,bankN:bankN,
+    act:act,gate:gateOpen,falls:falls,time:runTime(),penalty:penalty,
+    totalBank:totalBank,bestChain:bestChain,maxStars:maxStars,grade:gradeOf(),
+    wind:P.windA,windNow:windNow(RIGS[P.rig]),
+    port:(function(){const c=portOf(P.rig);return c?{ready:!!c.ready,used:!!c.used,ang:c.ang}:null;})(),
+    drone:DRONE.fade,parts:pLive,partsMax:pLiveMax,partsCap:PCAP,
+    faces:drawnFaces,dropped:fnDropped,winFaces:winFaces,winDrawn:winDrawn,fps:fps,
     qual:QUAL.name,sw:SW,sh:SH,render:renderMs()};},
-  action:action,release:doRelease,start:startGame,menu:toMenu,
+  action:action,release:doRelease,figure:figure,figureEnd:figureEnd,
+  start:startGame,menu:toMenu,finale:startFinale,
   pause:togglePause,quality:setQuality,
   debug:function(v){debugOn=!!v;},
   look:look,
   // Utilisé par les tests : place le joueur sur un rig donné, au repos.
-  goRig:function(n){P.rig=clamp(n|0,0,RIGS.length-1);respawn();CAMS.ready=false;},
+  // Ouvre aussi la porte de l'acte 1, sinon toute capture à partir du rig 2
+  // partirait d'un état que le jeu n'autorise pas encore.
+  goRig:function(n){
+    P.rig=clamp(n|0,0,RIGS.length-1);
+    if(P.rig>0){gateOpen=1;if(act<2)act=2;}
+    if(P.rig>=RIGS.length-2&&act<3)act=3;
+    respawn();CAMS.ready=false;
+  },
+  // Force la hype, pour cadrer le drone ou franchir la porte en test.
+  setHype:function(v){hype=clamp(v,0,CFG.HYPE_MAX);refreshStars();},
   setAmp:function(a){const r=RIGS[P.rig];P.ang=0;P.angV=0.0001;setAmp(r,a);},
   // Avance la simulation d'un nombre exact de pas : les captures de test
   // sont ainsi reproductibles, au lieu de dépendre du temps réel écoulé.
