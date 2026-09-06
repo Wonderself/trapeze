@@ -871,6 +871,63 @@ de ce qui reste hors de portée sans matériel réel.
 
 ---
 
-## 15. Les prompts
+## 15. État après S6 (tampon)
+
+La session 5 n'avait remonté aucun défaut bloquant, seulement un écart
+honnête laissé ouvert : `tools/s9_memory.js` (la dérive du tas sur 30
+minutes simulées, qui existe pour V2) n'avait pas d'équivalent pour
+Trapeze City. C'est le seul point de la liste de fin de S5 qui relevait
+d'un vrai travail d'outillage plutôt que d'un choix de conception ou d'une
+limite matérielle — donc le seul candidat légitime pour cette session
+tampon.
+
+**Livré** : `tools/s9_memory_v3.js`, qui porte la vérification à Trapeze
+City avec sa propre machine à états (`hang`/`fly`/`held`/`net`, pas
+`run`/`air`/`swing` de V2) et son propre bot de pilotage.
+
+**Un vrai bug trouvé avant même le premier lancement complet du test**
+
+La première version du bot mesurait la distance à la barre visée contre
+`rig.ax/ay/az` — l'**ancrage** du portique, à une longueur de câble
+au-dessus d'où pend réellement la barre. Résultat : le bot pompait
+indéfiniment sur le premier rig sans jamais rattraper le suivant,
+parce que la « distance » qu'il mesurait n'avait aucun rapport avec la
+vraie fenêtre de saisie. Une trace pas à pas (rig, amplitude, distance
+mesurée, toutes les 5 secondes simulées) l'a montré immédiatement : le rig
+restait à 0 sur toute la durée du test. Corrigé en reprenant exactement le
+calcul de `barDist()` déjà utilisé et vérifié dans `tools/play_v3.js`
+(ancrage + longueur de câble × sinus/cosinus de l'angle courant) : le bot
+progresse alors normalement à travers les sept rigs et redémarre à la fin
+de chaque traversée.
+
+C'est le même genre de défaut que les sessions précédentes ont trouvé en
+regardant des captures plutôt qu'en lisant du code : la formule *avait
+l'air* juste (une distance à un point du rig), et seule l'exécution, avec
+l'état affiché à intervalles réguliers, a révélé qu'elle visait le
+mauvais point.
+
+**Vérifié, pas supposé**
+
+| Vérification | Résultat |
+|---|---|
+| Tas JS sur 30 minutes simulées (216 000 pas, le pas fixe du jeu) | stable à 9,5 Mo du début à la fin |
+| Pic de particules vivantes | 31, sur un plafond de 340 |
+| Boucle vivante à la fin | oui |
+| Non-régression | `check.js`, `play_v3.js` (16/16), `monkey_v3.js` (0 crash), `reach_v3.js` : tous inchangés — aucun fichier de jeu n'a été touché, seul un outil de test a été ajouté |
+
+**Ce qui reste, sans complaisance** : `s9_multitouch.js` reste spécifique à
+V1/V2 (le multitouch réel de Trapeze City est déjà couvert séparément par
+`s9_multitouch_v3.js`, écrit en session 4) ; et comme pour les cinq
+sessions précédentes, aucun vrai iPhone, aucun vrai Android, aucun
+ressenti tactile réel n'a été testé — hors de portée sans matériel
+physique, pas une omission de cette session.
+
+**V3 « Trapeze City » reste complète** : ce tampon a fermé le seul écart
+d'outillage légitime laissé par la session 5. Il n'ouvre aucun nouveau
+point.
+
+---
+
+## 16. Les prompts
 
 Un prompt autonome par session, dans [`V3-PROMPTS.md`](V3-PROMPTS.md).

@@ -66,6 +66,7 @@ fragile même s'il ne causait pas encore de bug observable.
 cd tools && npm install     # installe playwright-core
 node tools/s9_storage.js    # localStorage hostile (navigation privée), les TROIS jeux
 node tools/s9_memory.js     # 30 minutes simulées (V2) : le tas ne doit pas dériver
+node tools/s9_memory_v3.js  # même vérification pour Trapeze City, sa propre machine à états
 node tools/s9_multitouch.js # déplacement + action simultanés, V1 et V2
 node tools/s9_refresh.js    # vitesse indépendante du taux de rafraîchissement, V2
 node tools/s9_refresh_v3.js # même vérification pour Trapeze City
@@ -131,17 +132,36 @@ Playwright ad hoc qui capture des `page.screenshot()` puis les regarder
 avec l'outil `Read` — c'est ce qui a débusqué la mise à l'échelle et la
 police canvas invalides que le harnais headless ne pouvait pas voir.
 
-**Écart assumé** : `s9_memory.js` (dérive du tas sur 30 minutes simulées) et
-`s9_multitouch.js` restent spécifiques à V1/V2. Les adapter à Trapeze City
-demanderait de rejouer sa propre machine à états (`hang`/`fly`/`held`/`net`,
-au lieu de `run`/`air`/`swing` de V2) plutôt qu'un simple changement de nom
-de fichier — contrairement à `s9_storage.js` et `s9_refresh_v3.js`, qui ne
-dépendaient que du chemin de sauvegarde et de l'accumulateur, communs aux
-trois. Le multitouch réel de Trapeze City est déjà couvert par
-`s9_multitouch_v3.js` ; une dérive de tas sur session longue ne l'est pas
-spécifiquement, même si `play_v3.js` fait déjà tourner chaque profil sur
-plusieurs dizaines de milliers de pas sans réutiliser d'allocation (listes
-libres pour les particules, les textes flottants, les porteurs).
+`s9_memory_v3.js` reprend le principe de `s9_memory.js` pour Trapeze City :
+30 minutes de temps simulé (soit 216 000 pas, au pas fixe de 1/120 s du
+jeu), en pilotant le bot directement dans la page via `window.__v3`, sans
+attendre en temps réel. La transposition n'était pas un simple changement
+de nom : sa propre machine à états (`hang`/`fly`/`held`/`net`, pas
+`run`/`air`/`swing`) et une traversée qui dure 50 à 90 s au lieu d'occuper
+un niveau entier obligent le bot à redémarrer des dizaines de fois sur la
+fenêtre de 30 minutes — un test plus dur que l'original, qui exerce aussi
+le nettoyage d'état au redémarrage (`respawn()`, remise à zéro des listes
+libres), pas seulement une session continue.
+
+**Un vrai bug trouvé en écrivant ce bot, avant même son premier lancement
+complet** : sa première version mesurait la distance à la barre visée
+contre `rig.ax/ay/az` — l'**ancrage** du portique, à une longueur de câble
+au-dessus d'où pend réellement la barre. Le bot pompait indéfiniment sur le
+premier rig sans jamais rattraper le suivant, parce que la « distance »
+qu'il mesurait n'avait aucun rapport avec la vraie fenêtre de saisie.
+Corrigé en reprenant exactement le calcul de `barDist()` dans
+`play_v3.js` (ancrage + longueur de câble × sinus/cosinus de l'angle
+courant) : le bot progresse alors normalement à travers les sept rigs et
+redémarre à la fin de chaque traversée, comme prévu. C'est exactement le
+genre de défaut qu'une lecture du code de test n'aurait pas forcément
+relevé — la formule *avait l'air* juste — et que seule l'exécution, avec le
+rig affiché à chaque échantillon, a révélé.
+
+Mesuré sur 30 minutes simulées : tas stable à 9,5 Mo du début à la fin,
+pic de particules vivantes borné à 31 sur un plafond de 340, boucle
+vivante à la fin. `s9_multitouch.js` reste spécifique à V1/V2 — le
+multitouch réel de Trapeze City est déjà couvert par
+`s9_multitouch_v3.js`, qui suit le même motif de portage que ce script.
 
 ## Générateur d'image
 

@@ -66,18 +66,28 @@ aucun vrai iPhone, aucun vrai Android, aucun ressenti tactile réel. Le
 multitouch, le stockage hostile et l'indépendance au taux de rafraîchissement
 sont vérifiés par simulation fidèle, pas par du matériel physique.
 
-**Écart assumé** : `s9_memory.js` (dérive du tas sur 30 minutes simulées)
-n'a pas été porté à Trapeze City dans cette session — sa politique de
-pilotage automatique est écrite pour la machine à états de V2
-(`run`/`air`/`swing`) et demanderait une vraie réécriture, pas un
-changement de nom de fichier, contrairement à `s9_storage.js` et
-`s9_refresh_v3.js`. Ce que `play_v3.js` vérifie déjà, sans être un
-remplacement exact : chaque profil de joueur tourne sur plusieurs dizaines
-de milliers de pas de simulation sans qu'aucun système (particules, textes
-flottants, porteurs) n'alloue dans sa boucle — vérifié par construction
-(listes libres, tableaux typés) et par la mesure du pic de particules
-vivantes, jamais par une session Chromium de 30 minutes réelles comme pour
-V2.
+**Écart de la session précédente, comblé dans celle-ci** : `s9_memory_v3.js`
+porte désormais la dérive de tas sur 30 minutes simulées à Trapeze City,
+avec sa propre machine à états (`hang`/`fly`/`held`/`net`) et son propre
+bot — une vraie réécriture, pas un changement de nom de fichier. Le bot
+redémarre la traversée des dizaines de fois sur la fenêtre de 30 minutes
+(chaque traversée ne dure que 50 à 90 s de temps simulé), ce qui exerce en
+plus le nettoyage d'état au redémarrage, pas seulement une session
+continue.
+
+Un vrai bug a été trouvé en écrivant ce bot, avant même son premier
+lancement complet : sa première version mesurait la distance à la barre
+visée contre l'**ancrage** du portique plutôt que contre la barre
+elle-même (au bout du câble, qui oscille) — le bot pompait indéfiniment sur
+le premier rig sans jamais rattraper le suivant. Corrigé en reprenant
+exactement le calcul `barDist()` de `play_v3.js`. Mesuré ensuite sur 30
+minutes simulées : tas stable à 9,5 Mo du début à la fin, pic de
+particules vivantes borné à 31 sur un plafond de 340, boucle vivante à la
+fin.
+
+**Écart restant** : `s9_multitouch.js` reste spécifique à V1/V2 — le
+multitouch réel de Trapeze City est déjà couvert séparément par
+`s9_multitouch_v3.js`, écrit dès la session 4.
 
 ---
 
