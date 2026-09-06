@@ -46,9 +46,36 @@ body.touch #pad.on{display:block;}
   -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
 }
 .tbtn:active{transform:scale(0.92);background:rgba(255,46,136,0.30);}
+/* Boutons regroupés à droite : pomper/saisir (grand, au centre du groupe),
+   figure (à sa gauche), lâcher (au-dessus) — l'orientation reste au manche
+   virtuel de gauche, qui a tout l'espace pour lui. */
 #tAct{right:calc(env(safe-area-inset-right,0px) + 20px);}
 #tFig{right:calc(env(safe-area-inset-right,0px) + 118px);width:72px;height:72px;bottom:calc(env(safe-area-inset-bottom,0px) + 30px);}
-#tRel{left:calc(env(safe-area-inset-left,0px) + 20px);}
+#tRel{
+  right:calc(env(safe-area-inset-right,0px) + 44px);
+  bottom:calc(env(safe-area-inset-bottom,0px) + 132px);
+  width:64px;height:64px;font-size:11px;
+}
+
+/* Manche virtuel : oriente le regard libre (le corps de l'acrobate n'a pas
+   de degré de liberté directionnel dans les mécaniques de trapèze — lui
+   inventer une commande serait de la triche visuelle). Deux cercles
+   concentriques, la connaissance visuelle immédiate d'un stick. */
+#stick{
+  position:absolute;left:calc(env(safe-area-inset-left,0px) + 26px);
+  bottom:calc(env(safe-area-inset-bottom,0px) + 26px);
+  width:132px;height:132px;border-radius:50%;
+  border:2px solid rgba(255,255,255,0.20);background:rgba(12,4,32,0.32);
+  pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent;
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+}
+#stickKnob{
+  position:absolute;left:50%;top:50%;width:58px;height:58px;border-radius:50%;
+  margin:-29px 0 0 -29px;background:rgba(255,255,255,0.22);
+  border:2px solid rgba(255,255,255,0.42);
+  transition:background 0.1s;
+}
+#stick.active #stickKnob{background:rgba(255,46,136,0.34);}
 
 #rotate{
   position:absolute;inset:0;z-index:60;display:none;
@@ -62,11 +89,13 @@ body.touch #pad.on{display:block;}
 <div id="stage">
   <canvas id="c"></canvas>
   <div id="pad">
+    <div id="stick"><div id="stickKnob"></div></div>
     <div class="tbtn" id="tRel">LÂCHER</div>
     <div class="tbtn" id="tFig">FIGURE</div>
     <div class="tbtn" id="tAct">POMPER<br>SAISIR</div>
   </div>
   <button class="sysbtn" id="btnFull" title="Plein écran">⛶</button>
+  <button class="sysbtn" id="btnPause" title="Pause">❚❚</button>
   <div id="rotate">Tourne ton téléphone à l'horizontale.</div>
 </div>
 <script>
@@ -252,6 +281,17 @@ const I18N={
     rStars:'ÉTOILES MAXIMALES', rFalls:'CHUTES', rBank:'CAGNOTTE TOTALE',
     rScore:'SCORE', rGrade:'NOTE', rAgain:'ESPACE pour rejouer',
     bow:'SALUT',
+    /* Session 4 : menus, réglages, HUD */
+    play:'JOUER', settings:'RÉGLAGES', back:'RETOUR', resume:'REPRENDRE',
+    quit:'QUITTER', tapStart:'TOUCHER POUR COMMENCER',
+    musicVol:'MUSIQUE', sfxVol:'EFFETS', lang:'LANGUE', quality:'QUALITÉ',
+    camSens:'SENSIBILITÉ CAMÉRA', invertY:'INVERSER L’AXE', aids:'AIDES VISUELLES',
+    reduceMotion:'RÉDUIRE LES SECOUSSES', reduceFlash:'RÉDUIRE LES FLASHS',
+    textSize:'TAILLE DU TEXTE', highContrast:'CONTRASTE RENFORCÉ',
+    on:'ACTIVÉ', off:'DÉSACTIVÉ', low:'BASSE', med:'MOYENNE', high:'HAUTE',
+    small:'PETIT', normal:'NORMAL', large:'GRAND',
+    nextRig:'PROCHAIN RIG', catchWindow:'FENÊTRE DE PRISE',
+    tapPlay:'ESPACE ou toucher : jouer', tapSettings:'toucher : réglages',
   },
   en:{
     title:'TRAPEZE CITY', sub:'Live crossing',
@@ -279,6 +319,17 @@ const I18N={
     rStars:'PEAK STARS', rFalls:'FALLS', rBank:'TOTAL BANK',
     rScore:'SCORE', rGrade:'GRADE', rAgain:'SPACE to play again',
     bow:'BOW',
+    /* Session 4 : menus, settings, HUD */
+    play:'PLAY', settings:'SETTINGS', back:'BACK', resume:'RESUME',
+    quit:'QUIT', tapStart:'TAP TO BEGIN',
+    musicVol:'MUSIC', sfxVol:'SFX', lang:'LANGUAGE', quality:'QUALITY',
+    camSens:'CAMERA SENSITIVITY', invertY:'INVERT AXIS', aids:'VISUAL AIDS',
+    reduceMotion:'REDUCE SHAKE', reduceFlash:'REDUCE FLASHES',
+    textSize:'TEXT SIZE', highContrast:'HIGH CONTRAST',
+    on:'ON', off:'OFF', low:'LOW', med:'MEDIUM', high:'HIGH',
+    small:'SMALL', normal:'NORMAL', large:'LARGE',
+    nextRig:'NEXT RIG', catchWindow:'CATCH WINDOW',
+    tapPlay:'SPACE or tap: play', tapSettings:'tap: settings',
   },
 };
 let LANG=(navigator.language||'fr').slice(0,2)==='en'?'en':'fr';
@@ -291,7 +342,12 @@ function t(k){const d=I18N[LANG]||I18N.fr;return d[k]!==undefined?d[k]:(I18N.fr[
    ce bug exact a déjà été trouvé en V1, il ne revient pas ici.
    ───────────────────────────────────────────────────────────── */
 const SAVE_KEY='trapezecity.v3.save';
-const SV={schema:1,quality:null,lang:null,best:0};
+const SV={
+  schema:1,quality:null,lang:null,best:0,
+  // ── Session 4 : réglages persistés ──────────────────────────
+  music:0.7,sfx:0.85,camSens:1.0,invertY:0,aids:1,
+  reduceMotion:0,reduceFlash:0,textScale:1.0,highContrast:0,
+};
 (function loadSave(){
   try{
     const raw=localStorage.getItem(SAVE_KEY);
@@ -301,6 +357,15 @@ const SV={schema:1,quality:null,lang:null,best:0};
     if(o.quality)SV.quality=o.quality;
     if(o.lang)SV.lang=o.lang;
     if(typeof o.best==='number')SV.best=o.best;
+    if(typeof o.music==='number')SV.music=clamp(o.music,0,1);
+    if(typeof o.sfx==='number')SV.sfx=clamp(o.sfx,0,1);
+    if(typeof o.camSens==='number')SV.camSens=clamp(o.camSens,0.4,2.2);
+    if(typeof o.invertY==='number')SV.invertY=o.invertY?1:0;
+    if(typeof o.aids==='number')SV.aids=o.aids?1:0;
+    if(typeof o.reduceMotion==='number')SV.reduceMotion=o.reduceMotion?1:0;
+    if(typeof o.reduceFlash==='number')SV.reduceFlash=o.reduceFlash?1:0;
+    if(typeof o.textScale==='number')SV.textScale=clamp(o.textScale,0.8,1.35);
+    if(typeof o.highContrast==='number')SV.highContrast=o.highContrast?1:0;
   }catch(e){}
 })();
 if(SV.lang)LANG=SV.lang;
@@ -311,6 +376,251 @@ function persist(){
     _persistT=0;
     try{localStorage.setItem(SAVE_KEY,JSON.stringify(SV));}catch(e){}
   },280);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   3 bis. AUDIO — entièrement synthétisé, WebAudio
+
+   Deux bus (musique, effets) derrière un limiteur commun : les réglages de
+   volume deviennent réellement indépendants, et rien ne peut saturer la
+   sortie. Toute la surface d'API est protégée par try/catch — le motif
+   exact de V2 — parce qu'un contexte audio peut échouer à se créer, et
+   parce qu'un navigateur interdit toute lecture avant un geste utilisateur.
+
+   L'ambiance (vent, foule, rotors) n'est pas rejouée à chaque image : trois
+   sources tournent EN BOUCLE dès le premier geste, et chaque pas de jeu se
+   contente d'ajuster leur filtre et leur gain. C'est la même discipline que
+   les particules et les textes flottants — pas de création dans la boucle
+   chaude, ici appliquée à l'audio.
+   ───────────────────────────────────────────────────────────── */
+const AU={
+  ctx:null,master:null,music:null,sfx:null,ready:false,
+  wind:null,windFilt:null,windGain:null,
+  crowd:null,crowdFilt:null,crowdGain:null,
+  drone:null,droneGain:null,
+  layers:[],playing:false,loopTimer:0,musicStars:-1,
+  duckedForPause:false,
+};
+function audioInit(){
+  if(AU.ctx)return;
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC)return;
+    AU.ctx=new AC();
+    const comp=AU.ctx.createDynamicsCompressor();
+    comp.threshold.value=-10;comp.knee.value=22;comp.ratio.value=10;
+    comp.attack.value=0.005;comp.release.value=0.24;
+    AU.master=AU.ctx.createGain();AU.master.gain.value=0.9;
+    AU.music=AU.ctx.createGain();AU.music.gain.value=SV.music;
+    AU.sfx=AU.ctx.createGain();AU.sfx.gain.value=SV.sfx;
+    AU.music.connect(AU.master);AU.sfx.connect(AU.master);
+    AU.master.connect(comp);comp.connect(AU.ctx.destination);
+    AU.ready=true;
+    buildAmbientLoops();
+  }catch(e){AU.ready=false;}
+}
+// L'audio ne démarre qu'après une interaction : appelé depuis chaque
+// point d'entrée utilisateur (action, lâcher, figure, clic de menu).
+function audioResume(){
+  audioInit();
+  try{if(AU.ctx&&AU.ctx.state==='suspended')AU.ctx.resume().catch(function(){});}catch(e){}
+}
+function setVol(bus,v){
+  v=clamp(v,0,1);
+  if(bus==='music'){
+    SV.music=v;
+    try{if(AU.music)AU.music.gain.value=AU.duckedForPause?v*0.30:v;}catch(e){}
+  }else{
+    SV.sfx=v;
+    try{if(AU.sfx)AU.sfx.gain.value=v;}catch(e){}
+  }
+  persist();
+}
+function duckMusic(down){
+  if(down===AU.duckedForPause||!AU.ready||!AU.music)return;
+  AU.duckedForPause=down;
+  try{AU.music.gain.setTargetAtTime(down?SV.music*0.30:SV.music,AU.ctx.currentTime,0.12);}catch(e){}
+}
+
+// Une voix simple : oscillateur, enveloppe exponentielle, glissando optionnel.
+function voice(freq,dur,type,vol,glide,bus,delay){
+  if(!AU.ready)return;
+  try{
+    const c=AU.ctx,t0=c.currentTime+(delay||0);
+    const o=c.createOscillator(),g=c.createGain();
+    o.type=type||'sine';
+    o.frequency.setValueAtTime(freq,t0);
+    if(glide)o.frequency.exponentialRampToValueAtTime(Math.max(20,glide),t0+dur);
+    g.gain.setValueAtTime(0.0001,t0);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002,vol||0.2),t0+0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    o.connect(g);g.connect(bus==='music'?AU.music:AU.sfx);
+    o.start(t0);o.stop(t0+dur+0.02);
+  }catch(e){}
+}
+function noiseBurst(dur,vol,freq,q){
+  if(!AU.ready)return;
+  try{
+    const c=AU.ctx,n=Math.floor(c.sampleRate*dur);
+    const buf=c.createBuffer(1,Math.max(1,n),c.sampleRate),d=buf.getChannelData(0);
+    for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*(1-i/n);
+    const src=c.createBufferSource();src.buffer=buf;
+    const f=c.createBiquadFilter();f.type='bandpass';f.frequency.value=freq||900;f.Q.value=q||0.8;
+    const g=c.createGain();g.gain.value=vol||0.2;
+    src.connect(f);f.connect(g);g.connect(AU.sfx);
+    src.start();
+  }catch(e){}
+}
+// Effets ponctuels, un par événement de jeu. Rien de continu ici : le
+// continu (vent, foule, drone) vit dans les boucles d'ambiance plus bas.
+const SFX={
+  pump:    function(){voice(230,0.08,'triangle',0.15,410);},
+  release: function(){voice(340,0.12,'sine',0.14,150);},
+  giant:   function(){[330,440,554,660,880].forEach(function(f,i){voice(f,0.2,'triangle',0.15,0,0,i*0.05);});},
+  catchP:  function(){[720,980,1320].forEach(function(f,i){voice(f,0.13,'sine',0.20,0,0,i*0.04);});},
+  catchG:  function(){voice(420,0.10,'sine',0.18);voice(640,0.08,'sine',0.12,0,0,0.03);},
+  catchB:  function(){voice(260,0.14,'sawtooth',0.16,150);},
+  trick:   function(){voice(560,0.05,'square',0.09,900);},
+  clean:   function(){voice(980,0.09,'sine',0.13,1400);},
+  cash:    function(){[523,659,784,1047].forEach(function(f,i){voice(f,0.15,'sine',0.17,0,0,i*0.05);});},
+  porteur: function(){voice(90,0.16,'sine',0.35);[392,523,659,880].forEach(function(f,i){voice(f,0.28,'triangle',0.18,0,0,0.10+i*0.06);});},
+  throwSnd:function(){voice(500,0.10,'sine',0.16,900);},
+  net:     function(){voice(80,0.20,'sine',0.30,150);noiseBurst(0.16,0.14,260);},
+  star:    function(){voice(880,0.09,'sine',0.15,1500);},
+  ovation: function(){noiseBurst(1.3,0.20,1500,0.6);[523,659,784,1047,1318].forEach(function(f,i){voice(f,0.45,'triangle',0.13,0,0,i*0.07);});},
+  ui:      function(){voice(620,0.05,'sine',0.11);},
+  uiBack:  function(){voice(420,0.06,'sine',0.10);},
+  creak:   function(a){noiseBurst(0.14,0.05+0.05*a,180+60*a,3.5);},
+};
+function sfx(n,a){const f=SFX[n];if(f&&AU.ready)f(a);}
+// Prise : trois timbres selon la qualité (0 parfaite, 1 bonne, 2 juste).
+function catchClack(q){sfx(q===0?'catchP':(q===1?'catchG':'catchB'));}
+// Étoile gagnée : un carillon net à chaque étoile, la fanfare complète à
+// la cinquième — c'est l'ovation.
+function sfxStarGain(n){if(n>=5)sfx('ovation');else sfx('star');}
+
+/* ── Ambiance continue ──────────────────────────────────────
+   Trois sources tournent en boucle une fois créées ; chaque pas de jeu ne
+   fait qu'ajuster un filtre et un gain — aucune création audio dans la
+   boucle chaude. */
+function makeNoiseBuffer(sec){
+  const c=AU.ctx,n=Math.max(1,Math.floor(c.sampleRate*sec));
+  const buf=c.createBuffer(1,n,c.sampleRate),d=buf.getChannelData(0);
+  for(let i=0;i<n;i++)d[i]=Math.random()*2-1;
+  return buf;
+}
+function buildAmbientLoops(){
+  if(!AU.ready||AU.wind)return;
+  try{
+    const c=AU.ctx;
+    // Vent : bruit filtré passe-bande, dont la fréquence et le gain
+    // suivent la hauteur et la vitesse — plus haut et plus vite, plus ça
+    // siffle.
+    const wb=makeNoiseBuffer(2.0);
+    AU.wind=c.createBufferSource();AU.wind.buffer=wb;AU.wind.loop=true;
+    AU.windFilt=c.createBiquadFilter();AU.windFilt.type='bandpass';
+    AU.windFilt.frequency.value=500;AU.windFilt.Q.value=0.7;
+    AU.windGain=c.createGain();AU.windGain.gain.value=0.0001;
+    AU.wind.connect(AU.windFilt);AU.windFilt.connect(AU.windGain);AU.windGain.connect(AU.sfx);
+    AU.wind.start();
+    // Foule : rumeur grave et continue, dont le niveau suit les étoiles de
+    // hype — le public monte en même temps que le spectacle.
+    const cb=makeNoiseBuffer(2.4);
+    AU.crowd=c.createBufferSource();AU.crowd.buffer=cb;AU.crowd.loop=true;
+    AU.crowdFilt=c.createBiquadFilter();AU.crowdFilt.type='lowpass';
+    AU.crowdFilt.frequency.value=420;AU.crowdFilt.Q.value=0.4;
+    AU.crowdGain=c.createGain();AU.crowdGain.gain.value=0.0001;
+    AU.crowd.connect(AU.crowdFilt);AU.crowdFilt.connect(AU.crowdGain);AU.crowdGain.connect(AU.sfx);
+    AU.crowd.start();
+    // Drone : un ronronnement de rotor, oscillateur grave dont le volume
+    // suit son apparition et dont le détune approxime un effet Doppler —
+    // plus aigu quand il se rapproche, plus grave quand il s'éloigne.
+    AU.drone=c.createOscillator();AU.drone.type='sawtooth';AU.drone.frequency.value=110;
+    AU.droneGain=c.createGain();AU.droneGain.gain.value=0.0001;
+    AU.drone.connect(AU.droneGain);AU.droneGain.connect(AU.sfx);
+    AU.drone.start();
+  }catch(e){}
+}
+let _prevDroneDist=0;
+// Appelé une fois par pas de simulation : aucune création, seulement des
+// affectations de valeur et quelques rampes courtes.
+function updateAmbience(){
+  if(!AU.ready||!AU.wind)return;
+  try{
+    const playing=(gs==='playing'||gs==='intro'||gs==='finale')&&!paused;
+    const rig=RIGS[P.rig]||RIGS[0];
+    const height=playing?Math.max(0,P.y-(rig?rig.roofY-CFG.NET_DROP:0)):0;
+    const speed=playing?Math.hypot(P.vx,P.vy,P.vz):0;
+    const windK=playing?clamp(height/70+speed/26,0,1):0;
+    AU.windFilt.frequency.value=380+windK*1600;
+    AU.windGain.gain.setTargetAtTime(playing?0.012+windK*0.05:0.0001,AU.ctx.currentTime,0.35);
+
+    const st=playing?hypeStars():0;
+    AU.crowdGain.gain.setTargetAtTime(playing?0.010+st*0.014:0.0001,AU.ctx.currentTime,0.6);
+
+    const dFade=DRONE.live?DRONE.fade:0;
+    if(dFade>0.01){
+      const dist=Math.hypot(DRONE.x-CAM.x,DRONE.y-CAM.y,DRONE.z-CAM.z);
+      const closing=dist<_prevDroneDist-0.01?1:(dist>_prevDroneDist+0.01?-1:0);
+      _prevDroneDist=dist;
+      const near=clamp(1-dist/60,0,1);
+      AU.drone.frequency.value=100+closing*6+near*22;
+      AU.droneGain.gain.setTargetAtTime(0.05*dFade*near,AU.ctx.currentTime,0.2);
+    }else{
+      AU.droneGain.gain.setTargetAtTime(0.0001,AU.ctx.currentTime,0.4);
+    }
+  }catch(e){}
+}
+
+/* Musique de radio, en couches selon les étoiles de hype — le même
+   principe que la musique par paliers de chaleur de V2 : la base tourne
+   toujours, les couches hautes n'entrent qu'avec le spectacle. */
+function musicStop(){
+  AU.layers.forEach(function(o){try{o.stop();}catch(e){}});
+  AU.layers=[];AU.playing=false;
+  if(AU.loopTimer)clearTimeout(AU.loopTimer);
+  AU.loopTimer=0;
+}
+function musicPlay(){
+  if(!AU.ready)return;
+  musicStop();
+  try{
+    const c=AU.ctx,t0=c.currentTime+0.05;
+    const roots=[131,165,196,262];
+    const BEAT=0.34,BARS=8,total=BEAT*4*BARS;
+    const st=hypeStars();
+    const withMelody=st>=2, withBrass=st>=4;
+    const mk=function(freq,start,dur,vol,type,det){
+      try{
+        const o=c.createOscillator(),g=c.createGain();
+        o.type=type;o.frequency.value=freq;if(det)o.detune.value=det;
+        g.gain.setValueAtTime(0.0001,start);
+        g.gain.exponentialRampToValueAtTime(vol,start+0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001,start+dur);
+        o.connect(g);g.connect(AU.music);
+        o.start(start);o.stop(start+dur+0.02);
+        AU.layers.push(o);
+      }catch(e){}
+    };
+    for(let b=0;b<BARS*4;b++){
+      const t=t0+b*BEAT;
+      const r=roots[b%4===0?0:(b%2===0?2:1)];
+      mk(r*0.5,t,BEAT*0.85,0.09,'sine');
+      if(b%2===0)mk(r*2,t,BEAT*0.5,0.04,'triangle',-6);
+      if(withMelody&&b%4===0)mk(r*4,t,BEAT*1.7,0.05,'triangle',3);
+      if(withBrass&&b%8===0){mk(r*2,t,BEAT*2.4,0.06,'sawtooth',-5);mk(r*3,t,BEAT*2.4,0.05,'sawtooth',5);}
+    }
+    AU.playing=true;AU.musicStars=st;
+    AU.loopTimer=setTimeout(function(){
+      if(AU.playing&&(gs==='playing'||gs==='intro'||gs==='finale'))musicPlay();
+    },total*1000-100);
+  }catch(e){}
+}
+// Rejoue la boucle dès que le palier d'étoiles change, pour que la couche
+// haute entre sans attendre la fin de la mesure en cours de plus de
+// quelques secondes.
+function musicWatchStars(){
+  if(AU.playing&&hypeStars()!==AU.musicStars)musicPlay();
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -331,9 +641,17 @@ const isTouch=('ontouchstart' in window)||navigator.maxTouchPoints>0;
 if(isTouch)document.body.classList.add('touch');
 
 const _reduceMQ=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)');
-let reducedMotion=_reduceMQ?_reduceMQ.matches:false;
+let sysReduceMotion=_reduceMQ?_reduceMQ.matches:false;
+// reducedMotion combine la préférence système ET le réglage manuel du menu :
+// l'un ou l'autre suffit, comme pour toute case d'accessibilité sérieuse.
+let reducedMotion=sysReduceMotion||!!SV.reduceMotion;
+let reduceFlash=!!SV.reduceFlash;
+function updateAccessFlags(){
+  reducedMotion=sysReduceMotion||!!SV.reduceMotion;
+  reduceFlash=!!SV.reduceFlash;
+}
 if(_reduceMQ&&_reduceMQ.addEventListener)
-  _reduceMQ.addEventListener('change',function(e){reducedMotion=e.matches;});
+  _reduceMQ.addEventListener('change',function(e){sysReduceMotion=e.matches;updateAccessFlags();});
 
 /* Trois profils. Le budget de faces est le levier principal : c'est lui
    qui décide de la distance de rendu et de la densité de fenêtres.
@@ -1336,6 +1654,11 @@ const ACT_CARD=200;
    toute l'image, pour une hype qui ne bougeait plus. Une étoile se gagne
    au seuil, elle ne se reperd que quatre points plus bas. */
 let starsNow=0;
+// Pop et clignotement à l'apparition d'une étoile, façon étoiles de
+// recherche : un timer par étoile, consommé par le HUD, jamais par la
+// logique de jeu — c'est purement cosmétique.
+const starPopT=new Float64Array(5);
+const STAR_POP=34;
 function hypeStars(){return starsNow;}
 function refreshStars(){
   const before=starsNow;
@@ -1343,9 +1666,11 @@ function refreshStars(){
   while(starsNow>0&&hype<starsNow*CFG.STAR_STEP-CFG.STAR_HYST)starsNow--;
   if(starsNow>maxStars)maxStars=starsNow;
   if(starsNow>before){
+    for(let i=before;i<starsNow;i++)starPopT[i]=STAR_POP;
     shake(2+starsNow);
-    burst(P.x,P.y+1.2,P.z,4+starsNow*2,3.4,starsNow>=CFG.DRONE_ST?1:0,46,0.11);
+    if(!reduceFlash)burst(P.x,P.y+1.2,P.z,4+starsNow*2,3.4,starsNow>=CFG.DRONE_ST?1:0,46,0.11);
     if(starsNow===CFG.DRONE_ST)ftext(P.x,P.y+3.4,P.z,t('drone'),'#25E5FF',18);
+    sfxStarGain(starsNow);
   }
 }
 function hypeMult(){return CFG.MULT[starsNow];}
@@ -1384,6 +1709,7 @@ function cashBank(mult){
   const total=addScore(bankVal*mult*hypeMult());
   totalBank+=total;
   ftext(P.x,P.y+2.6,P.z,'+'+total,'#FFD98A',Math.min(34,20+total/220));
+  sfx('cash');
   addHype(4+Math.min(14,bankN*2.4));
   burst(P.x,P.y+1.0,P.z,Math.min(26,8+bankN*3),4.6,2,58,0.15);
   bankVal=0;bankN=0;
@@ -1395,6 +1721,7 @@ function dropBank(){
 }
 
 let toast='', toastT=0, toastCol='#fff';
+let displayScore=0;  // suit `score` avec retard, pour l'animation du compteur
 function say(msg,col){toast=msg;toastT=110;toastCol=col||'#fff';}
 
 // Amplitude déduite de l'énergie. Deluxe manipulait l'amplitude par un
@@ -1435,7 +1762,7 @@ function pump(){
   // enfermait le pendule à 0,30 rad : chaque pompage le ramenait à la même
   // valeur et l'amplitude ne montait jamais.
   if(inWin&&na<CFG.PUMP_MIN)na=CFG.PUMP_MIN;
-  if(inWin){addHype(CFG.HYPE_PUMP);emit(P.x,P.y,P.z,0,1.2,0,26,0.07,0);}
+  if(inWin){addHype(CFG.HYPE_PUMP);emit(P.x,P.y,P.z,0,1.2,0,26,0.07,0);sfx('pump');sfx('creak',Math.min(1,amp/CFG.AMP_MAX));}
   setAmp(rig,Math.min(CFG.AMP_MAX,na));
 }
 
@@ -1463,6 +1790,7 @@ function release(){
   P.dst=Math.min(RIGS.length-1,P.rig+1);
   P.windA=windNow(rig);
   trailReset();
+  sfx('release');
   // Poussière de magnésie au lâcher : la seule chose qui reste accrochée à
   // la barre quand les mains la quittent.
   for(let i=0;i<9;i++)
@@ -1505,6 +1833,7 @@ function tryGrab(){
   say(q===0?t('perfect'):(q===1?t('good'):t('poor')),q===0?'#25E5FF':(q===1?'#9CFF7A':'#FFC46E'));
   addScore(q===0?300:(q===1?180:90));
   addHype(CFG.HYPE_CATCH[q]);
+  catchClack(q);
   shake(q===0?3:1.6);
   burst(P.x,P.y,P.z,q===0?12:6,3.2,q===0?0:4,40,0.10);
   // Sortie propre : le corps est redressé au moment de la prise. Une
@@ -1517,6 +1846,7 @@ function tryGrab(){
     bankVal*=1.35;
     ftext(P.x,P.y+3.2,P.z,t('clean'),'#9CFF7A',20);
     addHype(4);
+    sfx('clean');
   }
   // La cagnotte n'est encaissée QU'ICI : la réception est passée.
   cashBank(CFG.CASH_Q[q]);
@@ -1537,10 +1867,11 @@ function portCatch(c){
   say(t('porteur'),'#FFD98A');
   addScore(500);
   addHype(CFG.HYPE_PORT);
+  sfx('porteur');
   // Encaissement au porteur : le meilleur multiplicateur du jeu.
   cashBank(CFG.PORT_MULT);
   shake(8);
-  burst(P.x,P.y,P.z,20,5.0,2,58,0.16);
+  if(!reduceFlash)burst(P.x,P.y,P.z,20,5.0,2,58,0.16);
 }
 function portThrow(){
   const c=P.port;
@@ -1557,6 +1888,7 @@ function portThrow(){
   P.state='fly';P.flyT=0;
   P.spin=-1.1;P.spinDir=-1;P.spinAcc=0;
   ftext(P.x,P.y+2.2,P.z,t('portGo'),'#25E5FF',22);
+  sfx('throwSnd');
   shake(4);
 }
 function stepPorteurs(){
@@ -1586,6 +1918,7 @@ function hitNet(){
   hype*=CFG.HYPE_FALL;refreshStars();
   falls++;penalty+=CFG.NET_PEN;
   say(t('net'),'#FF5B6E');
+  sfx('net');
   // Ralenti et resserrement : la réception ratée est le moment que le
   // joueur doit VOIR, pas celui qu'il doit subir en une demi-seconde.
   if(!reducedMotion)slowT=760;
@@ -1653,7 +1986,7 @@ function stepPlayer(){
       addHype(CFG.HYPE_GIANT*dec);
       addScore(400*dec);
       if(rig.giants<=2){say(t('giant'),'#FF2E88');shake(4);
-        burst(P.x,P.y,P.z,14,3.6,1,50,0.12);}
+        if(!reduceFlash)burst(P.x,P.y,P.z,14,3.6,1,50,0.12);sfx('giant');}
     }else if(P.amp<CFG.GIANT*0.86){rig.giantOn=0;}
     // Cambré à l'arrière du balancé, groupé à l'avant : la pose raconte
     // le sens du mouvement, ce qui aide à sentir quand pomper.
@@ -1690,6 +2023,7 @@ function stepPlayer(){
       const v=bankTrick(id,CFG.TRICK_PTS*(h1<=1?1:1.2));
       ftext(P.x,P.y+1.8,P.z,t(TRICK_KEYS[id])+' +'+Math.round(v),'#25E5FF',17);
       emit(P.x,P.y,P.z,0,1.0,0,30,0.07,0);
+      sfx('trick');
     }
     P.phi+=P.spin*DT;
     P.tuck=clamp(Math.abs(P.spin)/8,0,1);
@@ -2806,15 +3140,31 @@ function render(){
 
 /* ─────────────────────────────────────────────────────────────
    17. ÉTAT DE JEU ET INTERFACE
-   Le HUD complet — radar des toits, étoiles de hype, compteur de cagnotte —
-   est le lot de la session 4. Ici : le strict nécessaire pour piloter et
-   pour vérifier le socle.
+   Le HUD complet, les menus au canvas et les réglages d'accessibilité.
    ───────────────────────────────────────────────────────────── */
-let gs='menu';            // 'menu' | 'intro' | 'playing' | 'finale' | 'levelcomplete' | 'gameover'
+let gs='menu';    // 'menu' | 'intro' | 'settings' | 'playing' | 'finale' | 'levelcomplete' | 'gameover'
 let introT=0;             // avancement de la cinématique d'ouverture
 let slowT=0;              // ralenti, en millisecondes de temps réel restant
 const INTRO_LEN=470;      // ~3,9 s à 120 Hz
 let paused=false;
+let settingsFrom='menu';  // écran vers lequel revenir : 'menu' ou 'pause'
+let menuSel=0, settingsSel=0, pauseSel=0, resultsSel=0;
+
+/* ── Zones tactiles des écrans de menu ──
+   Repeuplées à chaque image par l'écran actif ; le clic ou le tap les
+   consulte plutôt que deviner des coordonnées à l'aveugle. Le motif exact
+   de trapeze-stars-v2.html : registre plat, dernier inscrit gagne. */
+let hitZones=[];
+function zone(x,y,w,h,fn){hitZones.push({x:x,y:y,w:w,h:h,fn:fn});}
+function hitTest(px,py){
+  for(let i=hitZones.length-1;i>=0;i--){
+    const z=hitZones[i];
+    if(px>=z.x&&px<=z.x+z.w&&py>=z.y&&py<=z.y+z.h)return z.fn;
+  }
+  return null;
+}
+function openSettings(){settingsFrom=(gs==='playing'&&paused)?'pause':'menu';gs='settings';settingsSel=0;sfx('ui');}
+function closeSettings(){gs=(settingsFrom==='pause')?'playing':'menu';if(settingsFrom==='pause')paused=true;sfx('uiBack');}
 // `lives` et l'état 'gameover' ne servent plus au jeu : une chute ne coûte
 // plus de vie, le filet rattrape et on repart du dernier toit. Les deux
 // restent déclarés et rendus parce que tools/check.js traverse les trois
@@ -2823,13 +3173,33 @@ let paused=false;
 let lives=5, score=0, level=1, frame=0;
 let debugOn=false, fps=60, faceAvg=0;
 
-function uiFont(size,weight){CX.font=(weight||700)+' '+Math.round(size*uiScale)+'px '+FONT;}
+// La taille de texte du réglage d'accessibilité multiplie TOUTE la
+// typographie du HUD : un seul point de passage, jamais une taille codée
+// en dur qui l'oublierait.
+function uiFont(size,weight){
+  CX.font=(weight||700)+' '+Math.round(size*uiScale*SV.textScale)+'px '+FONT;
+}
 function outlineText(txt,x,y,size,col,weight,align){
   uiFont(size,weight);
   CX.textAlign=align||'center';CX.textBaseline='middle';
-  CX.lineJoin='round';CX.lineWidth=Math.max(2,size*uiScale*0.22);
-  CX.strokeStyle='rgba(6,2,16,0.72)';CX.strokeText(txt,x,y);
+  // Contraste renforcé : contour plus large et plus opaque, pour un texte
+  // qui reste lisible sur n'importe quel fond de la ville.
+  CX.lineJoin='round';
+  CX.lineWidth=Math.max(2,size*uiScale*(SV.highContrast?0.34:0.22));
+  CX.strokeStyle=SV.highContrast?'rgba(0,0,0,0.92)':'rgba(6,2,16,0.72)';
+  CX.strokeText(txt,x,y);
   CX.fillStyle=col;CX.fillText(txt,x,y);
+}
+// Comme outlineText, mais réduit la taille si le texte dépasserait maxW.
+// Une valeur de réglage change de longueur avec la langue ("MOYENNE" contre
+// "MED") : deviner une taille qui rentre toujours a déjà coûté deux passes
+// sur V2 parce que la première correction n'avait pas été MESURÉE. Ici on
+// mesure avec measureText avant de choisir quoi que ce soit.
+function fitText(txt,x,y,maxW,size,col,weight,align){
+  uiFont(size,weight);
+  const w=CX.measureText(txt).width;
+  const s=w>maxW?Math.max(9,size*maxW/w):size;
+  outlineText(txt,x,y,s,col,weight,align);
 }
 
 // Le chrono n'est reformaté qu'au dixième de seconde : une chaîne par
@@ -2868,11 +3238,21 @@ function drawHypeStars(xRight,y,r,gap){
   const frac=clamp((hype-st*CFG.STAR_STEP)/CFG.STAR_STEP,0,1);
   for(let i=0;i<5;i++){
     const cx=x+i*(r*2+gap);
-    starPath(cx,y,r);
+    // Pop d'apparition, façon étoile de recherche : un rebond bref à
+    // l'instant où l'étoile est gagnée, jamais rejoué ensuite — l'étoile
+    // grossit puis retombe à sa taille normale en quelques images.
+    const pop=starPopT[i]/STAR_POP;
+    const rr=r*(pop>0?1+0.55*Math.sin(pop*Math.PI):1);
+    starPath(cx,y,rr);
     CX.fillStyle='rgba(10,4,26,0.55)';CX.fill();
     CX.lineWidth=Math.max(1,1.4*uiScale);
     CX.strokeStyle=i<st?'rgba(255,217,138,0.95)':'rgba(255,255,255,0.26)';CX.stroke();
-    if(i<st){starPath(cx,y,r*0.92);CX.fillStyle='#FFD98A';CX.fill();}
+    if(i<st){
+      // Clignotement bref juste après le gain, comme la nouvelle étoile
+      // de recherche d'un GTA.
+      const blink=pop>0&&((starPopT[i]/4)|0)%2===0;
+      starPath(cx,y,rr*0.92);CX.fillStyle=blink?'#FFFFFF':'#FFD98A';CX.fill();
+    }
     else if(i===st&&frac>0.02){
       CX.save();CX.beginPath();
       CX.rect(cx-r,y+r-2*r*frac,2*r,2*r*frac);CX.clip();
@@ -2880,6 +3260,103 @@ function drawHypeStars(xRight,y,r,gap){
       CX.restore();
     }
   }
+}
+
+/* ── Radar des toits ──────────────────────────────────────────
+   Panneau carré aux angles arrondis, en bas à gauche, comme le radar
+   d'un GTA — mais ce qu'il montre, c'est le parcours du numéro : les
+   sept rigs, le rig courant, le prochain, le drone. Orienté selon le cap
+   de la caméra : « devant » sur le radar, c'est devant à l'écran.
+   Peu coûteux — la ville est une grille, mais le radar ne dessine que
+   sept points et un cercle. */
+const RADAR_RANGE=150;   // mètres visibles du centre au bord
+function radarPoint(px,py,wx,wz,R){
+  // Position relative au joueur, tournée par le cap de la caméra : le nord
+  // du radar suit ce que regarde la caméra, pas le nord du monde.
+  const dx=wx-P.x, dz=wz-P.z;
+  const cy2=Math.cos(-CAM.yaw), sy2=Math.sin(-CAM.yaw);
+  const rx=dx*cy2-dz*sy2, rz=dx*sy2+dz*cy2;
+  const d=Math.hypot(rx,rz);
+  const k=Math.min(1,d/RADAR_RANGE)*R/(d||1);
+  return{x:px+rx*k,y:py-rz*k,clipped:d>RADAR_RANGE};
+}
+function drawRadar(cx,cy,R){
+  CX.save();
+  CX.beginPath();CX.roundRect(cx-R,cy-R,R*2,R*2,R*0.22);CX.clip();
+  CX.fillStyle='rgba(6,2,16,0.58)';CX.fillRect(cx-R,cy-R,R*2,R*2);
+  // Cercles de distance, pour donner une échelle au coup d'œil.
+  CX.strokeStyle='rgba(255,255,255,0.10)';CX.lineWidth=1;
+  CX.beginPath();CX.arc(cx,cy,R*0.55,0,6.2832);CX.stroke();
+  for(let n=0;n<RIGS.length;n++){
+    const rig=RIGS[n];
+    const p2=radarPoint(cx,cy,rig.x,rig.z,R*0.92);
+    const isCur=n===P.rig, isNext=n===P.dst&&P.state!=='hang';
+    const rr=(isCur?4.2:(isNext?3.6:2.4))*uiScale;
+    CX.fillStyle=isCur?'#25E5FF':(isNext?'#FFD98A':'rgba(255,255,255,0.55)');
+    CX.beginPath();CX.arc(p2.x,p2.y,rr,0,6.2832);CX.fill();
+    if(isNext){
+      CX.strokeStyle='rgba(255,217,138,0.65)';CX.lineWidth=Math.max(1,1.4*uiScale);
+      CX.beginPath();CX.arc(p2.x,p2.y,rr+2.4*uiScale+Math.sin(frame*0.12)*1.2,0,6.2832);CX.stroke();
+    }
+  }
+  // Le drone de télévision, s'il est en l'air.
+  if(DRONE.live&&DRONE.fade>0.05){
+    const dp=radarPoint(cx,cy,DRONE.x,DRONE.z,R*0.92);
+    CX.fillStyle='rgba(255,90,110,'+(0.5+0.5*DRONE.fade).toFixed(2)+')';
+    CX.beginPath();CX.arc(dp.x,dp.y,2.2*uiScale,0,6.2832);CX.fill();
+  }
+  CX.restore();
+  CX.lineWidth=Math.max(1,1.4*uiScale);
+  CX.strokeStyle='rgba(255,255,255,0.22)';
+  CX.beginPath();CX.roundRect(cx-R,cy-R,R*2,R*2,R*0.22);CX.stroke();
+  // Le joueur, fixe au centre : le radar tourne autour de lui, jamais
+  // l'inverse — c'est ce qui le rend lisible en plein vol.
+  CX.save();CX.translate(cx,cy);
+  CX.fillStyle='#FFFFFF';
+  CX.beginPath();CX.moveTo(0,-5*uiScale);CX.lineTo(4*uiScale,4.5*uiScale);
+  CX.lineTo(0,2*uiScale);CX.lineTo(-4*uiScale,4.5*uiScale);CX.closePath();CX.fill();
+  CX.restore();
+}
+
+/* ── Flèche hors champ vers le prochain rig ──────────────────
+   Utile en vol et pendant le balancé : si la barre visée n'est pas dans
+   le cadre (derrière le plan proche ou hors des bords), une flèche à la
+   marge de l'écran indique où elle est. */
+function drawNextRigArrow(){
+  const tgt=RIGS[P.dst];
+  if(!tgt)return;
+  toEye(tgt.ax,tgt.ay,tgt.az);
+  const onScreen=project(tgt.ax,tgt.ay,tgt.az)&&_px>40&&_px<SW-40&&_py>60&&_py<SH-60;
+  if(onScreen)return;
+  const ang=Math.atan2(_ex,Math.max(0.001,_ez));
+  // Derrière la caméra : l'angle brut pointerait dans le mauvais sens.
+  const bearing=_ez<0?(ang>=0?Math.PI-ang:-Math.PI-ang):ang;
+  const R=Math.min(SW,SH)*0.42;
+  const ax=HW+Math.sin(bearing)*R, ay=HH-Math.cos(bearing)*R*0.62;
+  const cxp=clamp(ax,50*uiScale,SW-50*uiScale), cyp=clamp(ay,70*uiScale,SH-90*uiScale);
+  CX.save();
+  CX.translate(cxp,cyp);CX.rotate(bearing);
+  CX.fillStyle='rgba(37,229,255,0.85)';
+  CX.beginPath();CX.moveTo(0,-11*uiScale);CX.lineTo(8*uiScale,9*uiScale);
+  CX.lineTo(0,4*uiScale);CX.lineTo(-8*uiScale,9*uiScale);CX.closePath();CX.fill();
+  CX.restore();
+}
+
+/* ── Jauge de fenêtre de prise ────────────────────────────────
+   Uniquement pendant un vol : la distance courante à la barre visée,
+   colorée selon les MÊMES seuils que tryGrab() — le HUD ne fait
+   qu'afficher un calcul qui existe déjà, il n'invente aucune règle. */
+function drawCatchGauge(x,y,w,h){
+  const tgt=RIGS[P.dst];
+  if(!tgt||P.state!=='fly')return;
+  barAt(tgt,tgt.ang);
+  const d=Math.hypot(P.x-_bx,P.y-_by,P.z-_bz);
+  const perf=CFG.GRAB_PERF*tgt.gw, good=CFG.GRAB_GOOD*tgt.gw, r=CFG.GRAB_R;
+  const k=clamp(1-(d-perf)/(r-perf),0,1);
+  CX.fillStyle='rgba(8,3,22,0.55)';CX.fillRect(x,y,w,h);
+  const col=d<perf?'#25E5FF':(d<good?'#9CFF7A':(d<r?'#FFD98A':'rgba(255,255,255,0.25)'));
+  CX.fillStyle=col;CX.fillRect(x,y,w*clamp(1-d/r,0,1),h);
+  outlineText(t('catchWindow'),x,y-13*uiScale,10,'rgba(255,255,255,0.6)',800,'left');
 }
 
 /* Texte à chasse forcée. Le canvas ne sait pas espacer les lettres : on
@@ -2938,26 +3415,163 @@ function drawLogo(cx,cy,size,alpha){
   CX.restore();
 }
 
+/* ── Réglages : la même grammaire de ligne partout ────────────
+   Chaque ligne sait s'afficher (val) et se faire tourner (left/right) ;
+   l'écran n'a qu'à les énumérer. C'est le motif exact de V2. */
+function cycleQuality(dir){
+  const names=['low','med','high'];
+  let i=names.indexOf(QUAL.name);
+  i=(i+dir+names.length)%names.length;
+  setQuality(names[i]);
+}
+function settingsRowsV3(){
+  return[
+    {label:t('musicVol'),val:function(){return Math.round(SV.music*100)+'%';},
+     left:function(){setVol('music',SV.music-0.1);},right:function(){setVol('music',SV.music+0.1);}},
+    {label:t('sfxVol'),val:function(){return Math.round(SV.sfx*100)+'%';},
+     left:function(){setVol('sfx',SV.sfx-0.1);},right:function(){setVol('sfx',SV.sfx+0.1);}},
+    {label:t('lang'),val:function(){return LANG.toUpperCase();},
+     left:function(){setLang(LANG==='fr'?'en':'fr');},right:function(){setLang(LANG==='fr'?'en':'fr');}},
+    {label:t('quality'),val:function(){return t(QUAL.name==='med'?'med':QUAL.name);},
+     left:function(){cycleQuality(-1);},right:function(){cycleQuality(1);}},
+    {label:t('camSens'),val:function(){return Math.round(SV.camSens*100)+'%';},
+     left:function(){SV.camSens=clamp(SV.camSens-0.15,0.4,2.2);persist();},
+     right:function(){SV.camSens=clamp(SV.camSens+0.15,0.4,2.2);persist();}},
+    {label:t('invertY'),val:function(){return SV.invertY?t('on'):t('off');},
+     left:toggleInvertY,right:toggleInvertY},
+    {label:t('aids'),val:function(){return SV.aids?t('on'):t('off');},
+     left:toggleAids,right:toggleAids},
+    {label:t('reduceMotion'),val:function(){return SV.reduceMotion?t('on'):t('off');},
+     left:toggleReduceMotion,right:toggleReduceMotion},
+    {label:t('reduceFlash'),val:function(){return SV.reduceFlash?t('on'):t('off');},
+     left:toggleReduceFlash,right:toggleReduceFlash},
+    {label:t('textSize'),val:function(){
+       return SV.textScale<0.95?t('small'):(SV.textScale>1.15?t('large'):t('normal'));},
+     left:function(){cycleTextScale(-1);},right:function(){cycleTextScale(1);}},
+    {label:t('highContrast'),val:function(){return SV.highContrast?t('on'):t('off');},
+     left:toggleHighContrast,right:toggleHighContrast},
+  ];
+}
+function setLang(l){LANG=l;SV.lang=l;persist();}
+function toggleInvertY(){SV.invertY=SV.invertY?0:1;persist();}
+function toggleAids(){SV.aids=SV.aids?0:1;persist();}
+function toggleReduceMotion(){SV.reduceMotion=SV.reduceMotion?0:1;updateAccessFlags();persist();}
+function toggleReduceFlash(){SV.reduceFlash=SV.reduceFlash?0:1;updateAccessFlags();persist();}
+function toggleHighContrast(){SV.highContrast=SV.highContrast?0:1;persist();}
+const TEXT_SCALES=[0.85,1.0,1.25];
+function cycleTextScale(dir){
+  let i=0,bd=9;
+  for(let k=0;k<TEXT_SCALES.length;k++){const d=Math.abs(TEXT_SCALES[k]-SV.textScale);if(d<bd){bd=d;i=k;}}
+  i=(i+dir+TEXT_SCALES.length)%TEXT_SCALES.length;
+  SV.textScale=TEXT_SCALES[i];persist();
+}
+
+/* Fond commun aux écrans de menu : la ville défile derrière, jamais un
+   aplat mort. */
+function menuVeil(alpha){CX.fillStyle='rgba(6,2,16,'+alpha+')';CX.fillRect(0,0,SW,SH);}
+
+function drawMenuScreen(){
+  hitZones.length=0;
+  const u=uiScale;
+  menuVeil(0.34);
+  drawLogo(HW,SH*0.28,Math.min(56,SW/(14*u)),1);
+  outlineText(t('sub'),HW,logoBottom+26*u,14,'rgba(255,214,196,0.72)',700);
+
+  // Bouton JOUER : grand, chaud, impossible à manquer — au clavier ET
+  // au doigt, avec un état de sélection visible.
+  const by=SH*0.60, bw=Math.min(SW*0.56,240*u), bh=52*u;
+  const sel0=menuSel===0;
+  const bg=CX.createLinearGradient(HW-bw*0.5,0,HW+bw*0.5,0);
+  bg.addColorStop(0,'#FF2E88');bg.addColorStop(1,'#FF8A3D');
+  CX.fillStyle=bg;
+  CX.beginPath();CX.roundRect(HW-bw*0.5,by-bh*0.5,bw,bh,bh*0.5);CX.fill();
+  if(sel0){
+    CX.lineWidth=Math.max(1.5,3*u);CX.strokeStyle='rgba(255,255,255,0.85)';
+    CX.beginPath();CX.roundRect(HW-bw*0.5-3*u,by-bh*0.5-3*u,bw+6*u,bh+6*u,bh*0.5+3*u);CX.stroke();
+  }
+  outlineText('▶  '+t('play'),HW,by,20,'#1A0500',900);
+  zone(HW-bw*0.5,by-bh*0.5,bw,bh,function(){startGame();});
+
+  const sy=by+bh*0.5+36*u;
+  const sel1=menuSel===1;
+  const sw2=170*u,sh2=40*u;
+  if(sel1){CX.fillStyle='rgba(255,255,255,0.10)';CX.beginPath();CX.roundRect(HW-sw2*0.5,sy-sh2*0.5,sw2,sh2,sh2*0.5);CX.fill();}
+  outlineText('⚙ '+t('settings'),HW,sy,14,sel1?'#FFF':'rgba(255,255,255,0.62)',sel1?800:700);
+  zone(HW-sw2*0.5,sy-sh2*0.5,sw2,sh2,function(){openSettings();});
+
+  const pulse=0.62+0.38*Math.sin(frame*0.035);
+  outlineText(isTouch?t('tapPlay'):t('hintStart'),HW,SH*0.86,14,'rgba(37,229,255,'+pulse.toFixed(2)+')',800);
+  if(SV.best>0)outlineText('🏆 '+SV.best,HW,SH-18*u,12,'rgba(255,255,255,0.5)',700);
+}
+
+function drawSettingsScreen(){
+  hitZones.length=0;
+  if(settingsFrom==='pause')menuVeil(0.80);else menuVeil(0.50);
+  const u=uiScale;
+  outlineText(t('settings'),HW,SH*0.11,26,'#FFD98A',900);
+
+  const rows=settingsRowsV3();
+  const rw=Math.min(SW*0.86,440*u);
+  const rh=Math.min(48*u,SH*0.078);
+  const top=SH*0.19;
+  for(let i=0;i<rows.length;i++){
+    const y=top+i*rh;
+    if(y>SH*0.90)break;               // portrait : on tronque plutôt que déborder
+    const sel=settingsSel===i;
+    if(sel){
+      CX.fillStyle='rgba(255,255,255,0.09)';
+      CX.beginPath();CX.roundRect(HW-rw*0.5,y-rh*0.38,rw,rh*0.76,10*u);CX.fill();
+    }
+    outlineText(rows[i].label,HW-rw*0.5+14*u,y,13,sel?'#FFF':'rgba(255,255,255,0.68)',sel?800:700,'left');
+    // Mesuré, pas deviné : la valeur la plus longue ("SENSIBILITÉ CAMÉRA"
+    // à 220 %) doit tenir entre les deux chevrons sans jamais les toucher.
+    outlineText('◀',HW+rw*0.5-108*u,y,13,'rgba(255,255,255,0.4)',700);
+    fitText(rows[i].val(),HW+rw*0.5-58*u,y,78*u,14,sel?'#25E5FF':'#FFF',800);
+    outlineText('▶',HW+rw*0.5-8*u,y,13,'rgba(255,255,255,0.4)',700);
+    zone(HW-rw*0.5,y-rh*0.42,rw,rh*0.84,(function(idx){return function(){settingsSel=idx;rows[idx].right();sfx('ui');};})(i));
+    zone(HW+rw*0.5-122*u,y-rh*0.42,32*u,rh*0.84,(function(idx){return function(){settingsSel=idx;rows[idx].left();sfx('ui');};})(i));
+  }
+  const backY=Math.min(top+rows.length*rh+30*u,SH*0.95);
+  const bw=150*u,bh=40*u;
+  CX.fillStyle='rgba(255,255,255,0.10)';
+  CX.beginPath();CX.roundRect(HW-bw*0.5,backY-bh*0.5,bw,bh,bh*0.5);CX.fill();
+  outlineText('←  '+t('back'),HW,backY,14,'#FFF',800);
+  zone(HW-bw*0.5,backY-bh*0.5,bw,bh,closeSettings);
+}
+
+function drawPauseScreen(){
+  hitZones.length=0;
+  menuVeil(0.66);
+  const u=uiScale;
+  outlineText(t('paused'),HW,SH*0.30,32,'#FFD98A',900);
+  outlineText('$'+score+'   ·   '+t('rig')+' '+(P.rig+1)+'/'+RIGS.length,HW,SH*0.38,15,'rgba(255,255,255,0.68)',700);
+
+  const items=[{k:'resume',fn:togglePause},{k:'settings',fn:openSettings},{k:'quit',fn:toMenu}];
+  const iy=SH*0.52, ih=Math.min(50*u,SH*0.09);
+  for(let i=0;i<items.length;i++){
+    const y=iy+i*ih, sel=pauseSel===i;
+    const bw=190*u,bh=ih*0.72;
+    if(sel){CX.fillStyle='rgba(255,255,255,0.10)';CX.beginPath();CX.roundRect(HW-bw*0.5,y-bh*0.5,bw,bh,bh*0.5);CX.fill();}
+    outlineText(t(items[i].k),HW,y,16,sel?'#FFF':'rgba(255,255,255,0.65)',sel?800:700);
+    zone(HW-bw*0.5,y-bh*0.5,bw,bh,(function(fn){return function(){fn();};})(items[i].fn));
+  }
+}
+
 function drawHUD(){
   const u=uiScale;
-  if(gs==='menu'){
-    // L'écran-titre ne masque pas la ville : elle défile derrière, et c'est
-    // elle l'argument. Un simple voile pour que le lettrage tienne.
-    CX.fillStyle='rgba(8,3,22,0.34)';CX.fillRect(0,0,SW,SH);
-    drawLogo(HW,SH*0.30,Math.min(56,SW/(14*u)),1);
-    outlineText(t('sub'),HW,logoBottom+26*u,14,'rgba(255,214,196,0.72)',700);
-    // Le rappel de commande pulse : sur un écran-titre qui bouge déjà, un
-    // texte fixe se perd.
-    const pulse=0.62+0.38*Math.sin(frame*0.035);
-    outlineText(t('hintStart'),HW,SH*0.68,18,'rgba(37,229,255,'+pulse.toFixed(2)+')',800);
-    outlineText(t('pump')+'   ·   '+t('release')+'   ·   '+t('figure'),
-      HW,SH*0.68+28*u,12,'rgba(255,255,255,0.44)',700);
-    return;
-  }
+  if(gs==='menu'){drawMenuScreen();return;}
+  if(gs==='settings'){drawSettingsScreen();return;}
   if(gs==='levelcomplete'){drawResults();return;}
+  hitZones.length=0;
 
   // ── Jauge d'amplitude, à gauche ──
-  const gx=26*u, gy=SH-38*u, gw=Math.min(SW*0.34,240*u), gh=9*u;
+  // Sur tactile, le manche virtuel occupe tout le coin bas-gauche (132 px
+  // CSS de diamètre) : la première capture montrait le radar totalement
+  // avalé dessous. Toute la colonne gauche du HUD remonte donc d'autant
+  // sur les écrans tactiles — invisible au clavier/souris, où le manche
+  // n'existe pas.
+  const touchGuard=isTouch?168*DPR:0;
+  const gx=26*u, gy=SH-38*u-touchGuard, gw=Math.min(SW*0.34,240*u), gh=9*u;
   CX.fillStyle='rgba(8,3,22,0.55)';CX.fillRect(gx,gy,gw,gh);
   const k=clamp(P.amp/CFG.AMP_MAX,0,1);
   CX.fillStyle=P.amp>=CFG.GIANT?'#FF2E88':'#25E5FF';
@@ -2967,6 +3581,15 @@ function drawHUD(){
   outlineText(P.amp>=CFG.GIANT?t('giant'):t('amp'),gx,gy-13*u,11,
     P.amp>=CFG.GIANT?'#FF2E88':'rgba(255,255,255,0.72)',800,'left');
 
+  // ── Fenêtre de prise, juste au-dessus de la jauge d'amplitude ──
+  // Réglage « Aides visuelles » : elle affiche un calcul qui existe déjà
+  // (les seuils de tryGrab()), pour qui veut le voir avant de lâcher.
+  if(SV.aids&&P.state==='fly')drawCatchGauge(gx,gy-38*u,gw*0.62,7*u);
+
+  // ── Radar des toits, en bas à gauche, au-dessus du reste du HUD gauche ──
+  const radR=Math.min(58*u,SW*0.09);
+  drawRadar(radR+16*u,gy-70*u-radR,radR);
+
   // ── Étoiles de hype et multiplicateur, en haut à droite ──
   // Le bouton plein écran est un élément HTML posé par-dessus le canvas :
   // il faut lui laisser sa place, sinon le HUD passe dessous en portrait.
@@ -2974,8 +3597,13 @@ function drawHUD(){
   drawHypeStars(rx,20*u,7*u,3*u);
   const st=hypeStars();
   if(st>0)outlineText('×'+hypeMult().toFixed(1),rx,40*u,13,'#FFD98A',900,'right');
-  // ── Cagnotte, façon compteur de fric ──
-  outlineText('$'+score,rx,64*u,22,'#9CFF7A',900,'right');
+  // ── Cagnotte, façon compteur de fric : la valeur affichée COURT après
+  // le score réel, jamais un saut sec — c'est ce qui fait « compteur »
+  // plutôt que « texte qui change ».
+  if(displayScore<score)displayScore=Math.min(score,displayScore+Math.max(1,(score-displayScore)*0.14));
+  else displayScore=score;
+  const cashHot=bankVal>0||hypeMult()>1;
+  outlineText('$'+Math.round(displayScore),rx,64*u,22,cashHot?'#FFD98A':'#9CFF7A',900,'right');
   if(bankVal>0){
     outlineText('+'+Math.round(bankVal)+' × '+(hypeMult()).toFixed(1),
       rx,86*u,14,'#FFD98A',800,'right');
@@ -3004,12 +3632,18 @@ function drawHUD(){
 
   if(toastT>0&&(gs==='playing'||gs==='finale'))outlineText(toast,HW,SH*0.22,22,toastCol,900);
 
+  // ── Flèche vers le prochain rig, quand il n'est pas dans le cadre ──
+  if(SV.aids&&gs==='playing'&&!paused&&(P.state==='hang'||P.state==='fly'))drawNextRigArrow();
+
   // ── Acte 1 : la porte des deux étoiles ──
   if(gs==='playing'&&!gateOpen)
     outlineText(t('gate'),HW,SH*0.30,15,'rgba(255,217,138,0.88)',800);
 
   // ── Carton d'acte ──
-  if(actT>0){
+  // Ne s'affiche pas pendant la pause : les deux superposés se lisaient
+  // mal (le pilule « REPRENDRE » venait chevaucher le sous-titre du
+  // carton), et la pause a de toute façon la priorité visuelle.
+  if(actT>0&&!paused){
     const p2=1-actT/ACT_CARD;
     // Entrée, tenue, sortie : trois temps, comme un carton de mission.
     const al=p2<0.14?p2/0.14:(p2>0.82?(1-p2)/0.18:1);
@@ -3031,17 +3665,13 @@ function drawHUD(){
   }
 
   // ── Rappel contextuel de la commande utile à l'instant ──
-  if(gs==='playing'&&!paused){
+  if(SV.aids&&gs==='playing'&&!paused){
     let hint='';
     if(P.state==='fly')hint=t('grab')+'   ·   '+t('figure');
     else if(P.state==='hang')hint=t('pump')+'   ·   '+t('release');
     if(hint)outlineText(hint,HW,SH-22*u,12,'rgba(255,255,255,0.42)',700);
   }
-  if(paused){
-    CX.fillStyle='rgba(8,3,22,0.6)';CX.fillRect(0,0,SW,SH);
-    outlineText(t('paused'),HW,HH-12*u,32,'#FFF',900);
-    outlineText(t('resume'),HW,HH+22*u,14,'rgba(255,255,255,0.6)',700);
-  }
+  if(paused){drawPauseScreen();}
   if(gs==='finale'){
     // Les bandes cinéma sont posées par le post-traitement : elles ferment
     // sur le jeu, pas sur l'interface.
@@ -3077,6 +3707,7 @@ function gradeOf(){
   return 1;
 }
 function drawResults(){
+  hitZones.length=0;
   const u=uiScale;
   CX.fillStyle='rgba(6,2,16,0.86)';CX.fillRect(0,0,SW,SH);
   const bh=SH*0.105;
@@ -3110,7 +3741,17 @@ function drawResults(){
     CX.lineWidth=Math.max(1,1.5*u);
     CX.strokeStyle=i<g?'rgba(255,217,138,0.9)':'rgba(255,255,255,0.25)';CX.stroke();
   }
+  const pulse=0.6+0.4*Math.sin(frame*0.09);
+  CX.globalAlpha=pulse;
   outlineText(t('rAgain'),HW,SH-bh*0.5,14,'#25E5FF',800);
+  CX.globalAlpha=1;
+  zone(0,0,SW,SH,function(){startGame();});
+  // Un lien discret vers le menu, POSÉ AU-DESSUS de la zone plein écran
+  // ci-dessus : le registre garde le dernier inscrit, donc celui-ci gagne
+  // sur le rectangle qui le précède.
+  const mw=120*u,mh=32*u,mx=14*u,my=SH-bh*0.5;
+  outlineText('← '+t('quit'),mx,my,12,'rgba(255,255,255,0.5)',700,'left');
+  zone(mx-6*u,my-mh*0.5,mw,mh,function(e){toMenu();});
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -3135,7 +3776,7 @@ function startGame(){
   // d'une touche, et le mouvement réduit la supprime.
   gs=reducedMotion?'playing':'intro';
   introT=0;slowT=0;paused=false;
-  lives=5;score=0;level=1;
+  lives=5;score=0;level=1;displayScore=0;
   hype=0;starsNow=0;gateOpen=0;act=1;actT=ACT_CARD;
   bankVal=0;bankN=0;
   runSteps=0;penalty=0;falls=0;totalBank=0;maxStars=0;bestChain=0;finT=0;
@@ -3147,6 +3788,7 @@ function startGame(){
   respawn();
   CAMS.ready=false;
   toastT=0;
+  musicPlay();
 }
 // La réception qui boucle le numéro : un temps de salut, puis le bilan.
 function startFinale(){
@@ -3158,7 +3800,7 @@ function startFinale(){
   shake(9);
 }
 function endIntro(){if(gs==='intro'){gs='playing';introT=INTRO_LEN;}}
-function toMenu(){gs='menu';paused=false;introT=0;slowT=0;}
+function toMenu(){gs='menu';paused=false;introT=0;slowT=0;musicStop();}
 function togglePause(){if(gs==='playing')paused=!paused;}
 
 /* ─────────────────────────────────────────────────────────────
@@ -3167,6 +3809,7 @@ function togglePause(){if(gs==='playing')paused=!paused;}
    le glissement de caméra : de quoi ne pas être mort au doigt.
    ───────────────────────────────────────────────────────────── */
 function action(){
+  audioResume();
   if(gs==='menu'){startGame();return;}
   if(gs==='intro'){endIntro();return;}
   if(gs==='gameover'||gs==='levelcomplete'){startGame();return;}
@@ -3176,6 +3819,7 @@ function action(){
   else P.grabBuf=CFG.GRAB_BUF;
 }
 function doRelease(){
+  audioResume();
   if(gs==='intro'){endIntro();return;}
   if(gs!=='playing'||paused)return;
   release();
@@ -3183,15 +3827,41 @@ function doRelease(){
 // Figure. Maintenue, elle accélère la rotation ; une simple pression
 // suffit à en lancer une, pour que le jeu reste jouable sans keyup.
 function figure(){
+  audioResume();
   if(gs!=='playing'||paused)return;
   P.trickHeld=1;P.trickBuf=CFG.GRAB_BUF;
 }
 function figureEnd(){P.trickHeld=0;}
+/* Navigation clavier des menus : haut/bas déplace la sélection, entrée
+   ou espace l'active — avec un état visible, jamais un choix à l'aveugle. */
+function menuNav(dir){
+  if(gs==='menu')menuSel=(menuSel+dir+2)%2;
+  else if(gs==='settings')settingsSel=(settingsSel+dir+settingsRowsV3().length)%settingsRowsV3().length;
+  else if(paused)pauseSel=(pauseSel+dir+3)%3;
+  sfx('ui');
+}
+function menuActivate(){
+  if(gs==='menu'){if(menuSel===0)startGame();else openSettings();}
+  else if(gs==='settings'){settingsRowsV3()[settingsSel].right();}
+  else if(paused){[togglePause,openSettings,toMenu][pauseSel]();}
+  else if(gs==='gameover'||gs==='levelcomplete'){startGame();}
+}
 window.addEventListener('keydown',function(e){
   const k=e.key;
-  if(k===' '||k==='Spacebar'||k==='w'||k==='z'||k==='ArrowUp'){e.preventDefault();action();return;}
-  if(k==='s'||k==='ArrowDown'||k==='Shift'){e.preventDefault();doRelease();return;}
-  if(k==='f'||k==='F'||k==='x'||k==='ArrowLeft'||k==='ArrowRight'){e.preventDefault();figure();return;}
+  const menuLike=gs==='menu'||gs==='settings'||paused;
+  if(menuLike){
+    if(k==='ArrowUp'||k==='w'){e.preventDefault();menuNav(-1);return;}
+    if(k==='ArrowDown'||k==='s'){e.preventDefault();menuNav(1);return;}
+    if(k==='ArrowLeft'&&gs==='settings'){e.preventDefault();settingsRowsV3()[settingsSel].left();return;}
+    if(k==='ArrowRight'&&gs==='settings'){e.preventDefault();settingsRowsV3()[settingsSel].right();return;}
+    if(k==='Enter'){e.preventDefault();menuActivate();return;}
+    if(k==='Escape'){e.preventDefault();
+      if(gs==='settings')closeSettings();else if(paused)togglePause();else toMenu();
+      return;}
+  }
+  if(k===' '||k==='Spacebar'||k==='z'||(k==='ArrowUp'&&!menuLike)){e.preventDefault();action();return;}
+  if((k==='s'&&!menuLike)||k==='ArrowDown'||k==='Shift'){e.preventDefault();doRelease();return;}
+  if(k==='f'||k==='F'||k==='x'||(!menuLike&&(k==='ArrowLeft'||k==='ArrowRight'))){e.preventDefault();figure();return;}
   if(k==='p'||k==='P'){togglePause();return;}
   if(k==='r'||k==='R'){startGame();return;}
   if(k==='Escape'){toMenu();return;}
@@ -3205,13 +3875,38 @@ window.addEventListener('keyup',function(e){
   if(k==='f'||k==='F'||k==='x'||k==='ArrowLeft'||k==='ArrowRight')figureEnd();
 });
 // Regard libre. Il revient de lui-même : on ne laisse jamais le joueur
-// coincé face à un mur.
+// coincé face à un mur. La sensibilité et l'inversion d'axe sont des
+// réglages, pas des constantes : ils passent par SV à chaque appel.
 let dragId=-1, dragX=0, dragY=0;
 function look(dx,dy){
-  CAMS.yawOff=clamp(CAMS.yawOff-dx*0.0032,-1.1,1.1);
-  CAMS.pitchOff=clamp(CAMS.pitchOff+dy*0.0026,-0.5,0.5);
+  const s=SV.camSens, inv=SV.invertY?-1:1;
+  CAMS.yawOff=clamp(CAMS.yawOff-dx*0.0032*s,-1.1,1.1);
+  CAMS.pitchOff=clamp(CAMS.pitchOff+dy*0.0026*s*inv,-0.5,0.5);
+}
+// Convertit un point client en coordonnées de rendu (SW × SH) : le canevas
+// est affiché à la taille CSS de l'écran mais dessine dans une résolution
+// physique différente — confondre les deux fait manquer toutes les zones.
+function toCanvasXY(clientX,clientY){
+  const r=CV.getBoundingClientRect();
+  const rw=r.width||1, rh=r.height||1;
+  return{x:(clientX-r.left)*(SW/rw),y:(clientY-r.top)*(SH/rh)};
+}
+// Un menu est actif : le pointeur clique, il ne fait pas glisser la caméra.
+function menuScreenActive(){return gs==='menu'||gs==='settings'||paused||gs==='gameover'||gs==='levelcomplete';}
+function screenClick(px,py){
+  audioResume();
+  const fn=hitTest(px,py);
+  if(fn){fn();return;}
+  if(gs==='menu'||gs==='intro'||gs==='gameover'||gs==='levelcomplete'||gs==='finale')action();
 }
 CV.addEventListener('pointerdown',function(e){
+  if(menuScreenActive()){
+    const p2=toCanvasXY(e.clientX,e.clientY);
+    screenClick(p2.x,p2.y);
+    return;
+  }
+  if(gs==='intro'){endIntro();return;}
+  if(gs==='finale'){audioResume();action();return;}   // tap-anywhere : passer le salut
   if(dragId<0){dragId=e.pointerId;dragX=e.clientX;dragY=e.clientY;}
 });
 CV.addEventListener('pointermove',function(e){
@@ -3222,21 +3917,68 @@ CV.addEventListener('pointermove',function(e){
 function endDrag(e){if(e.pointerId===dragId)dragId=-1;}
 CV.addEventListener('pointerup',endDrag);
 CV.addEventListener('pointercancel',endDrag);
-CV.addEventListener('click',function(){if(gs!=='playing')action();});
 
 (function bindTouch(){
   const a=document.getElementById('tAct'), r=document.getElementById('tRel');
   const f=document.getElementById('tFig');
   const pad=document.getElementById('pad');
   if(pad&&pad.classList&&isTouch)pad.classList.add('on');
-  if(a)a.addEventListener('pointerdown',function(e){e.preventDefault();action();});
-  if(r)r.addEventListener('pointerdown',function(e){e.preventDefault();doRelease();});
+  if(a)a.addEventListener('pointerdown',function(e){e.preventDefault();audioResume();action();});
+  if(r)r.addEventListener('pointerdown',function(e){e.preventDefault();audioResume();doRelease();});
   if(f){
-    f.addEventListener('pointerdown',function(e){e.preventDefault();figure();});
+    f.addEventListener('pointerdown',function(e){e.preventDefault();audioResume();figure();});
     f.addEventListener('pointerup',function(e){e.preventDefault();figureEnd();});
     f.addEventListener('pointercancel',figureEnd);
     f.addEventListener('pointerleave',figureEnd);
   }
+})();
+/* Manche virtuel de regard. Il porte SON PROPRE pointerId, capturé sur son
+   propre élément DOM : c'est ce qui garantit le multitouch réel — un doigt
+   dessus et un doigt sur POMPER sont deux pointeurs indépendants, routés
+   chacun vers son élément par le navigateur, sans code de coordination à
+   écrire. Le stick ne fait QUE piloter le regard libre (CAMS.yawOff /
+   pitchOff), exactement comme le glissement sur le reste de l'écran : le
+   corps de l'acrobate suit la physique du trapèze, il n'a rien à orienter. */
+(function bindStick(){
+  const base=document.getElementById('stick'), knob=document.getElementById('stickKnob');
+  if(!base||!knob)return;
+  let sid=-1, cx=0, cy=0, R=52;
+  function setKnob(dx,dy){knob.style.transform='translate('+dx+'px,'+dy+'px)';}
+  base.addEventListener('pointerdown',function(e){
+    if(sid>=0)return;
+    e.preventDefault();
+    sid=e.pointerId;
+    try{base.setPointerCapture(sid);}catch(err){}
+    const r=base.getBoundingClientRect();
+    cx=r.left+r.width*0.5;cy=r.top+r.height*0.5;R=r.width*0.40;
+    base.classList.add('active');
+  });
+  base.addEventListener('pointermove',function(e){
+    if(e.pointerId!==sid)return;
+    let dx=e.clientX-cx, dy=e.clientY-cy;
+    const d=Math.hypot(dx,dy);
+    if(d>R){dx=dx/d*R;dy=dy/d*R;}
+    setKnob(dx,dy);
+    // Le stick pilote le regard EN CONTINU, proportionnellement à son
+    // écart au centre — contrairement au glissement, qui pilote une
+    // vitesse par différence de position d'une image à l'autre.
+    look(dx*0.16,dy*0.16);
+  });
+  function releaseStick(e){
+    if(e.pointerId!==sid)return;
+    sid=-1;setKnob(0,0);base.classList.remove('active');
+  }
+  base.addEventListener('pointerup',releaseStick);
+  base.addEventListener('pointercancel',releaseStick);
+})();
+(function bindPause(){
+  const b=document.getElementById('btnPause');
+  if(!b)return;
+  b.addEventListener('click',function(){
+    audioResume();
+    if(gs==='playing')togglePause();
+    else if(paused)togglePause();
+  });
 })();
 (function bindFull(){
   const b=document.getElementById('btnFull');
@@ -3264,6 +4006,10 @@ function step(){
   frame++;
   if(toastT>0)toastT--;
   if(actT>0)actT--;
+  for(let i=0;i<5;i++)if(starPopT[i]>0)starPopT[i]--;
+  updateAmbience();
+  musicWatchStars();
+  duckMusic(paused||gs==='menu'||gs==='settings');
   if(gs==='intro'){
     introT++;
     stepPorteurs();
@@ -3359,6 +4105,19 @@ window.__v3={
   pause:togglePause,quality:setQuality,
   debug:function(v){debugOn=!!v;},
   look:look,
+  // Session 4 : menus, réglages, accessibilité — exposés pour
+  // monkey_v3.js et les captures, sur le même principe que le reste du
+  // pont : rien que l'outil n'ait à deviner depuis l'extérieur.
+  hitZones:hitZones,hitTest:hitTest,
+  openSettings:openSettings,closeSettings:closeSettings,
+  menuNav:menuNav,menuActivate:menuActivate,
+  get menuSel(){return menuSel;},set menuSel(v){menuSel=v;},
+  get settingsSel(){return settingsSel;},set settingsSel(v){settingsSel=v;},
+  get pauseSel(){return pauseSel;},set pauseSel(v){pauseSel=v;},
+  settingsRows:settingsRowsV3,
+  SV:SV,setVol:setVol,setLang:setLang,
+  screenClick:screenClick,
+  audioReady:function(){return AU.ready;},
   // Utilisé par les tests : place le joueur sur un rig donné, au repos.
   // Ouvre aussi la porte de l'acte 1, sinon toute capture à partir du rig 2
   // partirait d'un état que le jeu n'autorise pas encore.

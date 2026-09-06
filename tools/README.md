@@ -11,7 +11,16 @@ node tools/monkey_v1.js                # 8000 entrées aléatoires (clavier, tap
 node tools/monkey_v2.js                # même principe pour V2, y compris réglages et sélection de niveau
 node tools/reach_v3.js                 # preuve que chaque barre de Trapeze City est atteignable
 node tools/play_v3.js [n]              # joueur automatique, doit boucler les 7 rigs de Trapeze City
+node tools/monkey_v3.js [n]            # 8000 entrees aleatoires : jeu, menus, reglages, tactile
 ```
+
+`monkey_v3.js` étend le principe de `monkey_v2.js` aux menus de la session 4 :
+en plus des touches mitraillées et des taps à des coordonnées aléatoires, il
+ouvre et ferme les réglages en plein vol, navigue au clavier dans les menus,
+fait tourner des lignes de réglage hors de l'écran réglages, et force des
+transitions brutales (démarrer, revenir au menu, changer de qualité ou de
+langue) sans jamais respecter un ordre raisonnable. Une chose au moins doit
+tenir : quel que soit le désordre, aucune exception.
 
 `play_v3.js` est le test qui décide si la session 2 tient : cinq profils de
 joueur différents doivent boucler la traversée des sept rigs sans
@@ -59,7 +68,16 @@ node tools/s9_memory.js     # 30 minutes simulées : le tas ne doit pas dériver
 node tools/s9_multitouch.js # déplacement + action simultanés, deux points de contact réels
 node tools/s9_refresh.js    # la vitesse du jeu ne doit pas dépendre du taux de rafraîchissement
 node tools/shot_v3.js       # captures de contrôle de Trapeze City + enchaînement au clavier
+node tools/s9_multitouch_v3.js  # preuve de multitouch REEL : pomper et orienter en meme temps
 ```
+
+`s9_multitouch_v3.js` fait la même chose que `s9_multitouch.js`, pour
+Trapeze City : deux contacts simultanés via CDP `Input.dispatchTouchEvent`
+(pas des événements de pointeur synthétiques depuis la page), l'un sur le
+manche virtuel de regard, l'autre sur le bouton pomper/saisir. Il vérifie
+que les DEUX gestes agissent dans la même fenêtre de contact combiné — la
+preuve qu'aucun geste ne bloque l'autre, pas seulement qu'ils marchent
+chacun pris séparément.
 
 `shot_v3.js` fait deux choses. Il capture dix-huit situations choisies — dont
 deux caméra collée contre une façade, qui prouvent le découpage au plan

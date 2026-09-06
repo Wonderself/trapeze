@@ -655,6 +655,108 @@ habille, elle ne les réinvente pas.
 
 ---
 
-## 13. Les prompts
+## 13. État après S4
+
+**Livré** : le HUD, les menus, l'audio, le tactile — dans le même
+`trapeze-city-v3.html`, désormais 4 162 lignes, 185 Ko, un seul fichier,
+zéro dépendance. Radar des toits, flèche hors champ, jauge de fenêtre de
+prise, étoiles de hype animées, compteur de cagnotte animé, menu
+principal, écran de réglages (11 lignes), écran de pause, écran de
+résultats — tous cliquables ET navigables au clavier, avec un état de
+sélection visible. Audio entièrement synthétisé : deux bus derrière un
+limiteur, trois ambiances continues (vent, foule, drone), effets
+ponctuels par événement, musique en couches par étoile. Manche virtuel de
+regard à gauche, boutons regroupés à droite, bouton pause tactile.
+Accessibilité : réduction des secousses, réduction des flashs, taille de
+texte, contraste renforcé — les quatre persistées et agissant réellement
+sur le rendu.
+
+**Vérifié, pas supposé**
+
+| Vérification | Outil | Résultat |
+|---|---|---|
+| Syntaxe, chargement, parcours des états | `tools/check.js` | passe |
+| Traversée de bout en bout (non-régression S2) | `tools/play_v3.js` | 16/16, 5 profils sur 5 |
+| 8 000 entrées aléatoires — clavier, tap, réglages en plein vol | `tools/monkey_v3.js` | **0 crash sur 5 exécutions**, tous les gs atteints (`menu`, `intro`, `settings`, `playing`, `finale`) |
+| Multitouch RÉEL (CDP `Input.dispatchTouchEvent`) | `tools/s9_multitouch_v3.js` | pomper et orienter **simultanément** : le regard bouge et le pendule avance dans la même fenêtre de contact combiné |
+| Franchissabilité (non-régression S1) | `tools/reach_v3.js` | inchangée |
+| Jouabilité V2 (non-régression) | `tools/play_v2.js` | 12/12 |
+| Rendu, drone en vol | mesuré dans le jeu | 60 / 60 / 43 ips — identique à S3, le HUD et l'audio ne coûtent rien de mesurable |
+| HUD portrait et paysage | captures `20` à `28`, **regardées** | trois défauts trouvés, voir plus bas |
+
+**Trois défauts trouvés en REGARDANT les captures**
+
+1. **Le manche virtuel avalait le radar tout entier.** Les deux occupaient
+   le même coin bas-gauche ; le manche fait 132 px CSS de diamètre contre
+   une soixantaine de pixels pour le radar — quatre fois plus grand, posé
+   par-dessus. La première capture tactile montrait un radar invisible.
+   Toute la colonne gauche du HUD (jauge d'amplitude, fenêtre de prise,
+   radar) remonte maintenant d'autant sur les écrans tactiles ; rien ne
+   bouge au clavier/souris, où le manche n'existe pas.
+2. **Le carton d'acte et l'écran de pause se chevauchaient.** Mettre la
+   traversée en pause pendant un carton laissait « ACT II / THE CROSSING »
+   visible en transparence derrière le bouton RESUME. Le carton ne
+   s'affiche plus pendant la pause : elle a la priorité visuelle.
+3. **L'écran de résultats n'avait aucune zone cliquable vers le menu.**
+   Ajouté un lien discret « ← QUIT » dans le même coin que sur l'écran de
+   pause, cohérent avec le reste des écrans.
+
+**Une confusion de coordonnées, avant même la première capture**
+
+Le premier jet du dispatcheur de clic traduisait `event.clientX/clientY`
+directement en coordonnées de rendu, en ignorant que le canevas s'affiche
+à la taille CSS de l'écran mais dessine dans une résolution physique
+différente (le rapport de pixels). Sur un écran à forte densité, chaque
+tap aurait touché une zone décalée de son point réel. Une fonction
+`toCanvasXY()` fait maintenant la conversion via `getBoundingClientRect()`,
+avant tout `hitTest()`.
+
+**Écarts assumés par rapport au plan**
+
+- **Le manche virtuel oriente le regard, pas le corps.** Le plan demandait
+  « orientation du corps et de la figure au manche virtuel ». Le corps de
+  l'acrobate n'a aucun degré de liberté directionnel dans les mécaniques de
+  trapèze — le pendule est plan, le vol est balistique, la rotation part
+  d'une vitesse angulaire fixée au lâcher. Lui inventer une commande aurait
+  été de la triche visuelle, ou pire, une vraie nouvelle mécanique qu'S4
+  n'a pas le droit de toucher. Le manche pilote donc `CAMS.yawOff` /
+  `pitchOff`, exactement comme le glissement à la souris — en continu et
+  proportionnellement à l'écart au centre, là où le glissement pilote une
+  vitesse par différence de position.
+- **L'ambiance et la musique sont réelles mais pragmatiques.** Le vent, la
+  foule et le drone tournent en continu et réagissent à la hauteur, à la
+  vitesse, aux étoiles de hype et à la distance — mais l'effet Doppler du
+  drone est approché par un détune borné selon le signe de la distance
+  (se rapproche / s'éloigne), pas calculé depuis une vraie vitesse
+  radiale : le calcul exact demanderait de dériver une position sur deux
+  images, pour un gain inaudible dans un rotor de synthèse.
+- **La réduction des flashs cible les trois moments les plus francs**
+  (nouvelle étoile de hype, grand soleil, réception au porteur) plutôt que
+  toutes les gerbes de particules. Une gerbe de encaissement de cagnotte
+  n'est pas un flash au sens photosensible du terme ; en couper l'intégralité
+  aurait vidé le jeu de son retour visuel sans bénéfice d'accessibilité
+  réel.
+- **`aids` (aides visuelles) gate trois éléments précis** : la flèche hors
+  champ, la jauge de fenêtre de prise, et le rappel textuel de commande —
+  les trois révèlent un calcul qui existe déjà dans le jeu (le seuil de
+  `tryGrab()`, la position du prochain rig) plutôt que d'inventer une
+  assistance qui changerait la difficulté.
+
+**Une décision de conception à connaître pour la suite**
+
+**Le registre `hitZones` est repeuplé à CHAQUE image**, jamais accumulé :
+chaque écran commence par `hitZones.length=0` puis s'inscrit lui-même. Un
+écran qui oublierait de le faire laisserait les zones de l'écran précédent
+actives par-dessus le sien — c'est exactement le bug que ce motif, hérité
+de V2, empêche structurellement.
+
+**Ce qui reste ouvert pour la session 5** : l'intégration à `index.html`
+(troisième carte, aperçu animé, tableau comparatif), la mise à jour de
+`tools/README.md` et `docs/RESTE-A-FAIRE.md`, une dernière passe de
+performance et d'accessibilité à l'échelle des trois jeux.
+
+---
+
+## 14. Les prompts
 
 Un prompt autonome par session, dans [`V3-PROMPTS.md`](V3-PROMPTS.md).

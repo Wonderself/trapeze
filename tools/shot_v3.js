@@ -97,6 +97,20 @@ const SHOTS=[
   {name:'19-tour-finale', w:1280,h:720, run:v=>{
       v.start();v.goRig(5);v.setHype(70);v.sim(6);
       const p=v.state;v.freeze(p.x-24,p.y+26,p.z-30,Math.atan2(24,30),-0.10);}},
+
+  /* ── Session 4 : menus, HUD, portrait/paysage ────────────────────── */
+  {name:'20-menu-principal', w:1280,h:720, run:v=>{v.sim(4);}},
+  {name:'21-reglages', w:1280,h:720, run:v=>{v.openSettings();v.settingsSel=4;}},
+  {name:'22-pause', w:1280,h:720, run:v=>{v.start();v.goRig(2);v.setAmp(2.0);v.sim(60);v.pause();}},
+  {name:'23-hud-vol', w:1280,h:720, run:v=>{
+      v.start();v.goRig(2);v.setHype(72);v.setAmp(2.2);v.sim(30);
+      for(let i=0;i<900;i++){v.sim(1);const s=v.state;if(s.angV>0&&s.ang>0.95){v.release();break;}}
+      v.sim(20);}},
+  {name:'24-portrait-hud', w:414,h:896, run:v=>{v.start();v.goRig(2);v.setHype(64);v.setAmp(2.0);v.sim(80);}},
+  {name:'25-portrait-menu', w:414,h:896, run:v=>{v.sim(4);}},
+  {name:'26-portrait-reglages', w:414,h:896, run:v=>{v.openSettings();}},
+  {name:'27-radar-detail', w:1280,h:720, run:v=>{
+      v.start();v.goRig(4);v.setHype(80);v.setAmp(2.3);v.sim(50);}},
 ];
 
 (async()=>{
