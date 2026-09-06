@@ -6,7 +6,78 @@ est court, local, et vérifiable.
 
 **Avant toute modification** : `node tools/check.js <fichier>` doit passer, et
 `node tools/play_v2.js` doit rester vert après une modification de V2 (lancer
-plusieurs fois : la génération de niveau est aléatoire).
+plusieurs fois : la génération de niveau est aléatoire). Pour Trapeze City,
+`node tools/play_v3.js` et `node tools/monkey_v3.js` jouent le même rôle.
+
+---
+
+## V3 « Trapeze City » — état après les cinq sessions
+
+Les cinq sessions prévues dans `docs/V3-PLAN.md` sont livrées : socle 3D
+(S1), gameplay et traversée (S2), direction artistique et post-traitement
+(S3), HUD/menus/audio/tactile (S4), intégration à la page d'accueil et QA
+finale (S5, celle-ci). Le détail mesuré de chaque session est dans
+`docs/V3-PLAN.md`, sections « État après S1 » à « État après S5 » — ce qui
+suit est le résumé côté outillage et QA, dans le même esprit que le reste
+de ce fichier.
+
+**Vérifié dans cette session**, sur les trois jeux à la fois :
+
+- `tools/check.js` passe sur les trois fichiers.
+- `tools/s9_storage.js` étendu à Trapeze City : un `localStorage` hostile
+  (navigation privée simulée) ne tue la boucle de rendu sur aucun des trois.
+- `tools/s9_refresh_v3.js` (nouveau) : même preuve que `s9_refresh.js` pour
+  V2, transposée au pas fixe de 1/120 s de Trapeze City. Écart mesuré entre
+  60 Hz et 120 Hz : 0,22 %, dans le bruit de calcul.
+- `tools/s9_multitouch_v3.js` (nouveau) : deux contacts tactiles réels via
+  CDP, pomper et orienter le regard fonctionnent dans la même fenêtre de
+  contact combiné.
+- Performance mesurée, 1280×720, scène chargée :
+
+  | Jeu | Profils | Résultat |
+  |---|---|---|
+  | Classic (V1) | rendu fixe, pas de profil | ~46 ips |
+  | Deluxe (V2) | basse / moyenne / haute | ~61 / ~32 / ~26 ips |
+  | City (V3), drone en vol | basse / moyenne / haute | 60 / 60 / 43 ips |
+
+  Les trois tournent dans le **même conteneur sans GPU** : la rastérisation
+  logicielle du Canvas 2D y coûte nettement plus qu'sur un vrai poste, ce qui
+  explique que Deluxe en qualité haute (26 ips ici) reste néanmoins fluide
+  sur un ordinateur ou un téléphone réel — c'est la même limite déjà
+  documentée pour V1/V2 dans la section S9 ci-dessous, désormais confirmée
+  vraie aussi pour V3.
+- Accessibilité de `index.html` : les trois liens de jeu, les deux
+  `<details>` et le lien de pied de page sont atteignables par tabulation
+  seule, dans cet ordre, sans piège au clavier. Contrastes mesurés (ratio
+  WCAG) : texte courant 9,4 à 17,9 (seuil AA : 4,5), boutons d'action 5,4 à
+  7,6 sur le pire point de leur dégradé (seuil AA gros texte : 3). Les trois
+  aperçus animés ont un texte alternatif décrivant la scène, pas seulement
+  le nom de la version.
+- Régénération de l'image Open Graph (`assets/og-cover.png`, 1200×630) par
+  un encodeur PNG en Python pur (`tools/make_og_cover.py`, zlib et struct
+  seulement) : trois pastilles numérotées gold/cyan/magenta annoncent les
+  trois versions au lieu de deux, avec une silhouette de toits en clin
+  d'œil à Trapeze City. Décodage vérifié par un vrai navigateur, pas
+  seulement par l'absence d'erreur de l'encodeur.
+
+**Honnêteté sur ce qui n'a PAS pu être testé pour V3** (même limite que pour
+V1/V2, voir la section S9 plus bas — elle s'applique ici à l'identique) :
+aucun vrai iPhone, aucun vrai Android, aucun ressenti tactile réel. Le
+multitouch, le stockage hostile et l'indépendance au taux de rafraîchissement
+sont vérifiés par simulation fidèle, pas par du matériel physique.
+
+**Écart assumé** : `s9_memory.js` (dérive du tas sur 30 minutes simulées)
+n'a pas été porté à Trapeze City dans cette session — sa politique de
+pilotage automatique est écrite pour la machine à états de V2
+(`run`/`air`/`swing`) et demanderait une vraie réécriture, pas un
+changement de nom de fichier, contrairement à `s9_storage.js` et
+`s9_refresh_v3.js`. Ce que `play_v3.js` vérifie déjà, sans être un
+remplacement exact : chaque profil de joueur tourne sur plusieurs dizaines
+de milliers de pas de simulation sans qu'aucun système (particules, textes
+flottants, porteurs) n'alloue dans sa boucle — vérifié par construction
+(listes libres, tableaux typés) et par la mesure du pic de particules
+vivantes, jamais par une session Chromium de 30 minutes réelles comme pour
+V2.
 
 ---
 
@@ -34,6 +105,7 @@ plusieurs fois : la génération de niveau est aléatoire).
 | S8 Décors par monde | ✅ (version légère) | décor latéral par monde, sans mise en cache hors écran |
 | S9 Tests appareils réels | ◐ | tout ce qui est vérifiable sans matériel est fait — voir ci-dessous |
 | Limitation V1 portrait | ✅ | écran « tournez votre appareil », pause automatique |
+| V3 « Trapeze City » (S1 à S5) | ✅ | socle 3D, gameplay, direction artistique, HUD/audio/tactile, intégration — détail plus haut et dans `docs/V3-PLAN.md` |
 
 Tout ce qui était planifié dans les deux sessions précédentes est fait,
 y compris la limitation V1 explicitement mise de côté la fois d'avant.
@@ -180,10 +252,13 @@ défauts ci-dessus ; le garder dans la routine de vérification.
 
 | Fichier | Rôle |
 |---|---|
-| `tools/check.js` | Syntaxe, chargement, et parcours de tous les états de jeu. Contient le test de non-régression du bug `flashN`. |
+| `tools/check.js` | Syntaxe, chargement, et parcours de tous les états de jeu, sur les trois fichiers. Contient le test de non-régression du bug `flashN`. |
 | `tools/play_v2.js` | Joueur automatique qui passe par les mêmes entrées qu'un humain, esquive les dangers, et doit franchir les 12 niveaux. |
-| `tools/monkey_v1.js`, `tools/monkey_v2.js` | Entrées aléatoires et transitions d'état brutales, 8000 itérations. Cherchent les crashs qu'un joueur raisonnable ne provoquerait pas. |
+| `tools/play_v3.js` | Cinq profils de joueur automatique, doivent boucler les sept rigs de Trapeze City. Enchaîne un fuzz de 60 000 pas et un scénario de chute. |
+| `tools/monkey_v1.js`, `tools/monkey_v2.js`, `tools/monkey_v3.js` | Entrées aléatoires et transitions d'état brutales, 8000 itérations. Cherchent les crashs qu'un joueur raisonnable ne provoquerait pas. |
+| `tools/reach_v3.js` | Balaie chaque vol de Trapeze City en (amplitude, angle de lâcher) : prouve que chaque barre est atteignable. |
 | `tools/sandbox.js` | DOM et audio simulés, partagés par tous les scripts ci-dessus. |
+| `tools/make_og_cover.py` | Régénère `assets/og-cover.png`, en Python pur (zlib + struct). |
 
 Le joueur automatique de `play_v2.js` reste la meilleure protection contre
 les régressions de *gameplay* — il a trouvé, au fil des sessions, les barres

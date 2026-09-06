@@ -757,6 +757,120 @@ performance et d'accessibilité à l'échelle des trois jeux.
 
 ---
 
-## 14. Les prompts
+## 14. État après S5
+
+**Livré** : la troisième carte sur `index.html` (grille mobile-first à
+1/2/3 colonnes, aperçu animé au canvas montrant des toits de nuit, des
+néons et un acrobate qui se balance, tableau comparatif passé à trois
+colonnes, commandes et accessibilité mis à jour), l'image Open Graph
+régénérée pour trois versions, `tools/s9_storage.js` étendu au troisième
+jeu, `tools/s9_refresh_v3.js` nouveau, et la QA finale sur les trois jeux à
+la fois.
+
+**Vérifié, pas supposé**
+
+| Vérification | Outil | Résultat |
+|---|---|---|
+| Syntaxe, chargement, parcours des états, les trois jeux | `tools/check.js` | passe sur les trois fichiers |
+| Traversée de bout en bout (non-régression) | `tools/play_v3.js` | 16/16 |
+| 8 000 entrées aléatoires (non-régression) | `tools/monkey_v3.js` | 0 crash |
+| Franchissabilité (non-régression) | `tools/reach_v3.js` | inchangée |
+| Jouabilité V2 (non-régression) | `tools/play_v2.js` | 12/12, deux exécutions |
+| `localStorage` hostile, **les trois jeux** | `tools/s9_storage.js` (étendu) | aucun ne tue sa boucle de rendu |
+| Indépendance au taux de rafraîchissement, City | `tools/s9_refresh_v3.js` (nouveau) | écart 0,22 % entre 60 et 120 Hz |
+| Multitouch réel, City | `tools/s9_multitouch_v3.js` | pomper et orienter simultanément, confirmé |
+| Rendu, les trois jeux, trois profils | mesuré dans chaque jeu | voir tableau ci-dessous |
+| Page d'accueil : navigation clavier | script Playwright dédié | 6 arrêts de tabulation, les 3 liens de jeu + 2 réglages + le pied de page, aucun piège |
+| Page d'accueil : contrastes | mesuré (WCAG) | texte 9,4–17,9 ∶ 1, CTA 5,4–7,6 ∶ 1 sur le pire point du dégradé — tous au-dessus du seuil AA |
+| Page d'accueil : textes alternatifs | vérifié | les trois aperçus animés décrivent la scène, pas juste le nom de la version |
+| Image Open Graph | décodage réel (Chromium) | 1200×630, valide — pas seulement « l'encodeur n'a pas planté » |
+| Fichiers interdits | `git diff` | `trapeze-stars-v1.html` et `trapeze-stars-v2.html` non modifiés |
+
+**Performance mesurée**, 1280×720, scène chargée, dans le conteneur de
+développement (sans GPU — voir plus bas) :
+
+| Jeu | Profils | Images par seconde |
+|---|---|---|
+| Classic (V1) | rendu fixe, pas de profil de qualité | ~46 |
+| Deluxe (V2) | basse / moyenne / haute | ~61 / ~32 / ~26 |
+| City (V3), drone en vol et particules | basse / moyenne / haute | 60 / 60 / 43 |
+
+Les trois tournent dans le même conteneur logiciel, sans accélération
+graphique : c'est pour ça que Deluxe descend à 26 images par seconde en
+qualité haute ici, alors qu'il tourne fluide sur un ordinateur ou un
+téléphone réel avec un GPU — la même limite que `docs/RESTE-A-FAIRE.md`
+documente depuis les sessions V1/V2, désormais mesurée identique pour les
+trois jeux plutôt que supposée.
+
+**Un vrai doute résolu par la vérification, pas par la lecture du code**
+
+Le premier test de décodage de la nouvelle image Open Graph a échoué :
+`new Image()` depuis une page vierge refusait de charger le fichier
+`file://` généré. Une lecture rapide aurait pu conclure à un encodeur PNG
+cassé. Il ne l'était pas : un parcours manuel des chunks (signature, IHDR,
+CRC de chaque chunk, décompression du flux `IDAT`) montrait un fichier
+parfaitement valide, octet pour octet. La vraie cause était la restriction
+de Chromium sur le chargement d'images `file://` depuis un contexte qui
+n'est pas lui-même une page `file://` du même répertoire — **exactement le
+test que fait `index.html` en pratique** (une balise `<img>` dans une page
+`file://` référençant un fichier voisin). Revérifié dans ces conditions :
+décodage immédiat, 1200×630. La leçon vaut d'être notée : un échec de test
+ne prouve pas toujours ce qu'il a l'air de prouver — il fallait comprendre
+*pourquoi* avant de toucher au générateur.
+
+**Écarts assumés par rapport au plan**
+
+- **`tools/make_og_cover.py` est désormais committé.** La session à l'origine
+  de la première image de couverture (deux versions) avait écrit son
+  encodeur PNG à la volée sans le garder dans le dépôt — la couverture
+  n'était donc régénérable qu'en réécrivant l'outil de zéro, ce qui a
+  effectivement dû être refait ici. Cette fois le script reste dans
+  `tools/`, avec un chemin de sortie relatif au dépôt : la prochaine session
+  qui doit retoucher l'image n'aura qu'à le relancer.
+- **`s9_memory.js` (dérive du tas sur 30 minutes simulées) et
+  `s9_multitouch.js` restent V1/V2 seulement.** Leur politique de pilotage
+  automatique est écrite pour la machine à états de V2 ; l'adapter à
+  Trapeze City demande de la réécrire pour `hang`/`fly`/`held`/`net`, pas
+  seulement de changer un nom de fichier — contrairement à `s9_storage.js`
+  et à la version `_v3` de `s9_refresh.js`, qui ne dépendaient que du
+  chemin de sauvegarde et de l'accumulateur, communs aux trois jeux. Le
+  multitouch réel de Trapeze City est déjà couvert par
+  `s9_multitouch_v3.js` ; une dérive de tas sur session longue ne l'est pas
+  spécifiquement — voir `docs/RESTE-A-FAIRE.md` pour ce que `play_v3.js`
+  vérifie à la place, et pourquoi ce n'est pas un remplacement exact.
+- **L'image de couverture ne reprend pas de lettrage néon détaillé.** Une
+  police à blocs 5×7, dessinée à la main pour les sept lettres et les trois
+  chiffres réellement nécessaires (`TRAPEZE STARS` plus `1`/`2`/`3`) — pas
+  de bibliothèque de police, la contrainte « zlib et struct seulement »
+  l'interdit de toute façon. Le résultat reprend le même esprit que
+  l'image d'origine (mot-symbole en blocs, piste en perspective) en
+  ajoutant les trois pastilles numérotées et une silhouette de toits qui
+  ancre visuellement la troisième version.
+
+**Une décision de conception à connaître pour la suite**
+
+**Le tableau comparatif accepte des cases sans objet** (`—`), plutôt que de
+forcer une réponse à trois versions qui n'ont pas toutes un radar ou un
+HUD dédié. Une case vide honnête vaut mieux qu'une comparaison forcée : la
+ligne « Radar / HUD » dit clairement que c'est un ajout de Trapeze City,
+pas une variation sur un thème déjà présent dans les deux autres jeux.
+
+**Ce qui reste hors de portée**, sans complaisance : aucun vrai iPhone,
+aucun vrai Android de milieu de gamme, aucun ressenti tactile réel n'a été
+testé — pour Trapeze City comme pour les deux jeux précédents. Tout ce qui
+est écrit plus haut est vérifié par simulation fidèle (CDP pour le
+multitouch, un `localStorage` qui lève pour le stockage hostile, un
+accumulateur nourri à deux cadences pour l'indépendance au rafraîchissement)
+et par lecture réelle des résultats — jamais par une exécution sur du
+matériel physique, qui n'était pas disponible dans cette session.
+
+**V3 « Trapeze City » est complète** : les cinq sessions prévues sont
+livrées, vérifiées, et intégrées à la page d'accueil aux côtés de Classic
+et Deluxe. `docs/RESTE-A-FAIRE.md` porte le détail final et la liste honnête
+de ce qui reste hors de portée sans matériel réel.
+
+---
+
+## 15. Les prompts
 
 Un prompt autonome par session, dans [`V3-PROMPTS.md`](V3-PROMPTS.md).

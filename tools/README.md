@@ -1,6 +1,7 @@
 # Outils de vérification
 
-Deux familles d'outils, avec des besoins différents.
+Trois familles d'outils, avec des besoins différents : sans dépendance,
+avec Chromium réel, et un générateur d'image autonome.
 
 ## Sans dépendance — toujours disponibles
 
@@ -63,13 +64,28 @@ fragile même s'il ne causait pas encore de bug observable.
 
 ```
 cd tools && npm install     # installe playwright-core
-node tools/s9_storage.js    # localStorage hostile (navigation privée) ne doit pas planter le jeu
-node tools/s9_memory.js     # 30 minutes simulées : le tas ne doit pas dériver
-node tools/s9_multitouch.js # déplacement + action simultanés, deux points de contact réels
-node tools/s9_refresh.js    # la vitesse du jeu ne doit pas dépendre du taux de rafraîchissement
+node tools/s9_storage.js    # localStorage hostile (navigation privée), les TROIS jeux
+node tools/s9_memory.js     # 30 minutes simulées (V2) : le tas ne doit pas dériver
+node tools/s9_multitouch.js # déplacement + action simultanés, V1 et V2
+node tools/s9_refresh.js    # vitesse indépendante du taux de rafraîchissement, V2
+node tools/s9_refresh_v3.js # même vérification pour Trapeze City
 node tools/shot_v3.js       # captures de contrôle de Trapeze City + enchaînement au clavier
 node tools/s9_multitouch_v3.js  # preuve de multitouch REEL : pomper et orienter en meme temps
+python3 tools/make_og_cover.py  # régénère assets/og-cover.png (zlib + struct, zéro dépendance)
 ```
+
+`s9_storage.js` couvre désormais les trois jeux dans la même passe : chacun
+a sa propre façon de démarrer une partie et de déclencher l'écriture d'un
+nouveau record (`addScore()` n'a pas la même signature sur Trapeze City que
+sur V1/V2), mais le chemin testé est identique — un `localStorage` hostile
+ne doit jamais tuer la boucle de rendu.
+
+`s9_refresh_v3.js` reprend le principe de `s9_refresh.js` pour Trapeze
+City : même pas fixe (1/120 s au lieu de 1/60), même méthode — on rejoue
+`frameLoop()` à 60 Hz puis 120 Hz sur une durée d'horloge murale identique,
+sous la même politique de pompage, et on compare l'amplitude atteinte.
+Écart mesuré : 0,22 %, dans le bruit — la vitesse du jeu ne dépend pas du
+taux de rafraîchissement, sur les trois jeux.
 
 `s9_multitouch_v3.js` fait la même chose que `s9_multitouch.js`, pour
 Trapeze City : deux contacts simultanés via CDP `Input.dispatchTouchEvent`
@@ -114,3 +130,25 @@ Pour un contrôle visuel après un changement de rendu, écrire un script
 Playwright ad hoc qui capture des `page.screenshot()` puis les regarder
 avec l'outil `Read` — c'est ce qui a débusqué la mise à l'échelle et la
 police canvas invalides que le harnais headless ne pouvait pas voir.
+
+**Écart assumé** : `s9_memory.js` (dérive du tas sur 30 minutes simulées) et
+`s9_multitouch.js` restent spécifiques à V1/V2. Les adapter à Trapeze City
+demanderait de rejouer sa propre machine à états (`hang`/`fly`/`held`/`net`,
+au lieu de `run`/`air`/`swing` de V2) plutôt qu'un simple changement de nom
+de fichier — contrairement à `s9_storage.js` et `s9_refresh_v3.js`, qui ne
+dépendaient que du chemin de sauvegarde et de l'accumulateur, communs aux
+trois. Le multitouch réel de Trapeze City est déjà couvert par
+`s9_multitouch_v3.js` ; une dérive de tas sur session longue ne l'est pas
+spécifiquement, même si `play_v3.js` fait déjà tourner chaque profil sur
+plusieurs dizaines de milliers de pas sans réutiliser d'allocation (listes
+libres pour les particules, les textes flottants, les porteurs).
+
+## Générateur d'image
+
+`tools/make_og_cover.py` régénère `assets/og-cover.png`, l'image Open Graph
+de la page d'accueil. Aucune dépendance, pas même Pillow : un rasteriseur
+minimal en Python pur, `zlib` pour la compression et `struct` pour les
+chunks PNG. Le format du fichier est vérifié à la main (parcours des chunks,
+CRC, décompression du flux `IDAT`) et par un vrai décodeur — Chromium,
+chargé depuis une page du même répertoire — pas seulement supposé correct
+parce que l'encodeur a tourné sans erreur.

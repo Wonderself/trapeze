@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#08021a">
-<title>Trapeze Stars — Deux versions à essayer</title>
-<meta name="description" content="Trapeze Stars en deux versions jouables : Classic, un platformer 2D, et Deluxe, une refonte en perspective 3D. Jouable au clavier et au tactile, sans installation.">
+<title>Trapeze Stars — Trois versions à essayer</title>
+<meta name="description" content="Trapeze Stars en trois versions jouables : Classic, un platformer 2D, Deluxe, une refonte en perspective 3D, et City, une traversée en trapèze sur les toits d'une ville néon. Jouable au clavier et au tactile, sans installation.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Trapeze Stars — Deux versions à essayer">
-<meta property="og:description" content="Classic, le platformer 2D. Deluxe, la refonte en perspective 3D. Deux jeux jouables dans le navigateur, sans installation.">
+<meta property="og:title" content="Trapeze Stars — Trois versions à essayer">
+<meta property="og:description" content="Classic, le platformer 2D. Deluxe, la refonte en perspective 3D. City, la traversée sur les toits d'une ville néon. Trois jeux jouables dans le navigateur, sans installation.">
 <meta property="og:image" content="assets/og-cover.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Trapeze Stars — Deux versions à essayer">
-<meta name="twitter:description" content="Classic, le platformer 2D. Deluxe, la refonte en perspective 3D.">
+<meta name="twitter:title" content="Trapeze Stars — Trois versions à essayer">
+<meta name="twitter:description" content="Classic, le platformer 2D. Deluxe, la refonte en perspective 3D. City, la traversée en direct sur les toits.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎪</text></svg>">
 <style>
 :root{
@@ -79,7 +79,10 @@ h1 .l2{display:block;
   grid-template-columns:1fr;
   padding-bottom:clamp(32px,8vh,64px);
 }
+/* Une colonne en portrait, deux dès 820px, les trois à partir de 1080px —
+   la carte City ne doit jamais se retrouver seule sur une ligne. */
 @media(min-width:820px){.cards{grid-template-columns:1fr 1fr;align-items:start}}
+@media(min-width:1080px){.cards{grid-template-columns:1fr 1fr 1fr}}
 
 .card{
   background:linear-gradient(168deg,var(--card2),var(--card));
@@ -91,13 +94,19 @@ h1 .l2{display:block;
 @media(hover:hover){.card:hover{transform:translateY(-4px);box-shadow:0 20px 50px rgba(0,0,0,.45)}}
 .card.v1{border-color:rgba(255,197,61,.24)}
 .card.v2{border-color:rgba(77,210,255,.30)}
+.card.v3{border-color:rgba(255,46,136,.30)}
 @media(hover:hover){
   .card.v1:hover{border-color:rgba(255,197,61,.5)}
   .card.v2:hover{border-color:rgba(77,210,255,.62)}
+  .card.v3:hover{border-color:rgba(255,46,136,.62)}
 }
 .card.v2::before{
   content:'';position:absolute;inset:0;pointer-events:none;
   background:radial-gradient(120% 60% at 50% 0%,rgba(77,210,255,.13),transparent 62%);
+}
+.card.v3::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(120% 60% at 50% 0%,rgba(255,46,136,.14),transparent 62%);
 }
 .shot{
   position:relative;aspect-ratio:16/9;background:#05010f;
@@ -111,6 +120,7 @@ h1 .l2{display:block;
 }
 .tag.a{background:rgba(255,197,61,.18);color:var(--gold);border:1px solid rgba(255,197,61,.4)}
 .tag.b{background:rgba(77,210,255,.18);color:var(--cyan);border:1px solid rgba(77,210,255,.45)}
+.tag.c{background:rgba(255,46,136,.18);color:var(--pink);border:1px solid rgba(255,46,136,.45)}
 .body{padding:clamp(18px,4.5vw,26px);display:flex;flex-direction:column;flex:1;gap:14px}
 .card h2{font-size:clamp(22px,5.6vw,28px);font-weight:900;letter-spacing:-.01em;line-height:1.15}
 .card h2 small{display:block;font-size:13px;font-weight:700;color:var(--ink3);letter-spacing:.05em;margin-top:4px}
@@ -129,6 +139,7 @@ ul.feat li b{color:var(--ink);font-weight:700}
 @media(hover:hover){.cta:hover{filter:brightness(1.1)}}
 .cta.a{background:linear-gradient(96deg,#FFC53D,#FF8A3D);color:#2A1000}
 .cta.b{background:linear-gradient(96deg,#4DD2FF,#9B6BFF);color:#04101F}
+.cta.c{background:linear-gradient(96deg,#FF2E88,#FF8A3D);color:#2A0016}
 .cta:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
 
 /* ── Comparatif ──────────────────────────────────────────── */
@@ -186,12 +197,13 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
 <div class="wrap">
 
 <header>
-  <div class="kicker">🎪 Deux versions jouables</div>
+  <div class="kicker">🎪 Trois versions jouables</div>
   <h1>TRAPEZE<span class="l2">STARS</span></h1>
   <p class="sub">
-    Le même cirque, deux jeux différents. <b>Classic</b> est un platformer en vue de côté.
+    Le même cirque, trois jeux différents. <b>Classic</b> est un platformer en vue de côté.
     <b>Deluxe</b> est une refonte complète en perspective, où l’on s’élance vers le fond du chapiteau.
-    Rien à installer&nbsp;: ça se joue dans le navigateur, au clavier comme au doigt.
+    <b>City</b> pose le même trapèze sur les toits d’une ville néon, avec la présentation d’un jeu
+    urbain moderne. Rien à installer&nbsp;: ça se joue dans le navigateur, au clavier comme au doigt.
   </p>
 </header>
 
@@ -245,28 +257,57 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
     </div>
   </article>
 
+  <!-- ── V3 ─────────────────────────────────────────────── -->
+  <article class="card v3">
+    <div class="shot">
+      <span class="tag c">Version 3 · Trapeze City</span>
+      <canvas id="pv3" width="480" height="270" role="img"
+        aria-label="Aperçu animé : toits d'une ville néon au crépuscule, un acrobate se balance entre deux rigs de trapèze pendant qu'un drone de télévision tourne autour de lui."></canvas>
+    </div>
+    <div class="body">
+      <h2>City<small>LA TRAVERSÉE, SUR LES TOITS D’UNE VILLE</small></h2>
+      <p class="desc">
+        Le même trapèze, une troisième peau. La caméra devient libre en 3D, le chapiteau
+        laisse place à une ville générée par graine et éclairée au néon, et le numéro devient
+        une traversée en direct de toit en toit&nbsp;: sept rigs, un seul vol continu.
+      </p>
+      <ul class="feat">
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FF2E88" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Sept rigs enchaînés</b>, en trois actes, au-dessus d’une ville en 3D générée par graine</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FF2E88" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Étoiles de hype</b> jusqu’à ×3, avec drone de télévision quand le public s’enflamme</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FF2E88" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Radar des toits</b> et HUD façon jeu urbain&nbsp;: mêmes mécaniques de trapèze, présentation neuve</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FF2E88" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Porteur, filet et vent latéral</b>&nbsp;: la chute coûte la cagnotte, jamais la traversée</span></li>
+      </ul>
+      <a class="cta c" href="trapeze-city-v3.html">▶ Jouer à City</a>
+    </div>
+  </article>
+
 </div>
 
 <section id="compare">
-  <h3>Ce qui change entre les deux</h3>
+  <h3>Ce qui change entre les trois</h3>
   <p class="lead">
-    Deluxe n’est pas Classic avec de meilleurs graphismes&nbsp;: les règles elles-mêmes sont différentes.
+    Ce n’est pas le même jeu avec de meilleurs graphismes à chaque version&nbsp;: les règles
+    elles-mêmes changent. City reprend les mécaniques de Deluxe (pompage, qualités de prise,
+    cagnotte, porteur, filet) et les rejoue dans un décor et une présentation entièrement neufs.
   </p>
   <div class="tablewrap">
     <table>
-      <thead><tr><th scope="col">&nbsp;</th><th scope="col">Classic</th><th scope="col">Deluxe</th></tr></thead>
+      <thead><tr><th scope="col">&nbsp;</th><th scope="col">Classic</th><th scope="col">Deluxe</th><th scope="col">City</th></tr></thead>
       <tbody>
-        <tr><td>Point de vue</td><td>Vue de côté, défilement horizontal</td><td>Perspective, progression en profondeur</td></tr>
-        <tr><td>Saisie du trapèze</td><td>Assistée, à proximité</td><td class="yes">Toujours volontaire, avec trois qualités de prise</td></tr>
-        <tr><td>Ampleur du balancé</td><td class="no">Subie</td><td class="yes">Se construit au pompage, jusqu’au grand soleil</td></tr>
-        <tr><td>Figures</td><td>Salto simple</td><td class="yes">Cagnotte perdue si la réception échoue</td></tr>
-        <tr><td>Porteur</td><td>Réception simple</td><td class="yes">Fenêtre annoncée, suspension, relance</td></tr>
-        <tr><td>Public</td><td>Applaudissements décoratifs</td><td class="yes">Jauge à trois paliers, multiplicateur jusqu’à ×3</td></tr>
-        <tr><td>En cas de chute</td><td>Une vie en moins</td><td class="yes">Le filet rattrape&nbsp;: on perd le score, pas la partie</td></tr>
-        <tr><td>Rendu</td><td>Ratio fixe 800×450, plein écran en paysage sur mobile</td><td class="yes">Plein écran, portrait et paysage, densité d’écran gérée</td></tr>
-        <tr><td>Écrans 120&nbsp;Hz</td><td class="no">Le jeu accélère</td><td class="yes">Pas de temps fixe, vitesse identique</td></tr>
-        <tr><td>Qualité graphique</td><td>Fixe</td><td class="yes">Trois profils, ajustés automatiquement</td></tr>
-        <tr><td>Réglages et progression</td><td>Aucun réglage, on repart de zéro</td><td class="yes">Musique, langue, qualité, vitesse ; niveaux à étoiles, rejouables un par un</td></tr>
+        <tr><td>Point de vue</td><td>Vue de côté, défilement horizontal</td><td>Perspective, progression en profondeur</td><td class="yes">Caméra 3D libre, au-dessus d’une ville</td></tr>
+        <tr><td>Décor</td><td>Chapiteau en 2D</td><td>Chapiteau en perspective, par monde</td><td class="yes">Ville néon générée par graine, 940&nbsp;m de côté</td></tr>
+        <tr><td>Structure</td><td>12 niveaux, 4 mondes</td><td>12 niveaux à étoiles, rejouables</td><td class="yes">Un seul numéro, sept rigs enchaînés en trois actes</td></tr>
+        <tr><td>Saisie du trapèze</td><td>Assistée, à proximité</td><td class="yes">Toujours volontaire, trois qualités de prise</td><td class="yes">Toujours volontaire, fenêtre resserrée à chaque rig</td></tr>
+        <tr><td>Ampleur du balancé</td><td class="no">Subie</td><td class="yes">Se construit au pompage, jusqu’au grand soleil</td><td class="yes">Identique, par l’énergie du pendule</td></tr>
+        <tr><td>Figures</td><td>Salto simple</td><td class="yes">Cagnotte perdue si la réception échoue</td><td class="yes">Cagnotte, avec bonus de sortie propre et d’enchaînement</td></tr>
+        <tr><td>Porteur</td><td>Réception simple</td><td class="yes">Fenêtre annoncée, suspension, relance</td><td class="yes">Identique, plus un vent latéral au dernier vol</td></tr>
+        <tr><td>Public</td><td>Applaudissements décoratifs</td><td class="yes">Jauge à trois paliers, multiplicateur jusqu’à ×3</td><td class="yes">Cinq étoiles de hype, multiplicateur ×3, drone de télévision</td></tr>
+        <tr><td>En cas de chute</td><td>Une vie en moins</td><td class="yes">Le filet rattrape&nbsp;: on perd le score, pas la partie</td><td class="yes">Le filet rattrape, reprise au dernier toit atteint</td></tr>
+        <tr><td>Rendu</td><td>Ratio fixe 800×450, plein écran en paysage sur mobile</td><td class="yes">Plein écran, portrait et paysage, densité d’écran gérée</td><td class="yes">Identique, avec post-traitement (lueur, grain, étalonnage)</td></tr>
+        <tr><td>Écrans 120&nbsp;Hz</td><td class="no">Le jeu accélère</td><td class="yes">Pas de temps fixe, vitesse identique</td><td class="yes">Identique, pas fixe à 1/120&nbsp;s</td></tr>
+        <tr><td>Qualité graphique</td><td>Fixe</td><td class="yes">Trois profils, ajustés automatiquement</td><td class="yes">Trois profils, effets dégressifs par palier</td></tr>
+        <tr><td>Réglages et progression</td><td>Aucun réglage, on repart de zéro</td><td class="yes">Musique, langue, qualité, vitesse ; niveaux à étoiles</td><td class="yes">Musique, langue, qualité, sensibilité caméra, accessibilité</td></tr>
+        <tr><td>Radar / HUD</td><td class="no">—</td><td class="no">—</td><td class="yes">Radar des toits, façon jeu urbain</td></tr>
       </tbody>
     </table>
   </div>
@@ -274,7 +315,7 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
 
 <section id="tech">
   <h3>Sous le capot</h3>
-  <p class="lead">Deux fichiers HTML autonomes. Pas de moteur, pas de bibliothèque, pas de build.</p>
+  <p class="lead">Trois fichiers HTML autonomes. Pas de moteur, pas de bibliothèque, pas de build.</p>
   <div class="specs">
     <div class="spec"><b>0</b><span>dépendance externe</span></div>
     <div class="spec c"><b>1</b><span>fichier par version</span></div>
@@ -285,29 +326,38 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
   <details>
     <summary>Commandes</summary>
     <div class="in">
-      <p><b>Ordinateur</b> — <kbd>←</kbd> <kbd>→</kbd> se déplacer,
+      <p><b>Classic et Deluxe, au clavier</b> — <kbd>←</kbd> <kbd>→</kbd> se déplacer,
         <kbd>Espace</kbd> sauter, saisir ou lâcher,
         <kbd>Maj</kbd> figure et pompage,
         <kbd>P</kbd> pause, <kbd>M</kbd> couper la musique.</p>
-      <p style="margin-top:9px"><b>Tactile</b> — deux palettes sous le pouce gauche pour se déplacer,
-        deux boutons sous le pouce droit pour agir. Le libellé du bouton principal change
-        selon la situation&nbsp;: sauter, saisir, puis lâcher.</p>
+      <p style="margin-top:9px"><b>City, au clavier</b> — <kbd>Espace</kbd> pomper ou saisir,
+        <kbd>S</kbd> lâcher, <kbd>F</kbd> figure, la souris pour le regard libre,
+        <kbd>P</kbd> pause.</p>
+      <p style="margin-top:9px"><b>Tactile, Classic et Deluxe</b> — deux palettes sous le pouce
+        gauche pour se déplacer, deux boutons sous le pouce droit pour agir. Le libellé du
+        bouton principal change selon la situation&nbsp;: sauter, saisir, puis lâcher.</p>
+      <p style="margin-top:9px"><b>Tactile, City</b> — un manche virtuel sous le pouce gauche
+        pour le regard, trois boutons sous le pouce droit (pomper/saisir, figure, lâcher),
+        multitouch réel&nbsp;: pomper et regarder fonctionnent en même temps.</p>
     </div>
   </details>
   <details>
     <summary>Accessibilité et confort</summary>
     <div class="in">
-      Le jeu respecte <code>prefers-reduced-motion</code>, plafonne l’opacité des flashs,
-      donne aux dangers une forme reconnaissable en plus de leur couleur, et se met en pause
-      tout seul quand l’onglet passe en arrière-plan ou qu’un appel arrive.
-      Les zones tactiles font au moins 56&nbsp;px et respectent les encoches.
+      Les trois jeux respectent <code>prefers-reduced-motion</code>, plafonnent l’opacité des
+      flashs, et se mettent en pause tout seuls quand l’onglet passe en arrière-plan ou qu’un
+      appel arrive. Classic et Deluxe donnent aux dangers une forme reconnaissable en plus de
+      leur couleur. City ajoute un écran de réglages dédié&nbsp;: réduction des secousses et des
+      flashs, taille de texte, contraste renforcé, sensibilité de caméra et inversion d’axe —
+      persistés d’une partie à l’autre. Les zones tactiles font au moins 56&nbsp;px et
+      respectent les encoches sur les trois versions.
     </div>
   </details>
 </section>
 </main>
 
 <footer>
-  <p>Trapeze Stars — Classic &amp; Deluxe.
+  <p>Trapeze Stars — Classic, Deluxe &amp; City.
      <a href="docs/MEGA-PLAN.md">Plan de développement</a></p>
 </footer>
 
@@ -512,6 +562,99 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
     const vg=cx.createRadialGradient(W/2,H/2,H*.3,W/2,H/2,W*.75);
     vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.5)');
     cx.fillStyle=vg;cx.fillRect(0,0,W,H);
+    cx.fillStyle='rgba(0,0,0,.28)';cx.fillRect(0,0,W,3);cx.fillRect(0,H-3,W,3);
+  });
+
+  /* ── V3 : toits d'une ville néon ──────────────────────── */
+  // Hachage entier stable : les fenêtres allumées ne doivent jamais
+  // scintiller d'une image à l'autre, exactement la règle du jeu réel.
+  function hash2(a,b){
+    let h=Math.imul(a|0,0x27d4eb2d)^Math.imul(b|0,0x165667b1);
+    h^=h>>>15;h=Math.imul(h,0x2545f491);h^=h>>>13;
+    return (h>>>0)/4294967296;
+  }
+  setup('pv3',function(cx,W,H,t){
+    const hz=H*.58;
+    // Ciel crépusculaire : la palette exacte de Trapeze City.
+    const g=cx.createLinearGradient(0,0,0,hz);
+    g.addColorStop(0,'#150C36');g.addColorStop(.45,'#5A2260');
+    g.addColorStop(.78,'#B0316E');g.addColorStop(1,'#FF8A3D');
+    cx.fillStyle=g;cx.fillRect(0,0,W,hz);
+    cx.fillStyle='#141420';cx.fillRect(0,hz,W,H-hz);
+    // Un soleil bas, sans dépendance : un simple disque doux.
+    const sg=cx.createRadialGradient(W*.5,hz*.94,2,W*.5,hz*.94,W*.32);
+    sg.addColorStop(0,'rgba(255,226,168,.55)');sg.addColorStop(1,'rgba(255,138,61,0)');
+    cx.fillStyle=sg;cx.fillRect(0,0,W,hz);
+
+    // Silhouette de ville : deux nappes, lointaine puis proche, qui
+    // dérivent lentement — la caméra du vrai jeu orbite, elle ne fonce
+    // jamais tout droit.
+    const drift=t*0.12;
+    function skyline(rowY,rowH,count,seedBase,alpha,colFar){
+      cx.globalAlpha=alpha;
+      for(let i=-1;i<=count;i++){
+        const bw=W/count*0.86;
+        const x=((i*(W/count)-drift*(colFar?0.4:0.9))%(W+bw))-bw*0.5;
+        const hgt=rowH*(0.45+0.55*hash2(i+seedBase,7));
+        const y=rowY-hgt;
+        cx.fillStyle=colFar;
+        cx.fillRect(x,y,bw,hgt+rowH);
+        // Fenêtres : allumage stable par hachage de bâtiment × fenêtre.
+        if(!colFar)continue;
+        const cols=3,rows=Math.max(2,Math.floor(hgt/14));
+        for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+          if(hash2((i+seedBase)*131+c,r*37+5)>0.62)continue;
+          const wx=x+bw*(0.18+c*0.30), wy=y+8+r*13;
+          cx.fillStyle=hash2(i+seedBase,c*7+r)>0.8?'#96E2FF':'#FFC478';
+          cx.fillRect(wx,wy,bw*0.14,6);
+        }
+      }
+      cx.globalAlpha=1;
+    }
+    skyline(hz+6,H*.30,7,11,0.55,'#241636');
+    skyline(hz+10,H*.40,5,3,0.92,'#2E1A42');
+
+    // Néons sur les façades du premier plan : rose et cyan, lueur discrète.
+    for(let i=0;i<3;i++){
+      const x=W*(0.12+i*0.36)+Math.sin(drift*0.4+i)*6;
+      const y=hz-H*(0.10+0.06*hash2(i,90));
+      const col=i%2?'#25E5FF':'#FF2E88';
+      cx.globalAlpha=0.75+0.2*Math.sin(t*0.08+i*2);
+      cx.fillStyle=col;cx.fillRect(x,y,W*0.10,3);
+      cx.globalAlpha=1;
+    }
+
+    // Le rig : deux tours, une barre, un acrobate qui pompe son balancé.
+    const rigY=hz+8, spanX=W*0.30, cxr=W*0.5;
+    const rope=H*0.30;
+    cx.strokeStyle='#948A78';cx.lineWidth=1.4;
+    cx.beginPath();
+    cx.moveTo(cxr-spanX,rigY-rope*0.9);cx.lineTo(cxr-spanX,rigY);
+    cx.moveTo(cxr+spanX,rigY-rope*0.9);cx.lineTo(cxr+spanX,rigY);
+    cx.stroke();
+    const ang=Math.sin(t*0.05)*0.62;
+    const bx=cxr+Math.sin(ang)*spanX*0.34, by=rigY-rope*0.9+Math.cos(ang)*rope*0.78;
+    cx.strokeStyle='#D8C28A';cx.lineWidth=2.2;
+    cx.beginPath();cx.moveTo(cxr,rigY-rope*0.9);cx.lineTo(bx,by);cx.stroke();
+    cx.fillStyle='#C8A860';cx.fillRect(bx-9,by-1.5,18,3);
+    // Acrobate, en silhouette simple, suspendu sous la barre.
+    cx.save();cx.translate(bx,by+3);cx.rotate(ang*0.5);
+    cx.strokeStyle='#E8365F';cx.lineWidth=3;cx.lineCap='round';
+    cx.beginPath();cx.moveTo(-5,0);cx.lineTo(0,9);cx.lineTo(5,0);cx.stroke();
+    cx.fillStyle='#F2C79B';cx.beginPath();cx.arc(0,13,3.2,0,6.283);cx.fill();
+    cx.strokeStyle='#25E5FF';cx.lineWidth=2;
+    cx.beginPath();cx.moveTo(-4,4);cx.lineTo(-9,10);cx.moveTo(4,4);cx.lineTo(9,10);cx.stroke();
+    cx.restore();
+
+    // Le drone de télévision, en orbite lente, feu clignotant.
+    const da=t*0.02;
+    const dx=cxr+Math.cos(da)*W*0.22, dy=rigY-rope*0.55+Math.sin(da*1.3)*H*0.05;
+    cx.strokeStyle='rgba(180,210,255,.55)';cx.lineWidth=1;
+    cx.beginPath();cx.ellipse(dx-6,dy,4,1.4,0,0,6.283);cx.stroke();
+    cx.beginPath();cx.ellipse(dx+6,dy,4,1.4,0,0,6.283);cx.stroke();
+    cx.fillStyle='#8A94AE';cx.fillRect(dx-6,dy-1.5,12,3);
+    if((t/8|0)%2===0){cx.fillStyle='#FF3C5A';cx.beginPath();cx.arc(dx,dy+2,1.6,0,6.283);cx.fill();}
+
     cx.fillStyle='rgba(0,0,0,.28)';cx.fillRect(0,0,W,3);cx.fillRect(0,H-3,W,3);
   });
 })();
