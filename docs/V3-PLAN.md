@@ -450,7 +450,7 @@ reprise, vent latéral, écran de résultats.
 | Vérification | Outil | Résultat |
 |---|---|---|
 | Syntaxe, chargement, parcours des états | `tools/check.js` | passe, boucle vivante sur Game Over |
-| Franchissabilité des 7 rigs | `tools/reach_v3.js` | 6 vols, amplitude mini 91° / 99° / 109° / 120° / 129° / 144° sur 164° possibles |
+| Franchissabilité des 7 rigs | `tools/reach_v3.js` | 6 vols, amplitude mini 91° / 99° / 109° / 120° / 129° / 144° sur 164° possibles (le dernier vol est passé à 135° en section 16, voir plus bas) |
 | Traversée de bout en bout | `tools/play_v3.js` | **5 profils de joueur sur 5 bouclent les 7 rigs**, 51 à 84 s, 0 chute |
 | Désordre d'entrées | `tools/play_v3.js` | 60 000 pas, 41 880 actions au hasard, aucune exception, machine à états repart |
 | Filet et reprise | `tools/play_v3.js` | chute rattrapée, reprise au dernier toit, cagnotte perdue, +4 s au chrono |
@@ -928,6 +928,198 @@ point.
 
 ---
 
-## 16. Les prompts
+## 16. Relecture adversariale des mécaniques (passe Opus)
+
+Les six sessions avaient été validées par leurs propres tests. Cette passe
+ne rejoue pas ces tests : elle relit les mécaniques de trapèze —
+pendule, vol balistique, fenêtres de prise, minutage du porteur, seuils de
+hype, machine à états — en cherchant ce que les tests existants ne
+pouvaient pas voir, parce qu'ils vérifiaient qu'on *franchit* le parcours,
+jamais *à quoi ressemble* le franchir.
+
+La règle de la session tampon s'applique intégralement : **rien n'est
+corrigé avant d'avoir été mesuré**. Quatre défauts réels sont sortis de la
+mesure ; six soupçons se sont révélés sans objet et sont consignés
+ci-dessous, parce qu'un « défaut » écarté vaut le défaut trouvé.
+
+### Défaut 1 — les trois qualités de prise n'existaient pas dans le jeu
+
+Instrumenté : sur les six vols d'une traversée, la prise tombait à
+**3,26 · 3,32 · 3,31 · 3,30 · 3,34 · 3,26 m**, pour des seuils
+« parfait » de 1,32 à 0,77 m et « bon » de 2,52 à 1,47 m. Autrement dit,
+quel que soit le pilote, **toutes les prises étaient notées
+« approximatif »** — la note la plus basse des trois. `GRIP_K[2] = 0,60`
+s'appliquait à chaque réception, `CASH_Q[0]`, `HYPE_CATCH[0]` et le petit
+éclair bleu de la prise parfaite étaient du code mort.
+
+La cause est l'interaction de deux mécanismes écrits pour s'aider et qui
+se combattaient. `tryGrab()` concluait sur **le premier pas passé sous
+`GRAB_R`** — donc à l'entrée exacte de la sphère de saisie, jamais au
+point le plus proche du vol. Et la mémoire d'entrée (`GRAB_BUF`), faite
+pour *pardonner* une pression trop tôt, verrouillait en fait la note la
+plus basse : la répétition clavier la ré-armant à chaque image, appuyer
+tôt — ou simplement maintenir la touche — garantissait le pire résultat
+possible.
+
+Corrigé : tant que la barre se rapproche et qu'il reste de la mémoire
+d'entrée, la saisie attend. Elle conclut au demi-tour (la distance ne
+diminue plus) ou au dernier pas du tampon, et la note lit l'approche
+minimale du vol. La règle ne peut jamais faire *perdre* une prise : on ne
+diffère que pendant l'approche, donc toujours à l'intérieur du rayon.
+
+| Pilote | Avant | Après |
+|---|---|---|
+| vise large (lâche dès `flyMiss` < 2,55 m) | 0 parfait, 0 bon, 6 approx — score 5 918 | 0 parfait, 1 bon, 5 approx — score 6 101 |
+| vise juste (< 1,19 m) | — | 4 parfaits, 2 bons — score 8 201 |
+| vise très juste (< 0,75 m) | — | **6 parfaits** — score 9 542 |
+
+La note mesure désormais la **trajectoire**, c'est-à-dire exactement ce
+que la table du parcours prétendait mesurer depuis la session 2. Effet
+secondaire mesuré : une prise parfaite rend 1,55 à 1,75 rad d'amplitude au
+lieu de ~1,0 — le report intégral de vitesse devient un vrai gain de temps,
+et non une ligne de configuration sans conséquence.
+
+### Défaut 2 — la prise du final ne pouvait JAMAIS être parfaite
+
+Balayage exhaustif de l'espace (amplitude × angle de lâcher) sur chaque
+vol : la meilleure trajectoire possible passe à moins de 2 cm de la barre
+sur les cinq premiers vols… et à **1,35 m** sur le sixième, pour un seuil
+« parfait » de 0,77 m. Le vol final était **limité en portée** : son
+optimum se trouvait exactement au plafond d'amplitude du jeu (2,86 rad),
+signe qu'on ne l'atteignait pas, on l'effleurait. La prise du final — celle
+que le joueur veut le plus réussir — était donc la seule du parcours
+structurellement incapable de valoir mieux qu'« approximatif ».
+
+Corrigé en ramenant le dernier écart de 37,5 à 35,5 m (le rig 7 recule de
+deux mètres). L'échelle de difficulté redevient complète et monotone :
+
+| Vol | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|
+| Amplitude minimale pour accrocher (rad) | 1,58 | 1,72 | 1,90 | 2,09 | 2,24 | 2,31 |
+| … pour une prise « bonne » | 1,64 | 1,80 | 2,01 | 2,24 | 2,43 | 2,53 |
+| … pour une prise « parfaite » | 1,72 | 1,88 | 2,09 | 2,32 | 2,52 | **2,69** |
+
+Le vol 6 reste le plus dur du parcours sur tous les critères : le plus
+long (35,5 m contre 35,0), le plus haut (7 m de dénivelé), la fenêtre la
+plus serrée (`gw` 0,70), le seul dont le départ subit le vent, et celui
+qui offre le moins de trajectoires gagnantes (8 136 couples contre
+10 155). Avec le vent au maximum son approche minimale reste de 1,12 m —
+« parfait » exige donc de partir sur un creux du vent, ce qui donne enfin
+une conséquence chiffrée au vent annoncé de la session 2. Bénéfice
+collatéral mesuré : le nuage de trajectoires qui sert à placer le porteur
+du rig 6 passe de 15 à 28 échantillons, sa médiane est d'autant mieux
+posée.
+
+### Défaut 3 — la hype ne redescendait jamais
+
+Le code annonce, en toutes lettres : *« Plus on a d'étoiles, plus il faut
+en faire pour les garder. »* Mesuré, c'était faux à tous les paliers. Le
+gain passif du balancé plafonne à `HYPE_AMP × 120 = 6,72` points par
+seconde ; l'ancienne fuite à cinq étoiles ne valait que 4,14/s. Un joueur
+**suspendu à sa barre, sans rien tenter d'autre que se balancer, gagnait
+encore de la hype au sommet de l'échelle** :
+
+| Étoiles | 0 | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|---|
+| Bilan passif à pleine amplitude, avant (pts/s) | +5,70 | +5,08 | +4,45 | +3,83 | +3,20 | **+2,58** |
+| Après | +5,70 | +4,46 | +3,22 | +1,98 | +0,74 | **−0,48** |
+
+Conséquence en partie : les cinq étoiles étaient acquises vers la 25ᵉ
+seconde et ne se reperdaient plus, pour tous les pilotes — le
+multiplicateur ×3 cessait d'être un enjeu au tiers de la traversée.
+
+Corrigé par une seule constante, `HYPE_DECS` de 0,0052 à 0,0103. Le point
+d'équilibre exact (fuite = gain maximal du balancé) est à 0,0095 ; 0,0103
+laisse une marge nette de −0,48/s. Se balancer fait donc toujours monter
+les trois ou quatre premières étoiles — la porte de l'acte 1 s'ouvre comme
+avant, on remonte après une chute — mais les deux dernières se tiennent en
+traversant : prises, figures, porteur.
+
+Mesuré sur les pilotes automatiques : l'échelle discrimine enfin.
+
+| Pilote | Étoiles par rig, avant | Après |
+|---|---|---|
+| applique | 2★ 4★ 5★ 5★ 5★ 5★ | 2★ 3★ 4★ 4★ 5★ 5★ |
+| brouillon | 5★ max | 4★ max |
+| casse-cou | 5★ max, note 3/3 | 3★ max, note 2/3 |
+
+L'écart de score entre le pilote le plus soigneux et le plus brouillon
+passe de 5 918 → 6 101 (à peine 3 %) à 3 292 → 9 559 (×2,9).
+
+### Défaut 4 — le manche virtuel était une impulsion, pas une commande
+
+Le commentaire du manche promet *« le regard EN CONTINU, proportionnellement
+à son écart au centre — contrairement au glissement, qui pilote une vitesse
+par différence de position d'une image à l'autre »*. Le code faisait
+exactement le contraire de sa propre promesse : il passait l'écart au
+centre à `look()`, qui est une **impulsion**, et le navigateur n'émet un
+`pointermove` que lorsque le doigt **bouge**. Un pouce maintenu à fond sur
+le côté n'envoyait donc plus rien, pendant que `CAMS.yawOff` retombait de
+4,5 % par pas : le regard revenait tout seul sous un manche pourtant tenu,
+et il fallait touiller le pouce en rond pour garder une direction.
+
+C'est aussi ce qui rendait `tools/s9_multitouch_v3.js` **intermittent** —
+un test qui passait ou échouait selon que la mesure tombait juste après un
+mouvement du doigt ou juste après la retombée, avec un écart de regard
+oscillant entre 0,0002 et 0,0046 rad autour d'un seuil de 0,001. Le test
+n'a pas été assoupli : c'est le défaut qu'il attrapait mal qui est corrigé.
+
+Corrigé : le manche mémorise son écart normalisé, et `stepStick()`
+l'applique **à chaque pas de simulation** tant qu'il est tenu — donc au
+pas fixe, comme le reste, indépendamment du taux de rafraîchissement. Gain
+contre retombée, le regard atteint un palier, ce qui est la définition de
+« proportionnel à l'écart au centre ».
+
+| Mesure (pouce poussé à fond, puis immobile) | Avant | Après |
+|---|---|---|
+| Lacet pendant que le manche est tenu | retombe vers 0 | palier stable à +0,71 rad (41°) |
+| Retour quand le pouce quitte le manche | — | revient à la direction de suivi en moins d'une seconde |
+| `s9_multitouch_v3.js` sur 4 lancements | 2 échecs sur 4 | 4 réussites sur 4, écart 0,33 rad |
+
+### Six soupçons vérifiés, et écartés
+
+Consignés parce qu'ils auraient chacun coûté une « correction » qui aurait
+dégradé le jeu.
+
+| Soupçon | Mesure | Verdict |
+|---|---|---|
+| `rig.ang` n'est jamais mis à jour : toutes les barres pendent à la verticale | volontaire — une barre au repos pend, et seule celle du joueur est dessinée avec `P.ang` | pas un défaut |
+| La butée `ANGV_MAX` (4,2 rad/s) écrête le pendule | vitesse angulaire maximale réellement atteinte : 3,67 | garde-fou, jamais actif |
+| Une prise parfaite (report de vitesse intégral) peut dépasser `AMP_MAX`, que seul `pump()` plafonne, et faire boucler l'acrobate autour de sa barre | amplitude relevée juste après les prises parfaites : 0,98 à 1,75 rad, très en dessous du grand soleil (2,30) | borné par la physique du vol |
+| Une prise offre un « grand soleil » gratuit si l'amplitude retombe au-dessus de 2,30 | jamais observé : voir ligne précédente | sans objet |
+| `bankTrick` incrémente `bankN` sans plafond : cagnotte non bornée sur un vol très long | la dévaluation `TRICK_REP^rep` converge, et `bankIds` est un tableau de 96 avec garde explicite | borné |
+| Le porteur pourrait être placé sous la ligne du filet, qui déclencherait la chute avant la fenêtre de prise | mains du porteur à 26,8 m et 27,5 m au-dessus du filet | large marge |
+
+### Vérifié, pas supposé
+
+| Vérification | Résultat |
+|---|---|
+| `check.js` sur les trois jeux | OK |
+| `play_v3.js`, 5 puis 8 pilotes | 16/16 assertions, toutes les parties bouclent les 7 rigs |
+| `monkey_v3.js`, trois lancements | 0 crash |
+| `reach_v3.js` | parcours franchissable, marge à chaque vol, meilleure approche du vol 6 : 1,35 m → 0,11 m |
+| `s9_refresh_v3.js` | 0,22 % d'écart entre 60 et 120 Hz — inchangé |
+| `s9_memory_v3.js`, 30 minutes simulées | tas stable à 9,5 Mo, croissance 0,0 Mo |
+| `s9_storage.js`, `s9_multitouch_v3.js` | OK sur les trois jeux ; multitouch 4/4 |
+| `shot_v3.js` | enchaînement complet au clavier jusqu'au rig 7/7 |
+| Non-régression V1/V2 | `play_v2.js` 12/12, `monkey_v1.js` et `monkey_v2.js` 0 crash — aucun de ces deux fichiers n'a été touché |
+| Coût d'image | 6,80 ms → 6,70 ms (p50, qualité haute), mesuré **dans la même session de navigateur** avant/après : aucun effet |
+
+Une précision d'honnêteté sur les images par seconde : ce conteneur affiche
+aujourd'hui 52/46/26 ips là où la session 5 relevait 60/60/43, sur un code
+de rendu identique. L'A/B ci-dessus, fichier avant et fichier après dans le
+même navigateur et à la minute près, donne 6,80 contre 6,70 ms : l'écart
+avec la session 5 est de la charge de machine, pas une régression.
+
+### Ce que cette passe n'a pas fait
+
+Elle n'a touché ni V1, ni V2, ni la page d'accueil. Elle n'a rien changé au
+rendu, à l'audio, aux menus ni à la direction artistique. Et elle ne
+remplace toujours pas un vrai appareil tactile : le manche virtuel a été
+mesuré par CDP `Input.dispatchTouchEvent`, pas sous un vrai pouce.
+
+---
+
+## 17. Les prompts
 
 Un prompt autonome par session, dans [`V3-PROMPTS.md`](V3-PROMPTS.md).

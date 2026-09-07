@@ -40,6 +40,14 @@ de ce fichier.
   | Deluxe (V2) | basse / moyenne / haute | ~61 / ~32 / ~26 ips |
   | City (V3), drone en vol | basse / moyenne / haute | 60 / 60 / 43 ips |
 
+  Ces chiffres datent de la session 5. Relancée plus tard sur un code de
+  rendu **identique**, la même mesure a donné 56 / 49 / 25 ips pour V3 :
+  l'écart est de la charge de la machine, pas une régression. Vérifié par
+  un A/B — fichier avant et fichier après dans la même session de
+  navigateur, à la minute près — qui donne 6,80 contre 6,70 ms de coût
+  d'image en qualité haute. C'est la mesure de `render()` qui compte ici,
+  pas le nombre d'images par seconde du conteneur.
+
   Les trois tournent dans le **même conteneur sans GPU** : la rastérisation
   logicielle du Canvas 2D y coûte nettement plus qu'sur un vrai poste, ce qui
   explique que Deluxe en qualité haute (26 ips ici) reste néanmoins fluide
@@ -89,6 +97,48 @@ fin.
 multitouch réel de Trapeze City est déjà couvert séparément par
 `s9_multitouch_v3.js`, écrit dès la session 4.
 
+### Relecture adversariale des mécaniques (passe suivante)
+
+Les six sessions avaient été validées par leurs propres tests, qui
+vérifiaient tous qu'on *franchit* le parcours — jamais *à quoi ressemble*
+le franchir. Une relecture ciblée des mécaniques de trapèze a sorti
+**quatre défauts réels**, chacun mesuré avant d'être corrigé. Le détail
+complet, chiffres et tableaux, est dans `docs/V3-PLAN.md`, section
+« Relecture adversariale des mécaniques ».
+
+1. **Les trois qualités de prise n'existaient pas dans le jeu.** Mesuré :
+   les six prises d'une traversée tombaient toutes entre 3,26 et 3,36 m,
+   pour des seuils « parfait » de 1,32 à 0,77 m — donc *toutes*
+   « approximatif », quel que soit le pilote. `tryGrab()` concluait au
+   premier pas passé sous le rayon de saisie, et la mémoire d'entrée,
+   faite pour pardonner, verrouillait en fait la note la plus basse. La
+   saisie conclut désormais au point le plus proche du vol : un pilote
+   précis obtient six prises parfaites, un pilote large aucune.
+2. **La prise du final ne pouvait jamais être parfaite.** Le dernier vol
+   était limité en portée : sa meilleure trajectoire possible passait à
+   1,35 m de la barre, au-delà du seuil de 0,77 m. Dernier écart ramené de
+   37,5 à 35,5 m ; l'échelle de difficulté redevient complète et monotone,
+   et le vol reste le plus dur du parcours sur tous les autres critères.
+3. **La hype ne redescendait jamais.** Le gain passif du balancé
+   (6,72 pts/s au maximum) dépassait la fuite à cinq étoiles (4,14/s) :
+   se balancer sans rien tenter faisait encore *monter* la hype au sommet
+   de l'échelle, à rebours de ce que le code annonce. `HYPE_DECS` porté de
+   0,0052 à 0,0103 (équilibre exact à 0,0095). L'écart de score entre le
+   pilote le plus soigneux et le plus brouillon passe de 3 % à ×2,9.
+4. **Le manche virtuel était une impulsion, pas une commande.** Un pouce
+   maintenu à fond n'envoyait plus rien (le navigateur n'émet un
+   `pointermove` que si le doigt bouge) pendant que le regard libre
+   retombait de 4,5 % par pas. C'était aussi la cause de l'intermittence
+   de `s9_multitouch_v3.js` — corrigée en corrigeant le défaut, pas en
+   assouplissant le test. Le manche est désormais appliqué à chaque pas de
+   simulation tant qu'il est tenu.
+
+Six autres soupçons ont été vérifiés puis **écartés** (barres au repos,
+butée de vitesse angulaire jamais atteinte, amplitude après une prise
+parfaite, grand soleil « gratuit », cagnotte non bornée, porteur sous la
+ligne du filet) : chacun aurait coûté une correction qui aurait dégradé le
+jeu. Ils sont consignés dans `docs/V3-PLAN.md` avec leur mesure.
+
 ---
 
 ## Fait
@@ -116,6 +166,7 @@ multitouch réel de Trapeze City est déjà couvert séparément par
 | S9 Tests appareils réels | ◐ | tout ce qui est vérifiable sans matériel est fait — voir ci-dessous |
 | Limitation V1 portrait | ✅ | écran « tournez votre appareil », pause automatique |
 | V3 « Trapeze City » (S1 à S5) | ✅ | socle 3D, gameplay, direction artistique, HUD/audio/tactile, intégration — détail plus haut et dans `docs/V3-PLAN.md` |
+| V3 relecture adversariale des mécaniques | ✅ | quatre défauts réels mesurés puis corrigés (qualités de prise, portée du vol final, économie de hype, manche virtuel), six soupçons écartés — détail plus haut |
 
 Tout ce qui était planifié dans les deux sessions précédentes est fait,
 y compris la limitation V1 explicitement mise de côté la fois d'avant.

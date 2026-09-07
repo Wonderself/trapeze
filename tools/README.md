@@ -47,6 +47,14 @@ relecture de code ne répond. Il sort en échec si un vol devient
 infranchissable : à relancer après tout changement de gravité, de longueur
 de câble ou de position de rig.
 
+Il affiche aussi, pour chaque vol, la **meilleure approche possible** de la
+barre. Cette colonne est ce qui a révélé que le vol final était limité en
+portée : sa meilleure trajectoire, à l'amplitude maximale du jeu, passait à
+1,35 m de la barre — au-delà du seuil « parfait » de ce rig, qui devenait
+donc structurellement inatteignable. « Franchissable » et « jouable
+proprement » sont deux questions différentes, et seule la première était
+posée jusque-là. Après correction du parcours : 0,11 m.
+
 N'utilisent que `fs`/`vm` de Node, via un DOM et un audio simulés
 (`sandbox.js`). Rien à installer. À lancer après **toute** modification de
 `trapeze-stars-v1.html` ou `trapeze-stars-v2.html` — `play_v2.js` et les
@@ -95,6 +103,18 @@ manche virtuel de regard, l'autre sur le bouton pomper/saisir. Il vérifie
 que les DEUX gestes agissent dans la même fenêtre de contact combiné — la
 preuve qu'aucun geste ne bloque l'autre, pas seulement qu'ils marchent
 chacun pris séparément.
+
+**Ce test a longtemps été intermittent, et le coupable était le jeu.** Il
+mesurait un écart de regard de 0,0002 à 0,0046 rad selon les lancements,
+autour d'un seuil de 0,001 — donc il passait ou échouait au hasard. La
+cause n'était pas le test : le manche virtuel appliquait le regard par
+**impulsion à chaque `pointermove`**, or le navigateur n'en émet que si le
+doigt bouge. Un pouce maintenu à fond n'envoyait plus rien pendant que le
+regard libre retombait de 4,5 % par pas. Le manche est devenu une commande
+de vitesse appliquée à chaque pas de simulation ; l'écart mesuré est passé
+à 0,33 rad, et le test réussit désormais quatre fois sur quatre. Le seuil
+du test n'a pas été touché : c'est la règle de ce dépôt — quand un test
+vacille, on cherche d'abord ce qu'il attrape mal.
 
 `shot_v3.js` fait deux choses. Il capture dix-huit situations choisies — dont
 deux caméra collée contre une façade, qui prouvent le découpage au plan

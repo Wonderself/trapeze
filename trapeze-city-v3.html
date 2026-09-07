@@ -189,7 +189,20 @@ const CFG={
   STAR_STEP: 20,     // points de hype par étoile
   STAR_HYST: 4,      // hystérésis : une étoile ne se reperd pas au seuil
   HYPE_DEC:  0.0085, // fuite de base, par pas
-  HYPE_DECS: 0.0052, // fuite supplémentaire par étoile déjà gagnée
+  // Fuite supplémentaire par étoile déjà gagnée. 0,0103 et non 0,0052 :
+  // mesuré, l'ancienne valeur rendait la promesse du paragraphe ci-dessus
+  // FAUSSE. Le gain passif du balancé plafonne à HYPE_AMP × 120 = 6,72
+  // points par seconde ; l'ancienne fuite à cinq étoiles ne valait que
+  // 4,14/s, si bien qu'un joueur suspendu à sa barre, sans rien tenter,
+  // GAGNAIT encore de la hype au sommet de l'échelle. Les cinq étoiles
+  // étaient acquises vers la vingt-cinquième seconde et ne pouvaient plus
+  // se perdre : le multiplicateur ×3 n'était plus un enjeu.
+  // Le point d'équilibre est à 0,0095 (fuite = gain maximal du balancé) ;
+  // 0,0103 laisse une marge nette de −0,48/s. Se balancer fait donc encore
+  // monter les trois ou quatre premières étoiles — la porte de l'acte 1
+  // reste ouvrable, et on remonte après une chute — mais les deux
+  // dernières se tiennent en traversant : prises, figures, porteur.
+  HYPE_DECS: 0.0103,
   HYPE_AMP:  0.056,  // gain d'ampleur, par pas, au carré de l'amplitude
   HYPE_PUMP: 1.0,    // gain d'un pompage réussi
   HYPE_GIANT:12,     // gain du premier grand soleil sur un rig
@@ -1331,7 +1344,16 @@ function buildRoute(){
     {x: -34.7, z: -83.1, h:68, gw:0.92},          // 4
     {x: -16.0, z: -56.5, h:74, gw:0.82, port:1},  // 5 · le porteur
     {x:   6.5, z: -29.7, h:80, gw:0.74, wind:0.70, port:1}, // 6 · le vent, puis le final
-    {x:  33.0, z:  -3.2, h:87, gw:0.70, tower:1}, // 7 · la tour
+    // 7 · la tour. Écart 35,5 m et non 37,5 : mesuré, le vol final était
+    // LIMITÉ EN PORTÉE. Même à l'amplitude maximale du jeu (2,86 rad), la
+    // meilleure trajectoire possible passait à 1,35 m de la barre — au-delà
+    // du seuil « parfait » de ce rig (0,77 m), qui devenait donc
+    // inatteignable : la prise du final était la seule du parcours qui ne
+    // pouvait JAMAIS être notée mieux qu'approximative. Deux mètres de
+    // moins rétablissent l'échelle complète, sans rien retirer à sa
+    // difficulté : c'est toujours le vol le plus large, le plus haut et le
+    // seul dont le départ subit le vent.
+    {x:  31.6, z:  -4.6, h:87, gw:0.70, tower:1},
   ];
   for(let n=0;n<pts.length;n++)addRig(pts[n].x,pts[n].z,pts[n].h,CFG.ROPE,pts[n]);
   // Direction du plan de balancé : vers le rig suivant. Le dernier reprend
@@ -1627,7 +1649,7 @@ const P={
   vx:0,vy:0,vz:0,
   phi:0, spin:0, spinDir:-1, spinAcc:0, halfs:0,
   amp:0, flyT:0, netT:0, holdT:0,
-  grabBuf:0, pumpCd:0, pumpArm:1,
+  grabBuf:0, grabNear:1e9, pumpCd:0, pumpArm:1,
   trickBuf:0, trickHeld:0,
   pike:0, tuck:0,
   windA:0, port:null,
@@ -1786,7 +1808,7 @@ function release(){
   P.spin=-P.angV*0.55;
   P.spinDir=P.spin<0?-1:1;
   P.spinAcc=0;P.halfs=0;
-  P.state='fly';P.flyT=0;
+  P.state='fly';P.flyT=0;P.grabNear=1e9;
   P.dst=Math.min(RIGS.length-1,P.rig+1);
   P.windA=windNow(rig);
   trailReset();
@@ -1815,10 +1837,41 @@ function tryGrab(){
     if(d<bd){bd=d;best=n;}
   }
   if(best<0)return false;
+  // La saisie se conclut au POINT LE PLUS PROCHE du vol, pas à l'entrée de
+  // la sphère de prise.
+  //
+  // Mesuré avant correction : la prise tombait TOUJOURS au premier pas
+  // passé sous GRAB_R, donc à 3,26–3,36 m sur les six vols de la
+  // traversée — au-delà du seuil « approximatif » de tous les rigs. Les
+  // trois qualités existaient dans le code sans exister dans le jeu :
+  // aucune partie, quel que soit le pilote, n'obtenait autre chose
+  // qu'« approximatif ». GRIP_K[2] = 0,60 s'appliquait à chaque
+  // réception, CASH_Q[0] et HYPE_CATCH[0] n'étaient jamais atteints.
+  //
+  // La cause était l'interaction de deux mécanismes qui se combattaient :
+  // la mémoire d'entrée (GRAB_BUF), faite pour PARDONNER une pression
+  // trop tôt, verrouillait en fait la note la plus basse, et la
+  // répétition clavier la ré-armait à chaque image — appuyer tôt, ou
+  // maintenir, garantissait le pire résultat possible.
+  //
+  // Tant que la barre se rapproche et qu'il reste de la mémoire d'entrée,
+  // on attend donc. On conclut au demi-tour (la distance ne diminue plus)
+  // ou au dernier pas du tampon. Cette règle ne peut jamais FAIRE PERDRE
+  // une prise : on ne diffère que pendant l'approche, donc toujours à
+  // l'intérieur du rayon. La note est alors celle de la trajectoire —
+  // exactement ce que la table du parcours prétend mesurer.
+  const closing=bd<P.grabNear;
+  if(closing)P.grabNear=bd;
+  if(closing&&P.grabBuf>1)return false;
   const rig=RIGS[best];
   // Fenêtre de prise resserrée rig après rig : c'est la progression de
-  // difficulté, et elle est écrite dans la table du parcours.
-  const q=bd<CFG.GRAB_PERF*rig.gw?0:(bd<CFG.GRAB_GOOD*rig.gw?1:2);
+  // difficulté, et elle est écrite dans la table du parcours. La note lit
+  // l'approche minimale du vol, pas la position au pas où les mains se
+  // ferment : un pas de simulation vaut une dizaine de centimètres à la
+  // vitesse d'un vol, et noter le pas d'après ferait perdre des prises
+  // parfaites pour rien.
+  const gd=Math.min(bd,P.grabNear);
+  const q=gd<CFG.GRAB_PERF*rig.gw?0:(gd<CFG.GRAB_GOOD*rig.gw?1:2);
   const fwd=best>P.rig;
   P.rig=best;P.ang=rig.ang;
   const c=Math.cos(P.ang), s=Math.sin(P.ang);
@@ -1827,7 +1880,7 @@ function tryGrab(){
   // l'élan, sans qu'aucun malus artificiel n'ait à être ajouté.
   const vt=P.vx*rig.dx*c+P.vy*s+P.vz*rig.dz*c;
   P.angV=clamp(vt/rig.rope*CFG.GRIP_K[q],-CFG.ANGV_MAX,CFG.ANGV_MAX);
-  P.state='hang';P.grabBuf=0;P.spin=0;P.port=null;P.windA=0;
+  P.state='hang';P.grabBuf=0;P.grabNear=1e9;P.spin=0;P.port=null;P.windA=0;
   trailReset();
   P.dst=Math.min(RIGS.length-1,P.rig+1);
   say(q===0?t('perfect'):(q===1?t('good'):t('poor')),q===0?'#25E5FF':(q===1?'#9CFF7A':'#FFC46E'));
@@ -1877,7 +1930,7 @@ function portThrow(){
   const c=P.port;
   P.port=null;
   const tgt=RIGS[P.dst];
-  if(!c||!tgt){P.state='fly';P.flyT=0;return;}
+  if(!c||!tgt){P.state='fly';P.flyT=0;P.grabNear=1e9;return;}
   portHands(c,c.ang);
   const px=c.dz, pz=-c.dx;
   // La relance est RÉSOLUE vers la barre visée, vent compris : le porteur
@@ -1885,7 +1938,7 @@ function portThrow(){
   solveLaunch(_hx,_hy,_hz,tgt.ax,tgt.ay-tgt.rope,tgt.az,px,pz,P.windA);
   P.x=_hx;P.y=_hy;P.z=_hz;
   P.vx=_lvx;P.vy=_lvy;P.vz=_lvz;
-  P.state='fly';P.flyT=0;
+  P.state='fly';P.flyT=0;P.grabNear=1e9;
   P.spin=-1.1;P.spinDir=-1;P.spinAcc=0;
   ftext(P.x,P.y+2.2,P.z,t('portGo'),'#25E5FF',22);
   sfx('throwSnd');
@@ -1939,7 +1992,7 @@ function respawn(){
   barAt(rig,0);P.x=_bx;P.y=_by;P.z=_bz;
   P.vx=P.vy=P.vz=0;P.flyT=0;P.netT=0;P.holdT=0;
   P.dst=Math.min(RIGS.length-1,P.rig+1);
-  P.port=null;P.windA=0;P.grabBuf=0;P.trickBuf=0;P.trickHeld=0;
+  P.port=null;P.windA=0;P.grabBuf=0;P.grabNear=1e9;P.trickBuf=0;P.trickHeld=0;
   P.pumpCd=0;P.pumpArm=1;
   const pc=portOf(P.rig);
   if(pc){pc.used=0;pc.announced=0;}
@@ -2047,7 +2100,7 @@ function stepPlayer(){
   }else if(P.state==='held'){
     // Suspendu au porteur : il continue de balancer et l'emporte avec lui.
     const c=P.port;
-    if(!c){P.state='fly';P.flyT=0;}
+    if(!c){P.state='fly';P.flyT=0;P.grabNear=1e9;}
     else{
       portHands(c,c.ang);
       P.x=_hx;P.y=_hy;P.z=_hz;
@@ -3938,7 +3991,33 @@ CV.addEventListener('pointercancel',endDrag);
    chacun vers son élément par le navigateur, sans code de coordination à
    écrire. Le stick ne fait QUE piloter le regard libre (CAMS.yawOff /
    pitchOff), exactement comme le glissement sur le reste de l'écran : le
-   corps de l'acrobate suit la physique du trapèze, il n'a rien à orienter. */
+   corps de l'acrobate suit la physique du trapèze, il n'a rien à orienter.
+
+   Le manche est une commande de VITESSE, appliquée à chaque pas de
+   simulation tant qu'il est tenu — pas une impulsion par événement de
+   pointeur.
+   La distinction n'est pas théorique : c'était le défaut. Le gestionnaire
+   passait l'écart au centre à `look()`, qui est une impulsion, et le
+   navigateur n'émet un `pointermove` que quand le doigt BOUGE. Un pouce
+   maintenu à fond sur le côté n'envoyait donc plus rien, pendant que
+   `CAMS.yawOff` retombait de 4,5 % par pas — le regard revenait tout seul
+   sous un manche pourtant tenu, et il fallait touiller le pouce en rond
+   pour garder une direction. C'est aussi ce qui rendait
+   `tools/s9_multitouch_v3.js` intermittent : selon que la mesure tombait
+   juste après un mouvement ou juste après la retombée, l'écart de regard
+   passait de 0,0002 à 0,0046 rad autour d'un seuil de 0,001.
+   Appliquée par pas, la commande atteint un palier (gain contre retombée)
+   qui est bien « proportionnel à l'écart au centre », comme annoncé. */
+let stickX=0, stickY=0;
+// Écart normalisé × ce gain = le déplacement de glissement équivalent
+// injecté à chaque pas. Palier atteint à fond de manche :
+// 1 × 0,0032 × 10 / (1 − 0,955) ≈ 0,71 rad de lacet (41°), et le tangage
+// bute sur sa propre limite de ±0,5 rad. Le regard revient toujours seul
+// dès que le pouce quitte le manche.
+const STICK_RATE=10;
+function stepStick(){
+  if(stickX||stickY)look(stickX*STICK_RATE,stickY*STICK_RATE);
+}
 (function bindStick(){
   const base=document.getElementById('stick'), knob=document.getElementById('stickKnob');
   if(!base||!knob)return;
@@ -3952,6 +4031,7 @@ CV.addEventListener('pointercancel',endDrag);
     const r=base.getBoundingClientRect();
     cx=r.left+r.width*0.5;cy=r.top+r.height*0.5;R=r.width*0.40;
     base.classList.add('active');
+    stickX=0;stickY=0;
   });
   base.addEventListener('pointermove',function(e){
     if(e.pointerId!==sid)return;
@@ -3959,14 +4039,12 @@ CV.addEventListener('pointercancel',endDrag);
     const d=Math.hypot(dx,dy);
     if(d>R){dx=dx/d*R;dy=dy/d*R;}
     setKnob(dx,dy);
-    // Le stick pilote le regard EN CONTINU, proportionnellement à son
-    // écart au centre — contrairement au glissement, qui pilote une
-    // vitesse par différence de position d'une image à l'autre.
-    look(dx*0.16,dy*0.16);
+    stickX=dx/R;stickY=dy/R;
   });
   function releaseStick(e){
     if(e.pointerId!==sid)return;
     sid=-1;setKnob(0,0);base.classList.remove('active');
+    stickX=0;stickY=0;
   }
   base.addEventListener('pointerup',releaseStick);
   base.addEventListener('pointercancel',releaseStick);
@@ -4036,6 +4114,7 @@ function step(){
   stepParticles();
   stepTexts();
   stepDrone();
+  stepStick();                // le manche agit par PAS, pas par événement
   stepCamera();
 }
 function frameLoop(now){
