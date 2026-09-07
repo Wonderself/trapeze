@@ -133,6 +133,16 @@ complet, chiffres et tableaux, est dans `docs/V3-PLAN.md`, section
    assouplissant le test. Le manche est désormais appliqué à chaque pas de
    simulation tant qu'il est tenu.
 
+Deux ouvertures identifiées dans la foulée ont été refermées : l'écran de
+résultats affiche désormais **PRISES PARFAITES n / 6** et la note tient
+compte de la qualité des réceptions (la moitié en parfait pour 3/3 —
+mesuré, le seuil tombe entre un pilote « prudent » et un pilote
+« soigneux ») ; et la jauge de vent montre la zone de creux et la valeur
+que le vent aura dans une seconde, puisque c'est celle-là qui sera figée au
+lâcher. `play_v3.js` gagne un sixième profil et quatre assertions qui
+vérifient que les trois qualités de prise existent dans le jeu, pas
+seulement dans le code.
+
 Six autres soupçons ont été vérifiés puis **écartés** (barres au repos,
 butée de vitesse angulaire jamais atteinte, amplitude après une prise
 parfaite, grand soleil « gratuit », cagnotte non bornée, porteur sous la

@@ -25,11 +25,25 @@ const DT=1/120;
 //   patience : a quel point il attend une trajectoire propre avant de lacher
 //   figures  : jusqu'ou il enchaine les figures avant de se redresser
 //   rate     : proportion de pompages qu'il laisse passer (timing imparfait)
+//
+// `patience` est ce qui separe reellement les pilotes depuis que la note
+// de prise se joue sur la trajectoire : c'est l'ecart maximal, en fraction
+// du rayon de saisie, qu'un pilote accepte avant de lacher. Mesure sur la
+// traversee complete, prises parfaites sur six :
+//
+//   0,99 casse-cou   1   |   0,75 applique   0   |   0,40 soigneux  3
+//   0,95 brouillon   0   |   0,55 prudent    2   |   0,28 expert    6
+//
+// Le seuil de la note 3/3 (la moitie des prises en parfait) tombe donc
+// entre `prudent` et `soigneux` — c'est voulu, et c'est pour cela que
+// `soigneux` a ete ajoute : sans lui, aucun profil n'atteignait plus la
+// note maximale et le test cessait d'exercer le haut de l'echelle.
 const PROFILS=[
   {nom:'applique   ',patience:0.75,figures:13,rate:0.00},
   {nom:'presse     ',patience:0.95,figures:16,rate:0.00},
   {nom:'brouillon  ',patience:0.95,figures:20,rate:0.35},
   {nom:'prudent    ',patience:0.55,figures: 6,rate:0.15},
+  {nom:'soigneux   ',patience:0.40,figures:10,rate:0.00},
   {nom:'casse-cou  ',patience:0.99,figures:24,rate:0.45},
 ];
 // Aleatoire a graine : deux executions donnent le meme verdict.
@@ -162,6 +176,7 @@ function playOne(idx){
     +'  score '+fin.score
     +'  note '+fin.grade+'/3');
   console.log('       pompages '+log.pumps+'  lachers '+log.releases+'  prises '+log.grabs
+    +' ('+fin.catchPerf+' parfaites, '+fin.catchGood+' bonnes, '+fin.catchPoor+' approx)'
     +'  porteurs '+log.ports+'  porte ouverte au pas '+log.gateStep);
   return log;
 }
@@ -262,6 +277,16 @@ want(all.every(a=>a.fin.maxStars>=2),'la hype atteint au moins deux etoiles');
 want(all.some(a=>a.fin.maxStars>=3),'le drone de television decolle au moins une fois');
 want(all.some(a=>a.ports>0),'le porteur recoit au moins une fois');
 want(all.every(a=>a.fin.score>0),'le score progresse');
+// Les trois qualites de prise doivent EXISTER dans le jeu, pas seulement
+// dans le code. Avant la relecture des mecaniques, ces deux lignes
+// auraient echoue : la saisie se concluant a l'entree du rayon, les six
+// prises de chaque partie tombaient toutes dans « approximatif », quel
+// que soit le pilote. Une regression qui les y ramenerait passerait
+// inapercue sans cette verification.
+want(all.some(a=>a.fin.catchPerf>0),'la prise parfaite est atteignable');
+want(all.some(a=>a.fin.catchPerf===0),'la prise parfaite se merite (un pilote large n en a aucune)');
+want(all.some(a=>a.fin.grade===3),'la note maximale est atteignable');
+want(all.some(a=>a.fin.grade<3),'la note maximale se merite');
 want(!chErr,'60 000 pas d actions au hasard sans une seule exception');
 want(ch&&ch.restart,'la machine a etats repart apres le desordre');
 want(nt.sawNet,'le filet rattrape la chute');

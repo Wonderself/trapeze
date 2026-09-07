@@ -1168,6 +1168,62 @@ les chiffres de la session 5, là où la même commande donnait 52 / 46 / 26
 quelques heures plus tôt sur un code de rendu identique. La charge du
 conteneur était bien la seule explication.
 
+### Les deux ouvertures, refermées dans la foulée
+
+La relecture avait laissé deux constats sans suite. Les voici traités.
+
+**1. Le plafond de compétence existait, le jeu ne le montrait nulle part.**
+Corriger la fenêtre de prise a rendu les trois qualités atteignables — mais
+rien à l'écran ne disait au joueur qu'il y avait là quelque chose à viser.
+L'écran de résultats a donc une ligne de plus, **PRISES PARFAITES n / 6**,
+et la note tient compte d'un quatrième critère : la moitié des prises en
+parfait. Ce critère ne *pouvait pas* exister avant — il aurait été toujours
+faux, puisque toutes les prises étaient approximatives.
+
+Mesuré sur une échelle de pilotes, en faisant varier le seul paramètre qui
+compte désormais (l'écart maximal accepté avant de lâcher, en fraction du
+rayon de saisie) :
+
+| Pilote | Écart accepté | Prises parfaites | Note |
+|---|---|---|---|
+| brouillon / pressé | 0,95 | 0 / 6 | 2/3 |
+| appliqué | 0,75 | 0 / 6 | 2/3 |
+| casse-cou | 0,99 | 1 / 6 | 2/3 |
+| prudent | 0,55 | 2 / 6 | 2/3 |
+| **soigneux** | **0,40** | **3 / 6** | **3/3** |
+| expert | 0,28 | 6 / 6 | 3/3 |
+
+Le seuil tombe exactement entre « prudent » et « soigneux » : il se mérite
+sans être hors d'atteinte, et les deux relances de porteur en offrent déjà
+deux. `tools/play_v3.js` gagne au passage le profil « soigneux » — sans lui
+plus aucun pilote n'atteignait la note maximale et le test cessait
+d'exercer le haut de l'échelle — et quatre assertions qui vérifient que les
+trois qualités existent *dans le jeu* et pas seulement dans le code : la
+prise parfaite est atteignable, elle se mérite, la note maximale est
+atteignable, elle se mérite. Une régression qui ramènerait toutes les
+prises à « approximatif » passerait inaperçue sans elles.
+
+**2. Le vent avait enfin une conséquence, mais restait illisible.** Depuis
+que la note se joue sur la trajectoire, partir sur un creux de vent ou non
+change la note de la réception du final. Or la jauge n'affichait que la
+force instantanée — alors que ce qui décide du vol, c'est la valeur qu'aura
+le vent **à l'instant du lâcher**, puisqu'elle y est figée. Elle dit
+maintenant trois choses : où est le vent, où est le creux (deux repères
+verts, au seuil exact qui allume « VENT FAIBLE » — la jauge et le texte
+disent enfin la même chose), et où il ira dans une seconde, le temps de
+finir un demi-balancé. Ce dernier repère est vert quand le vent tombe,
+gris quand il monte : « attends » ou « pars maintenant », d'un coup d'œil.
+
+Le premier jet a été refait après l'avoir regardé : la zone de creux était
+dessinée en aplat et se retrouvait à moitié recouverte par la barre de
+valeur, et le repère d'anticipation venait heurter le libellé. Deux traits
+par-dessus la barre et un repère passé sous la jauge — c'est le genre de
+défaut qu'aucun test ne signale et qu'une capture montre en une seconde.
+
+Vérifié par régression visuelle (`shots_diff_v3.js`) : sur ces deux
+changements, **27 scènes sur 28 restent identiques au pixel**, et la seule
+qui bouge est l'écran de résultats, où la ligne a été ajoutée.
+
 ### Ce que cette passe n'a pas fait
 
 Elle n'a touché ni V1, ni V2, ni la page d'accueil. Elle n'a rien changé au

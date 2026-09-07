@@ -293,6 +293,7 @@ const I18N={
     results:'FIN DE TRAVERSÉE', rTime:'TEMPS TOTAL', rChain:'MEILLEUR ENCHAÎNEMENT',
     rStars:'ÉTOILES MAXIMALES', rFalls:'CHUTES', rBank:'CAGNOTTE TOTALE',
     rScore:'SCORE', rGrade:'NOTE', rAgain:'ESPACE pour rejouer',
+    rCatch:'PRISES PARFAITES',
     bow:'SALUT',
     /* Session 4 : menus, réglages, HUD */
     play:'JOUER', settings:'RÉGLAGES', back:'RETOUR', resume:'REPRENDRE',
@@ -331,6 +332,7 @@ const I18N={
     results:'CROSSING OVER', rTime:'TOTAL TIME', rChain:'BEST CHAIN',
     rStars:'PEAK STARS', rFalls:'FALLS', rBank:'TOTAL BANK',
     rScore:'SCORE', rGrade:'GRADE', rAgain:'SPACE to play again',
+    rCatch:'PERFECT CATCHES',
     bow:'BOW',
     /* Session 4 : menus, settings, HUD */
     play:'PLAY', settings:'SETTINGS', back:'BACK', resume:'RESUME',
@@ -1663,6 +1665,12 @@ let hype=0, gateOpen=0, act=1, actT=0;
 let bankVal=0, bankN=0;
 const bankIds=new Int32Array(96);      // figures en cagnotte, par identifiant
 let runSteps=0, penalty=0, falls=0, totalBank=0, maxStars=0, bestChain=0;
+// Prises par qualité sur la traversée : parfaites, bonnes, approximatives.
+// Ce compteur n'existait pas, et il ne POUVAIT pas exister avant : tant
+// que la saisie se concluait à l'entrée du rayon, les trois cases
+// n'auraient rien mesuré du tout — toutes les prises tombaient dans la
+// dernière. Maintenant qu'elles se méritent, elles se comptent.
+const catchQ=[0,0,0];
 let finT=0;                            // minutage du salut final
 
 const TRICK_KEYS=['demi','salto'];
@@ -1872,6 +1880,7 @@ function tryGrab(){
   // parfaites pour rien.
   const gd=Math.min(bd,P.grabNear);
   const q=gd<CFG.GRAB_PERF*rig.gw?0:(gd<CFG.GRAB_GOOD*rig.gw?1:2);
+  catchQ[q]++;
   const fwd=best>P.rig;
   P.rig=best;P.ang=rig.ang;
   const c=Math.cos(P.ang), s=Math.sin(P.ang);
@@ -3670,16 +3679,47 @@ function drawHUD(){
   if(falls>0)outlineText(t('rFalls')+' '+falls,22*u,58*u,11,'rgba(255,140,150,0.7)',700,'left');
 
   // ── Vent, quand le rig courant en subit un ──
+  //
+  // La jauge montrait la FORCE du vent, et rien d'autre. Or le vent est
+  // une sinusoïde lente dont la valeur est FIGÉE AU LÂCHER : ce qui décide
+  // du vol, ce n'est pas la force actuelle, c'est celle qu'il aura à
+  // l'instant où on part. Et depuis que la fenêtre de prise se joue au
+  // point le plus proche, l'écart tient à quelques dizaines de centimètres
+  // — assez pour que partir sur un creux de vent, ou non, change la note
+  // de la réception. La jauge dit donc maintenant trois choses au lieu
+  // d'une : où est le vent, où est le CREUX, et où il ira.
   const wr=RIGS[P.rig];
   if(wr&&wr.wind){
-    const w=(P.state==='fly'||P.state==='held')?P.windA:windNow(wr);
+    const flying=(P.state==='fly'||P.state==='held');
+    const w=flying?P.windA:windNow(wr);
     const wk=clamp(Math.abs(w)/wr.wind,0,1);
-    const wx=HW, wy=SH-56*u, ww=90*u;
-    CX.fillStyle='rgba(8,3,22,0.5)';CX.fillRect(wx-ww*0.5,wy,ww,6*u);
+    const wx=HW, wy=SH-56*u, ww=90*u, half=ww*0.5;
+    CX.fillStyle='rgba(8,3,22,0.5)';CX.fillRect(wx-half,wy,ww,6*u);
     CX.fillStyle=wk<0.25?'#9CFF7A':(wk<0.6?'#FFD98A':'#FF5B6E');
-    CX.fillRect(wx,wy,ww*0.5*(w/(wr.wind||1)),6*u);
-    CX.fillStyle='rgba(255,255,255,0.5)';CX.fillRect(wx-1*u,wy-3*u,2*u,12*u);
-    outlineText(wk<0.25?t('windCalm'):t('wind'),wx,wy-11*u,11,
+    CX.fillRect(wx,wy,half*(w/(wr.wind||1)),6*u);
+    // Bornes du creux : deux traits, PAR-DESSUS la barre de valeur. Une
+    // zone remplie aurait été à moitié recouverte par cette barre — ce qui
+    // était le cas au premier essai, et se lisait comme un défaut d'affichage.
+    // C'est le même seuil que celui qui allume « VENT FAIBLE » : la jauge
+    // et le texte disent enfin la même chose au même endroit.
+    CX.fillStyle='rgba(156,255,122,0.75)';
+    CX.fillRect(wx-half*0.25-1*u,wy-2*u,1.5*u,10*u);
+    CX.fillRect(wx+half*0.25,wy-2*u,1.5*u,10*u);
+    CX.fillStyle='rgba(255,255,255,0.75)';CX.fillRect(wx-1*u,wy-3*u,2*u,12*u);
+    // Repère d'anticipation : la valeur qu'aura le vent dans une seconde,
+    // le temps qu'il faut pour finir un demi-balancé et lâcher. Il est
+    // SOUS la barre — au-dessus il venait heurter le libellé. Suspendu
+    // seulement : en vol la valeur est figée, il n'y a plus rien à viser.
+    if(!flying){
+      const wNext=wr.wind*Math.sin((frame+120)*CFG.WIND_W);
+      const nx=wx+half*(wNext/(wr.wind||1));
+      const drop=Math.abs(wNext)<Math.abs(w);   // le vent tombe : ça vaut la peine d'attendre
+      CX.fillStyle=drop?'rgba(156,255,122,0.95)':'rgba(255,255,255,0.5)';
+      CX.beginPath();
+      CX.moveTo(nx,wy+8*u);CX.lineTo(nx-3.6*u,wy+14*u);CX.lineTo(nx+3.6*u,wy+14*u);
+      CX.closePath();CX.fill();
+    }
+    outlineText(wk<0.25?t('windCalm'):t('wind'),wx,wy-12*u,11,
       wk<0.25?'#9CFF7A':'rgba(255,255,255,0.72)',800);
   }
 
@@ -3752,10 +3792,24 @@ function drawHUD(){
 
 /* Écran de résultats. Il ne recalcule rien : toutes ces mesures ont été
    tenues pendant la traversée. */
-const RES_K=['rTime','rChain','rStars','rFalls','rBank','rScore'];
+// « Prises parfaites » est la ligne ajoutée après la relecture des
+// mécaniques. Elle manquait, et surtout elle n'aurait rien voulu dire
+// avant : tant que la saisie se concluait à l'entrée du rayon de prise,
+// AUCUNE traversée, quel que soit le joueur, n'obtenait autre chose
+// qu'« approximatif ». Le plafond de compétence existe maintenant ;
+// encore faut-il que le joueur puisse le voir et le viser.
+const RES_K=['rTime','rChain','rCatch','rStars','rFalls','rBank','rScore'];
 function gradeOf(){
-  // Trois critères lisibles, annoncés : finir, tomber peu, aller vite.
-  if(falls===0&&runTime()<=120&&maxStars>=4)return 3;
+  // Quatre critères lisibles, tous affichés sur l'écran de résultats :
+  // finir sans tomber, aller vite, tenir quatre étoiles, et RÉUSSIR SES
+  // PRISES. Le dernier est nouveau. Il ne pouvait pas exister tant que la
+  // saisie se concluait à l'entrée du rayon : toutes les prises étaient
+  // « approximatives », le critère aurait été toujours faux. Il demande la
+  // moitié des prises en parfait — atteignable en visant ses lâchers, et
+  // les deux relances de porteur en offrent déjà deux.
+  const nc=catchQ[0]+catchQ[1]+catchQ[2];
+  const nette=nc>0&&catchQ[0]*2>=nc;
+  if(falls===0&&runTime()<=120&&maxStars>=4&&nette)return 3;
   if(falls<=2)return 2;
   return 1;
 }
@@ -3772,8 +3826,10 @@ function drawResults(){
   CX.fillStyle='#FFFFFF';
   tracked(t('results'),HW,SH*0.19,rsz,rsz*0.28,function(ch,x,y){CX.fillText(ch,x,y);});
   const y0=SH*0.32, dy=Math.min(30*u,SH*0.075);
+  const nCatch=catchQ[0]+catchQ[1]+catchQ[2];
   const vals=[timeStr(runTime()),
     bestChain+' '+t('tricks'),
+    catchQ[0]+' / '+nCatch,
     maxStars+' / 5',
     String(falls),
     '$'+totalBank,
@@ -3833,6 +3889,7 @@ function startGame(){
   hype=0;starsNow=0;gateOpen=0;act=1;actT=ACT_CARD;
   bankVal=0;bankN=0;
   runSteps=0;penalty=0;falls=0;totalBank=0;maxStars=0;bestChain=0;finT=0;
+  catchQ[0]=catchQ[1]=catchQ[2]=0;
   for(let n=0;n<RIGS.length;n++){RIGS[n].giants=0;RIGS[n].giantOn=0;RIGS[n].ang=0;RIGS[n].angV=0;}
   for(let i=0;i<PORTS.length;i++){const c=PORTS[i];c.used=0;c.announced=0;c.phase=0;c.ready=false;}
   DRONE.live=0;DRONE.fade=0;
@@ -4189,6 +4246,7 @@ window.__v3={
     hype:hype,stars:hypeStars(),mult:hypeMult(),bank:bankVal,bankN:bankN,
     act:act,gate:gateOpen,falls:falls,time:runTime(),penalty:penalty,
     totalBank:totalBank,bestChain:bestChain,maxStars:maxStars,grade:gradeOf(),
+    catchPerf:catchQ[0],catchGood:catchQ[1],catchPoor:catchQ[2],
     wind:P.windA,windNow:windNow(RIGS[P.rig]),
     port:(function(){const c=portOf(P.rig);return c?{ready:!!c.ready,used:!!c.used,ang:c.ang}:null;})(),
     drone:DRONE.fade,parts:pLive,partsMax:pLiveMax,partsCap:PCAP,

@@ -23,13 +23,25 @@ transitions brutales (démarrer, revenir au menu, changer de qualité ou de
 langue) sans jamais respecter un ordre raisonnable. Une chose au moins doit
 tenir : quel que soit le désordre, aucune exception.
 
-`play_v3.js` est le test qui décide si la session 2 tient : cinq profils de
+`play_v3.js` est le test qui décide si la session 2 tient : six profils de
 joueur différents doivent boucler la traversée des sept rigs sans
 intervention, en passant par `action()`, `release()` et `figure()` — les
 fonctions mêmes que les touches appellent. Il fait varier le pilote (patience
 au lâcher, longueur des figures, proportion de pompages ratés) parce que le
 jeu est déterministe : rejouer le même pilote cinq fois ne prouve rien de
 plus qu'une fois.
+
+Depuis que la note de prise se joue sur la trajectoire, le paramètre qui
+sépare vraiment les pilotes est `patience` — l'écart maximal accepté avant
+de lâcher, en fraction du rayon de saisie. Mesuré sur la traversée
+complète, prises parfaites sur six : 0 pour un pilote large (0,95), 1 pour
+le casse-cou, 2 pour le prudent (0,55), **3 pour le soigneux (0,40)**, 6
+pour un pilote très précis (0,28). Le profil « soigneux » a été ajouté
+exactement là : sans lui, aucun pilote n'atteignait plus la note 3/3 et le
+test cessait d'exercer le haut de l'échelle. Quatre assertions vérifient
+désormais que les trois qualités de prise existent *dans le jeu* et pas
+seulement dans le code — la prise parfaite est atteignable, elle se mérite,
+la note maximale est atteignable, elle se mérite.
 
 Il enchaîne ensuite deux phases que la relecture de code ne remplace pas :
 60 000 pas d'actions tirées au hasard (lâcher à l'instant d'une prise, retour
