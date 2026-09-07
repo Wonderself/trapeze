@@ -142,6 +142,29 @@ ul.feat li b{color:var(--ink);font-weight:700}
 .cta.c{background:linear-gradient(96deg,#FF2E88,#FF8A3D);color:#2A0016}
 .cta:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
 
+/* ── Les deux autres jeux du dépôt ────────────────────────
+   Cartes plus sobres que les trois principales : ce sont des jeux
+   voisins, pas une quatrième et une cinquième version de la série. */
+.alt{display:grid;gap:clamp(16px,3.5vw,22px);grid-template-columns:1fr}
+@media(min-width:820px){.alt{grid-template-columns:1fr 1fr}}
+.alt a.item{
+  display:flex;flex-direction:column;text-decoration:none;color:inherit;
+  background:linear-gradient(168deg,var(--card2),var(--card));
+  border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
+  transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease;
+}
+@media(hover:hover){.alt a.item:hover{transform:translateY(-4px);border-color:rgba(95,227,161,.5);box-shadow:0 20px 50px rgba(0,0,0,.45)}}
+.alt img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:#05010f;border-bottom:1px solid var(--line)}
+.alt .b{padding:clamp(16px,4vw,22px);display:flex;flex-direction:column;gap:9px;flex:1}
+.alt h4{font-size:19px;font-weight:900;letter-spacing:-.01em}
+.alt .k{
+  align-self:flex-start;font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  padding:4px 10px;border-radius:999px;
+  background:rgba(95,227,161,.15);color:var(--green);border:1px solid rgba(95,227,161,.4);
+}
+.alt p{color:var(--ink2);font-size:14.5px;line-height:1.55}
+.alt .go{margin-top:auto;padding-top:4px;font-weight:800;color:var(--green);font-size:14.5px}
+
 /* ── Comparatif ──────────────────────────────────────────── */
 section{padding:clamp(30px,8vh,58px) 0}
 h3{font-size:clamp(21px,5.2vw,28px);font-weight:900;margin-bottom:8px;letter-spacing:-.01em}
@@ -313,9 +336,61 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
   </div>
 </section>
 
+<section id="autres">
+  <h3>Les deux autres jeux du dépôt</h3>
+  <p class="lead">
+    Ce dépôt ne contient pas que la série ci-dessus. Deux autres jeux y vivent, issus d’une
+    branche parallèle&nbsp;: le jeu 2D d’origine, emballé en application installable, et une
+    reprise complète en trois dimensions avec un vrai moteur 3D.
+  </p>
+  <div class="alt">
+
+    <a class="item" href="2d/index.html">
+      <img src="assets/shot-2d.jpg" width="960" height="560" loading="lazy"
+        alt="Écran-titre du jeu 2D : le chapiteau, Marc et Claire côte à côte, un bouton jouer.">
+      <div class="b">
+        <span class="k">2D · installable</span>
+        <h4>Circus Alzahir</h4>
+        <p>
+          Le jeu 2D d’origine, poursuivi de son côté&nbsp;: cinématique d’ouverture, musique
+          qui boucle par monde, médailles, annonces de monde en plein écran. Il s’installe sur
+          l’écran d’accueil (manifeste, service worker) et garde l’écran allumé pendant qu’on joue.
+        </p>
+        <span class="go">Jouer à Circus Alzahir ▸</span>
+      </div>
+    </a>
+
+    <a class="item" href="3d/index.html">
+      <img src="3d/shots/menu.jpg" width="960" height="560" loading="lazy"
+        alt="Écran-titre du jeu 3D : une piste de cirque en volume, deux personnages sous les projecteurs.">
+      <div class="b">
+        <span class="k">Three.js · vraie 3D</span>
+        <h4>Trapeze Stars 3D</h4>
+        <p>
+          Une reprise du même numéro avec un moteur 3D et des personnages en volume&nbsp;:
+          chapiteau, prises notées au timing, figures, quatre mondes et un tableau des scores.
+          C’est le seul jeu du dépôt qui n’est pas du Canvas 2D écrit à la main.
+        </p>
+        <span class="go">Jouer en 3D ▸</span>
+      </div>
+    </a>
+
+  </div>
+  <p class="lead" style="margin-top:22px;margin-bottom:0">
+    <b>Une précision honnête&nbsp;:</b> <i>Classic</i> et <i>Circus Alzahir</i> sont deux
+    branches du <b>même</b> jeu 2D, développées en parallèle et jamais réunies. Chacune a ce que
+    l’autre n’a pas — trampolines, porteurs, plateformes mobiles, difficulté adaptative et pause
+    automatique d’un côté&nbsp;; installation, cinématique, musique en boucle et parallaxe
+    supplémentaire de l’autre. Les réunir est un vrai chantier, pas une fusion de fichiers&nbsp;:
+    il est décrit dans <a href="docs/RESTE-A-FAIRE.md">le reste à faire</a>.
+  </p>
+</section>
+
 <section id="tech">
   <h3>Sous le capot</h3>
-  <p class="lead">Trois fichiers HTML autonomes. Pas de moteur, pas de bibliothèque, pas de build.</p>
+  <p class="lead">Les trois versions ci-dessus&nbsp;: trois fichiers HTML autonomes, pas de moteur,
+    pas de bibliothèque, pas de build. (<i>Circus Alzahir</i> suit la même règle&nbsp;; le jeu 3D,
+    lui, est une application compilée qui embarque Three.js.)</p>
   <div class="specs">
     <div class="spec"><b>0</b><span>dépendance externe</span></div>
     <div class="spec c"><b>1</b><span>fichier par version</span></div>
@@ -357,7 +432,8 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
 </main>
 
 <footer>
-  <p>Trapeze Stars — Classic, Deluxe &amp; City.
+  <p>Trapeze Stars — Classic, Deluxe &amp; City, plus <a href="2d/index.html">Circus Alzahir</a>
+     et <a href="3d/index.html">la version 3D</a>.
      <a href="docs/MEGA-PLAN.md">Plan de développement</a></p>
 </footer>
 

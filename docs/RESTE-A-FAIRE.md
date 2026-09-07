@@ -141,6 +141,98 @@ jeu. Ils sont consignés dans `docs/V3-PLAN.md` avec leur mesure.
 
 ---
 
+## Fusion des deux historiques — et ce qu'elle a révélé
+
+Ce dépôt portait **deux histoires parallèles** parties d'un ancêtre commun qui
+ne contenait qu'un seul fichier (`trapeze-stars-v2.html`, le jeu 2D d'origine,
+en hébreu). Elles ont ensuite avancé chacune de son côté, sans jamais se
+croiser : 30 commits d'un côté, 27 de l'autre.
+
+- **Cette branche** : `trapeze-stars-v1.html` (Classic), `trapeze-stars-v2.html`
+  (Deluxe, une refonte complète en perspective), `trapeze-city-v3.html`
+  (Trapeze City), la page d'accueil, `tools/` et `docs/`.
+- **`main`** : le jeu 2D poursuivi et emballé en application installable
+  (`2d/index.html` + manifeste, service worker, icônes), une reprise complète
+  en Three.js (`3d/`, plus ses sources dans `game3d/`), un site publié dans
+  `docs/`, et une série de documents (`README.md`, `CLAUDE.md`, `ROADMAP.md`,
+  `GAME_DESIGN.md`, `AUDIT.md`, `CHARACTERS.md`).
+
+**Deux conflits, dont un piège.** Git avait détecté un « renommage »
+`trapeze-stars-v2.html` → `2d/index.html` (76 % de similarité) et appariait
+donc le Deluxe de cette branche avec le jeu 2D de `main`. C'est faux : ce sont
+**deux jeux différents**. Le Deluxe a un moteur de rendu en perspective
+(`project(x,y,z)`, tri en profondeur, profils de qualité) ; le 2D de `main` est
+resté le jeu de plateformes à défilement horizontal
+(`GY=400, GRV=0.52, JP=-16.5`). Les fusionner ligne à ligne aurait détruit les
+deux. `trapeze-stars-v2.html` a donc été restauré tel quel, et `2d/index.html`
+pris tel quel : deux fichiers, deux jeux, rien de perdu.
+
+### Deux vrais bugs trouvés dans le jeu déployé
+
+La comparaison des deux branches du jeu 2D a montré que `2d/index.html` —
+**celui qui est en ligne et installable** — n'avait aucune des deux
+protections de stockage que la session S9 avait ajoutées à `trapeze-stars-v1.html`.
+
+- **Le jeu ne démarrait pas du tout en navigation privée.** Ligne 175,
+  `let highScore=+(localStorage.getItem('tse5_hs')||0)` — une lecture **non
+  protégée, à la racine du script**. En navigation privée Safari, `getItem`
+  lève ; l'exception interrompt le chargement entier, et toutes les
+  déclarations `let` situées plus bas restent dans leur zone morte. Résultat :
+  écran noir, pas même un menu. C'est plus grave que le bug d'origine trouvé
+  sur V1, qui ne se déclenchait qu'au premier record battu.
+- **La boucle mourait au premier record.** Même `localStorage.setItem` non
+  protégé dans `addScore()` que celui corrigé sur V1 en S9.
+
+Les deux sont corrigés, à l'identique de V1. Et surtout, `tools/s9_storage.js`
+couvre désormais **quatre** fichiers au lieu de trois : c'est le test qui
+aurait dû attraper ces bugs, et il ne les voyait pas parce que le fichier
+n'était pas dans sa liste.
+
+### L'outillage corrigé au passage
+
+- `tools/monkey_v1.js` prend maintenant **un fichier en argument**
+  (`node tools/monkey_v1.js 2d/index.html`). Son pont nommait en dur des
+  symboles qui n'existent que dans `trapeze-stars-v1.html` (`JP2`,
+  `togglePause`) : il ne se chargeait tout simplement pas sur l'autre branche.
+- Le même pont avançait le jeu en appelant `loop()`. Or `2d/index.html` a une
+  **boucle à pas fixe** où `loop(ts)` ne fait qu'alimenter un accumulateur :
+  l'appeler sans horodatage n'avance rien. Le test finissait donc à
+  `frame=0` — zéro crash, mais zéro image jouée, c'est-à-dire une réussite qui
+  ne prouvait rien. Il appelle désormais `tick()` quand il existe.
+
+### Le vrai chantier que cette fusion laisse ouvert
+
+`trapeze-stars-v1.html` et `2d/index.html` sont **deux branches du même jeu
+2D**, développées en parallèle et jamais réunies. Ni l'une ni l'autre n'est un
+sur-ensemble : 65 zones de différence, dont une bonne moitié est du contenu de
+jeu, pas de la traduction.
+
+| Seulement dans `trapeze-stars-v1.html` | Seulement dans `2d/index.html` |
+|---|---|
+| Trampolines (mécanique entière) | Application installable : manifeste, service worker, bouton « ajouter à l'écran d'accueil » |
+| Porteurs, avec fenêtre de réception | Cinématique d'ouverture, avec saut d'intro |
+| Plateformes mobiles (`elevPlats`) | Annonces de monde en plein écran |
+| Saut à hauteur variable | Musique qui boucle, durée de piste par monde |
+| Enchaînement d'écrasements (`stompChain`) | Couche de parallaxe supplémentaire par monde |
+| Difficulté adaptative (`consecutiveDeaths`, `ddaEasing`) | Cône de projecteur qui suit l'artiste |
+| Pause manuelle, et pause auto sur perte de focus | Natte animée, échelle par personnage |
+| `prefers-reduced-motion`, écran « tournez votre appareil » | Retour haptique, verrou d'écran allumé |
+| Étoiles par niveau, mode développeur | Bloom désactivé automatiquement si le débit chute |
+
+Les réunir est **un vrai chantier, pas une fusion de fichiers** : il faut
+choisir une base, porter une dizaine de systèmes indépendants, et revérifier
+le jeu à chaque étape. Le faire à l'intérieur d'un commit de fusion aurait été
+le meilleur moyen de casser un jeu qui tourne. C'est donc la dette assumée de
+cette fusion, et le tableau ci-dessus en est l'inventaire de départ.
+
+Autre point laissé tel quel, volontairement : `docs/` sert à la fois de site
+publié (`docs/index.html`, la version 3D compilée, côté `main`) et de dossier
+de documentation en markdown (côté cette branche). Les noms de fichiers ne se
+marchent pas dessus, rien ne casse — mais c'est un dossier qui fait deux
+métiers.
+
+---
+
 ## Fait
 
 | Lot | État | Où |

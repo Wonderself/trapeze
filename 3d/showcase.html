@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="Trapeze Stars 3D — a browser-native 3D arcade game built entirely with generative assets. A case study in AI-assisted game development." />
+<title>Trapeze Stars 3D — Case Study</title>
+<link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+<style>
+  :root{ --gold:#ffcf3f; --pink:#ff6db0; --blue:#54c8ff; --bg:#05010f; --panel:#0e0a1e; --ink:#e9e2ff; --dim:#9a8fc5 }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+  a{color:var(--blue);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1020px;margin:0 auto;padding:0 24px}
+
+  /* hero */
+  header{position:relative;padding:96px 0 72px;text-align:center;overflow:hidden;
+    background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(120,60,220,.35),transparent 70%),
+               radial-gradient(ellipse 40% 30% at 80% 10%,rgba(255,110,176,.12),transparent 70%)}
+  .kicker{font-size:13px;letter-spacing:5px;text-transform:uppercase;color:var(--dim);margin-bottom:18px}
+  h1{font-size:clamp(44px,9vw,92px);font-weight:800;line-height:.95;letter-spacing:1px;
+    background:linear-gradient(180deg,#fff2b0,#ffb43c);-webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 6px 30px rgba(255,180,40,.35))}
+  .tagline{margin:22px auto 0;max-width:560px;font-size:clamp(16px,2.6vw,20px);color:#cfc4f2}
+  .cta{display:inline-block;margin-top:36px;padding:16px 46px;border-radius:40px;font-size:19px;font-weight:700;color:#3a1500;
+    background:linear-gradient(180deg,#ffe08a,#ffb028);box-shadow:0 10px 34px rgba(255,170,30,.4);transition:transform .12s}
+  .cta:hover{transform:translateY(-2px);text-decoration:none}
+  .sub-cta{display:block;margin-top:14px;font-size:13px;color:var(--dim)}
+
+  /* sections */
+  section{padding:64px 0}
+  h2{font-size:clamp(24px,4.5vw,34px);font-weight:800;letter-spacing:.5px;margin-bottom:8px}
+  h2 span{color:var(--gold)}
+  .lead{color:var(--dim);max-width:640px;margin-bottom:36px}
+  .shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
+  figure{background:var(--panel);border:1px solid rgba(255,255,255,.08);border-radius:16px;overflow:hidden}
+  figure img{width:100%;display:block;aspect-ratio:12/7;object-fit:cover}
+  figcaption{padding:12px 16px;font-size:13px;color:var(--dim)}
+  figcaption b{color:var(--ink)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}
+  .card{background:var(--panel);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:22px 20px}
+  .card .ico{font-size:26px}
+  .card h3{font-size:16px;margin:10px 0 6px;letter-spacing:.5px}
+  .card p{font-size:14px;color:var(--dim)}
+
+  .techline{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}
+  .chip{padding:7px 16px;border-radius:30px;border:1px solid rgba(255,207,63,.35);background:rgba(255,207,63,.07);font-size:13px;color:#ffe9a8;letter-spacing:.5px}
+
+  .story{background:linear-gradient(180deg,rgba(120,60,220,.10),transparent);border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06)}
+  .story blockquote{max-width:680px;font-size:clamp(17px,2.8vw,22px);color:#e9e2ff;font-style:italic;border-left:3px solid var(--gold);padding-left:22px}
+  .story .who{margin-top:14px;font-size:14px;color:var(--dim)}
+
+  footer{padding:48px 0 60px;border-top:1px solid rgba(255,255,255,.06);text-align:center;font-size:14px;color:var(--dim)}
+  footer .dedic{margin-top:10px;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#7d6bb0}
+  footer a{color:var(--gold)}
+  @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} .cta{transition:none} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="kicker">Browser game · Case study</div>
+    <h1>TRAPEZE<br>STARS 3D</h1>
+    <p class="tagline">A full 3D arcade game that runs at 60 fps on a phone, loads in seconds, and ships <b>zero external assets</b> — every texture, character and note of music is generated in code.</p>
+    <a class="cta" href="./index.html">▶ Play the demo</a>
+    <span class="sub-cta">No install, no account — works on desktop, mobile &amp; gamepad. Leave it idle and it demos itself.</span>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>One skill: <span>timing</span></h2>
+    <p class="lead">Hold to pump your swing, let go at the peak, flip mid-air, catch the next bar. Releases are graded PERFECT / GOOD / OK — easy to learn, endlessly satisfying to master. Failure is never punished: a safety net, soft respawns and generous windows keep young players flying.</p>
+    <div class="shots">
+      <figure><img src="./shots/menu.jpg" alt="3D character podium menu with velvet curtain" loading="lazy" /><figcaption><b>3D podium menu</b> — pick your star under the spotlight, behind a velvet curtain.</figcaption></figure>
+      <figure><img src="./shots/fly.jpg" alt="Hero flying between trapeze bars with a rainbow trail" loading="lazy" /><figcaption><b>Flight &amp; flips</b> — slow-mo perfect catches, rainbow trails, confetti bursts.</figcaption></figure>
+      <figure><img src="./shots/space.jpg" alt="Neon space world with rings and a ringed planet" loading="lazy" /><figcaption><b>Four worlds</b> — Circus, Jungle, Beach, Space: new visuals and a new mechanic each.</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Built like a <span>product</span></h2>
+    <p class="lead">Not a tech demo — a complete arcade loop with retention, accessibility and shareability baked in.</p>
+    <div class="grid">
+      <div class="card"><div class="ico">🎬</div><h3>CINEMATIC INTRO</h3><p>Fly-through opening with spotlights firing in sequence and an animated logo. Skippable on first input.</p></div>
+      <div class="card"><div class="ico">🕹</div><h3>ATTRACT MODE</h3><p>Left idle, the game plays itself like an arcade cabinet — perfect for a stand or a shop window.</p></div>
+      <div class="card"><div class="ico">📅</div><h3>DAILY CHALLENGE</h3><p>A date-seeded rail, identical for every player in the world that day, with its own daily best.</p></div>
+      <div class="card"><div class="ico">🏆</div><h3>ARCADE SCORING</h3><p>Combos, medals per world, endless mode with rising difficulty, top-10 board with 3-initial entry.</p></div>
+      <div class="card"><div class="ico">🎵</div><h3>GENERATIVE AUDIO</h3><p>One synthesized soundtrack per world plus 14 sound effects — pure WebAudio, zero audio files.</p></div>
+      <div class="card"><div class="ico">♿</div><h3>ACCESSIBLE</h3><p>Respects reduced-motion, offers a reduce-flashes toggle, keyboard focus and HUD contrast passes.</p></div>
+      <div class="card"><div class="ico">📸</div><h3>PHOTO FINISH</h3><p>Your best catch is captured automatically and shareable via the native share sheet.</p></div>
+      <div class="card"><div class="ico">🎆</div><h3>GRAND FINALE</h3><p>Fireworks and a full ovation when you complete the tour or take the #1 spot.</p></div>
+    </div>
+    <div class="techline">
+      <span class="chip">Three.js</span><span class="chip">Generative WebAudio</span><span class="chip">PWA — installable &amp; offline</span>
+      <span class="chip">Gamepad API</span><span class="chip">Web Share API</span><span class="chip">0 external assets</span>
+      <span class="chip">60 fps mobile budget</span><span class="chip">&lt; 120 draw calls</span>
+    </div>
+  </div>
+</section>
+
+<section class="story">
+  <div class="wrap">
+    <h2>Built <span>session by session</span> with Claude</h2>
+    <p class="lead">The whole game — design, code, art direction, music, tests — was produced through a series of focused AI sessions, each one planned, executed, verified headlessly (WebGL smoke tests, zero-error gate) and shipped the same day. The repository drives itself: open it, and the next session knows what to do.</p>
+    <blockquote>Seven sessions from an empty folder to what you're looking at: playability, beauty, four worlds, audio &amp; retention, gamepad &amp; leaderboards, accessibility &amp; sharing, and this showcase.</blockquote>
+    <div class="who">A demonstration of AI-assisted product development — plan in the repo, tests as the gate, one session at a time.</div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>Want a game, a demo or an interactive experience like this one? <a href="mailto:smadja99@gmail.com">Get in touch</a>.</div>
+    <div class="dedic">Originally made with ❤ as a gift for Marc &amp; Claire</div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -8,7 +8,7 @@ avec Chromium réel, et un générateur d'image autonome.
 ```
 node tools/check.js <fichier.html>     # syntaxe, chargement, parcours des états, régression flashN
 node tools/play_v2.js                  # joueur automatique, doit franchir les 12 niveaux de V2
-node tools/monkey_v1.js                # 8000 entrées aléatoires (clavier, tap, transitions brutales)
+node tools/monkey_v1.js [fichier]       # 8000 entrées aléatoires (clavier, tap, transitions brutales)
 node tools/monkey_v2.js                # même principe pour V2, y compris réglages et sélection de niveau
 node tools/reach_v3.js                 # preuve que chaque barre de Trapeze City est atteignable
 node tools/play_v3.js [n]              # joueur automatique, doit boucler les 7 rigs de Trapeze City
@@ -60,6 +60,17 @@ N'utilisent que `fs`/`vm` de Node, via un DOM et un audio simulés
 `trapeze-stars-v1.html` ou `trapeze-stars-v2.html` — `play_v2.js` et les
 `monkey_*.js` plusieurs fois de suite (aléatoires par construction).
 
+`monkey_v1.js` prend un **fichier en argument**, parce que le dépôt contient
+deux branches du même jeu 2D : `trapeze-stars-v1.html` (par défaut) et
+`2d/index.html`. Les faire passer toutes les deux a demandé deux corrections
+du harnais, et la seconde est la plus instructive : le pont avançait le jeu
+en appelant `loop()`, ce qui marche sur V1 mais pas sur `2d/index.html`, dont
+la boucle à pas fixe se contente d'alimenter un accumulateur à partir d'un
+horodatage. Le test finissait donc à `frame=0` — **zéro crash, mais zéro
+image jouée** : une réussite qui ne prouvait rien. Il appelle maintenant
+`tick()` quand il existe. Un test vert sur un jeu qui n'a pas tourné est pire
+qu'un test rouge.
+
 `monkey_v1.js`/`monkey_v2.js` ne jouent pas intelligemment comme `play_v2.js` :
 ils mitraillent des touches, des taps à des coordonnées aléatoires, et forcent
 des transitions d'état brutales (game over en pleine figure, retour menu en
@@ -72,7 +83,7 @@ fragile même s'il ne causait pas encore de bug observable.
 
 ```
 cd tools && npm install     # installe playwright-core
-node tools/s9_storage.js    # localStorage hostile (navigation privée), les TROIS jeux
+node tools/s9_storage.js    # localStorage hostile (navigation privée), les QUATRE jeux en Canvas
 node tools/s9_memory.js     # 30 minutes simulées (V2) : le tas ne doit pas dériver
 node tools/s9_memory_v3.js  # même vérification pour Trapeze City, sa propre machine à états
 node tools/s9_multitouch.js # déplacement + action simultanés, V1 et V2
@@ -83,11 +94,21 @@ node tools/s9_multitouch_v3.js  # preuve de multitouch REEL : pomper et orienter
 python3 tools/make_og_cover.py  # régénère assets/og-cover.png (zlib + struct, zéro dépendance)
 ```
 
-`s9_storage.js` couvre désormais les trois jeux dans la même passe : chacun
-a sa propre façon de démarrer une partie et de déclencher l'écriture d'un
-nouveau record (`addScore()` n'a pas la même signature sur Trapeze City que
-sur V1/V2), mais le chemin testé est identique — un `localStorage` hostile
-ne doit jamais tuer la boucle de rendu.
+`s9_storage.js` couvre désormais les quatre jeux en Canvas dans la même
+passe : chacun a sa propre façon de démarrer une partie et de déclencher
+l'écriture d'un nouveau record (`addScore()` n'a pas la même signature sur
+Trapeze City que sur V1/V2), mais le chemin testé est identique — un
+`localStorage` hostile ne doit jamais tuer la boucle de rendu.
+
+**`2d/index.html` n'a été ajouté à cette liste que le jour de la fusion des
+deux historiques du dépôt — et il a immédiatement échoué, deux fois.** Ce
+fichier, celui qui est déployé et installable, lisait le record à la racine
+du script sans protection : en navigation privée, l'exception interrompait
+tout le chargement et le jeu ne démarrait pas du tout. Il écrivait aussi le
+record sans `try/catch`, comme V1 avant la session S9. Les deux sont
+corrigés. La leçon n'est pas sur le code mais sur la liste : un test qui ne
+connaît pas un fichier ne le protège pas, et ce fichier-là était le plus
+exposé de tous puisque c'est celui que les gens installent.
 
 `s9_refresh_v3.js` reprend le principe de `s9_refresh.js` pour Trapeze
 City : même pas fixe (1/120 s au lieu de 1/60), même méthode — on rejoue

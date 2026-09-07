@@ -8,6 +8,13 @@ const { chromium } = require('playwright-core');
      force:()=>{score=999999;if(typeof addScore==='function')addScore(1,10,10);}},
     {file:'trapeze-stars-v2.html',start:()=>window.startRun(),
      force:()=>{score=999999;if(typeof addScore==='function')addScore(1,10,10);}},
+    // 2d/index.html : l'autre branche du jeu 2D, celle qui est deployee en
+    // application installable. Elle a ete ajoutee ici le jour ou la fusion
+    // des deux historiques a montre qu'elle n'avait PAS la protection
+    // try/catch autour de localStorage.setItem — exactement le defaut que
+    // ce test avait trouve sur V1. Meme chemin d'ecriture, meme demarrage.
+    {file:'2d/index.html',start:()=>window.startGame(),
+     force:()=>{score=999999;if(typeof addScore==='function')addScore(1,10,10);}},
     // Trapeze City : meme chemin d'ecriture (persist() sur un nouveau
     // record), mais startGame() et addScore() ont une signature differente.
     // window.__v3 sert au demarrage ; score/SV/addScore restent des
