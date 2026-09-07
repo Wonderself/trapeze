@@ -89,7 +89,8 @@ node tools/s9_memory_v3.js  # même vérification pour Trapeze City, sa propre m
 node tools/s9_multitouch.js # déplacement + action simultanés, V1 et V2
 node tools/s9_refresh.js    # vitesse indépendante du taux de rafraîchissement, V2
 node tools/s9_refresh_v3.js # même vérification pour Trapeze City
-node tools/shot_v3.js       # captures de contrôle de Trapeze City + enchaînement au clavier
+node tools/shot_v3.js [dossier] [fichier]   # captures de contrôle + enchaînement au clavier
+node tools/shots_diff_v3.js <avant.html> <apres.html>  # régression visuelle : compare deux versions
 node tools/s9_multitouch_v3.js  # preuve de multitouch REEL : pomper et orienter en meme temps
 python3 tools/make_og_cover.py  # régénère assets/og-cover.png (zlib + struct, zéro dépendance)
 ```
@@ -168,10 +169,57 @@ pour le détail et pour ce qui reste hors de portée sans un vrai appareil
 système manquent — et aucune simulation ne remplace un vrai iPhone ou un
 vrai Android).
 
-Pour un contrôle visuel après un changement de rendu, écrire un script
-Playwright ad hoc qui capture des `page.screenshot()` puis les regarder
-avec l'outil `Read` — c'est ce qui a débusqué la mise à l'échelle et la
-police canvas invalides que le harnais headless ne pouvait pas voir.
+### `shots_diff_v3.js` — la régression visuelle, et pourquoi elle a été dure
+
+`shot_v3.js` se terminait par une phrase honnête : « il faut les OUVRIR ».
+En pratique on en ouvre trois ou quatre — celles qu'on soupçonne — et on
+déclare les autres vérifiées. Ce n'est pas une vérification, c'est un
+sondage. Et juger vingt-huit images dans l'absolu est de toute façon le
+mauvais exercice : l'œil juge mal la beauté, mais il juge très bien un
+**écart**.
+
+`shots_diff_v3.js` capture donc les mêmes scènes sur **deux versions** du
+jeu, compare pixel par pixel (décodage PNG dans le navigateur déjà lancé,
+aucune bibliothèque d'images à installer) et ne laisse à regarder que les
+scènes qui ont bougé — avec un composite avant/après dans `shots/diff/`.
+
+**Le premier résultat a été un échec instructif.** Sur 29 scènes, 26
+« avaient changé »… et le témoin — le même fichier comparé à lui-même —
+en donnait 24, avec des écarts PLUS grands que la comparaison réelle. La
+capture n'était pas reproductible ; l'outil ne mesurait que du bruit. Il a
+fallu trois corrections successives, chacune trouvée en remesurant :
+
+1. `shot_v3.js` attendait 260 ms d'horloge avant de capturer. Pendant ce
+   temps, `requestAnimationFrame` continuait d'avancer la simulation d'un
+   nombre d'images dépendant de la charge de la machine. Remplacé par
+   `__v3.still()`, qui fige la boucle et dessine **exactement une** image.
+2. Il restait la fenêtre entre le chargement de la page et la mise en
+   place de la scène : même problème, la scène démarrait à une image
+   inconnue. Corrigé en figeant **avant le premier script du jeu**, via
+   `window.__V3_HALT` posé par `addInitScript`.
+3. `13-enchainement` est exclu de la comparaison : ce n'est pas une scène
+   posée mais la traversée jouée au clavier, dont les événements partent
+   d'une boucle d'animation dans la page. Elle dépend du temps d'horloge
+   par construction — et c'est très bien, elle prouve un **comportement**,
+   pas une image.
+
+Après ces trois corrections, le témoin donne **0,000 % sur 28 scènes sur
+28** : les captures sont reproductibles au pixel près. Une scène à 0,000 %
+n'est plus « pas regardée », elle est **prouvée inchangée** — ce qui vaut
+mieux qu'un coup d'œil.
+
+Appliqué à la relecture des mécaniques : 25 scènes sur 28 identiques au
+pixel, et exactement 3 qui bougent — la ligne d'horizon, la tour du final
+et l'écran de résultats. Toutes les trois s'expliquent par le même
+changement, le déplacement de deux mètres du dernier rig, confirmé par la
+position affichée dans la surcouche de débogage (`pos 33.0 88.6 -3.2` →
+`pos 31.6 88.6 -4.6`).
+
+Pour un contrôle visuel d'un changement qui ne se compare pas à une version
+antérieure, écrire un script Playwright ad hoc qui capture des
+`page.screenshot()` puis les regarder avec l'outil `Read` — c'est ce qui a
+débusqué la mise à l'échelle et la police canvas invalides que le harnais
+headless ne pouvait pas voir.
 
 `s9_memory_v3.js` reprend le principe de `s9_memory.js` pour Trapeze City :
 30 minutes de temps simulé (soit 216 000 pas, au pas fixe de 1/120 s du

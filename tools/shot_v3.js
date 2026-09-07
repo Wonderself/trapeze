@@ -116,18 +116,33 @@ const SHOTS=[
 (async()=>{
   fs.mkdirSync(OUT,{recursive:true});
   const browser=await chromium.launch({executablePath:EXE,args:['--no-sandbox','--disable-dev-shm-usage']});
-  const url='file://'+path.join(ROOT,'trapeze-city-v3.html');
+  // Le fichier est un argument optionnel : c'est ce qui permet de
+  // capturer les MEMES scenes sur deux versions du jeu et de comparer
+  // les images, plutot que de juger vingt-huit captures a l'oeil nu.
+  //   node tools/shot_v3.js [dossier] [fichier]
+  const url='file://'+path.resolve(process.argv[3]||path.join(ROOT,'trapeze-city-v3.html'));
   for(const s of SHOTS){
     const ctx=await browser.newContext({viewport:{width:s.w,height:s.h},deviceScaleFactor:1});
     const page=await ctx.newPage();
     const errs=[];
     page.on('pageerror',e=>errs.push(String(e)));
     page.on('console',m=>{if(m.type()==='error')errs.push(m.text());});
+    // Fige la boucle AVANT le premier script du jeu. Attendre le pont puis
+    // appeler still() ne suffit pas : le temps de l'aller-retour, la
+    // simulation a deja avance d'un nombre d'images qui depend de la
+    // charge de la machine, et la camera a deja derive. Mesure a l'appui,
+    // c'etait la derniere source de captures non reproductibles.
+    await page.addInitScript(()=>{window.__V3_HALT=true;});
     await page.goto(url);
     await page.waitForFunction('!!window.__v3');
     await page.evaluate('window.__v3.debug(true)');
     if(s.run)await page.evaluate('('+s.run.toString()+')(window.__v3)');
-    await page.waitForTimeout(260);
+    // Fige la boucle et dessine exactement une image, AU LIEU d'attendre
+    // 260 ms d'horloge. C'est la difference entre une capture
+    // reproductible et une capture qui depend de la charge de la machine :
+    // mesure a l'appui, l'attente faisait diverger deux captures de la
+    // MEME version plus que deux versions differentes ne divergeaient.
+    await page.evaluate('window.__v3.still()');
     const st=await page.evaluate('window.__v3.state');
     await page.screenshot({path:path.join(OUT,s.name+'.png')});
     console.log(s.name.padEnd(20),
@@ -290,4 +305,9 @@ const SHOTS=[
   }
   await browser.close();
   console.log('\nCaptures dans '+OUT+' — il faut les OUVRIR, pas seulement les generer.');
+  console.log('Apres un changement de rendu, ne les jugez pas une par une :\n'
+    +'  node tools/shots_diff_v3.js <avant.html> <apres.html>\n'
+    +'compare les memes scenes entre deux versions et ne vous laisse a regarder\n'
+    +'que celles qui ont VRAIMENT bouge. Les captures sont reproductibles au\n'
+    +'pixel pres, donc une scene a 0,000 %% est prouvee inchangee.');
 })().catch(e=>{console.error(e);process.exit(1);});

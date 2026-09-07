@@ -1111,12 +1111,70 @@ de rendu identique. L'A/B ci-dessus, fichier avant et fichier après dans le
 même navigateur et à la minute près, donne 6,80 contre 6,70 ms : l'écart
 avec la session 5 est de la charge de machine, pas une régression.
 
+### Le résidu de cette passe, et comment il a été fermé
+
+Cette passe avait laissé un aveu : `shot_v3.js` régénère vingt-huit
+captures, et trois seulement avaient été ouvertes. Les vingt-cinq autres
+n'avaient que leur ligne d'instrumentation vérifiée.
+
+Le réflexe aurait été de les ouvrir une par une. C'est le mauvais
+exercice : l'œil juge mal une image dans l'absolu, mais il juge très bien
+un **écart**. `tools/shots_diff_v3.js` capture donc les mêmes scènes sur
+deux versions du jeu et ne laisse à regarder que celles qui ont bougé.
+
+**Le premier résultat a été un échec, et c'est lui qui valait le
+détour.** L'outil annonçait 26 scènes changées sur 29 — mais le témoin, le
+même fichier comparé à lui-même, en donnait 24, avec des écarts *plus
+grands* que la comparaison réelle. L'outil ne mesurait que du bruit, et
+sans ce témoin il aurait produit un rapport parfaitement crédible et
+entièrement faux.
+
+La cause était dans le harnais de capture, pas dans le jeu : entre la mise
+en place d'une scène et le déclenchement de la capture, `shot_v3.js`
+attendait 260 ms d'horloge pendant lesquelles `requestAnimationFrame`
+avançait la simulation d'un nombre d'images dépendant de la charge de la
+machine. Et même après suppression de cette attente, il restait la fenêtre
+entre le chargement de la page et la mise en place de la scène. Corrigé en
+deux temps : `__v3.still()` fige la boucle et dessine exactement une image,
+et `window.__V3_HALT`, posé avant le premier script du jeu, la fige dès sa
+toute première image.
+
+| Témoin (même fichier comparé à lui-même) | Scènes « changées » |
+|---|---|
+| Avant correction | 24 sur 29, jusqu'à 6,45 % d'écart |
+| Après `still()` | 20 sur 29 |
+| Après le gel dès la première image | **0 sur 28** (0,000 % partout) |
+
+Les captures sont désormais reproductibles au pixel près, et une scène à
+0,000 % n'est plus « pas regardée » : elle est **prouvée inchangée**.
+
+Appliqué à cette relecture : **25 scènes sur 28 identiques au pixel**, et
+exactement trois qui bougent — la ligne d'horizon, la tour du final et
+l'écran de résultats. Les trois composites avant/après ont été ouverts :
+toutes s'expliquent par le même changement, le recul de deux mètres du
+dernier rig, confirmé par la position affichée dans la surcouche de
+débogage (`pos 33.0 88.6 -3.2` → `pos 31.6 88.6 -4.6`). L'écran de
+résultats affiche des chiffres identiques ; seul le décor derrière a
+glissé, puisque la caméra regarde le rig qui a bougé.
+
+`13-enchainement` est hors comparaison : ce n'est pas une scène posée mais
+la traversée jouée au clavier, dont les événements partent d'une boucle
+d'animation dans la page. Elle dépend du temps d'horloge par construction
+— et c'est très bien, elle prouve un comportement, pas une image.
+
+Note de mesure, dans le même esprit d'honnêteté que plus haut : relancé
+après ces corrections, `shot_v3.js` affiche 60 / 60 / 45 ips, exactement
+les chiffres de la session 5, là où la même commande donnait 52 / 46 / 26
+quelques heures plus tôt sur un code de rendu identique. La charge du
+conteneur était bien la seule explication.
+
 ### Ce que cette passe n'a pas fait
 
 Elle n'a touché ni V1, ni V2, ni la page d'accueil. Elle n'a rien changé au
-rendu, à l'audio, aux menus ni à la direction artistique. Et elle ne
-remplace toujours pas un vrai appareil tactile : le manche virtuel a été
-mesuré par CDP `Input.dispatchTouchEvent`, pas sous un vrai pouce.
+rendu, à l'audio, aux menus ni à la direction artistique — et les captures
+le prouvent maintenant, au lieu de l'affirmer. Elle ne remplace toujours
+pas un vrai appareil tactile : le manche virtuel a été mesuré par CDP
+`Input.dispatchTouchEvent`, pas sous un vrai pouce.
 
 ---
 

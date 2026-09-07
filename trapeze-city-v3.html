@@ -4117,8 +4117,23 @@ function step(){
   stepStick();                // le manche agit par PAS, pas par événement
   stepCamera();
 }
+/* Boucle suspendue. Uniquement pour les outils de capture : tant que ce
+   drapeau est levé, la boucle continue d'être re-planifiée mais n'avance
+   plus rien. C'est ce qui rend une capture REPRODUCTIBLE — sans lui, le
+   temps d'horloge qui s'écoule entre la mise en place d'une scène et le
+   déclenchement de la capture avance la simulation d'un nombre d'images
+   qui dépend de la charge de la machine, et deux captures de la MÊME
+   version diffèrent alors plus que deux versions différentes. Mesuré. */
+// La valeur INITIALE se lit dans la page, pas dans le code : un outil de
+// capture pose `window.__V3_HALT = true` avant que le moindre script du
+// jeu ne s'exécute, et la boucle est alors figée dès sa toute première
+// image. Sans ça il reste une fenêtre — le temps d'un aller-retour entre
+// l'outil et la page — pendant laquelle la simulation avance d'un nombre
+// d'images imprévisible, et la caméra a déjà dérivé quand on la fige.
+let loopHalted=(typeof window!=='undefined'&&window.__V3_HALT===true);
 function frameLoop(now){
   requestAnimationFrame(frameLoop);
+  if(loopHalted)return;
   if(!lastT)lastT=now;
   let dt=now-lastT;lastT=now;
   if(dt>250)dt=STEP;                 // onglet réveillé : on ne rattrape pas
@@ -4216,6 +4231,11 @@ window.__v3={
   // Avance la simulation d'un nombre exact de pas : les captures de test
   // sont ainsi reproductibles, au lieu de dépendre du temps réel écoulé.
   sim:function(n){for(let i=0;i<(n|0);i++)step();},
+  // Fige la boucle et dessine EXACTEMENT une image. La capture qui suit ne
+  // dépend plus du temps d'horloge, seulement des pas de simulation
+  // demandés par la scène.
+  still:function(){loopHalted=true;lastT=0;acc=0;render();},
+  live:function(){loopHalted=false;lastT=0;acc=0;},
   // Fige la caméra à un endroit choisi. Sert notamment à la coller contre
   // un mur pour vérifier le découpage au plan proche.
   freeze:function(x,y,z,yaw,pitch){
