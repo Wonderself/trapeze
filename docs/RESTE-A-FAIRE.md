@@ -1,5 +1,10 @@
 # Reste à faire
 
+> 🚀 **Mise en ligne** : tout ce qui concerne le déploiement Coolify — état
+> vérifié, points manquants, questions ouvertes et mégaprompts prêts à
+> coller — vit désormais dans [`DEPLOIEMENT.md`](DEPLOIEMENT.md). Le présent
+> document reste celui du **contenu** des jeux.
+
 État au terme de la session. Les lots ci-dessous sont volontairement cadrés
 pour être exécutés séparément, y compris par un modèle plus léger : chacun
 est court, local, et vérifiable.

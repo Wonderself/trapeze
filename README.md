@@ -25,6 +25,17 @@ Le dépôt est servable tel quel comme **site statique** (aucun Dockerfile/serve
 - `2d/` et `3d/` sont des sous-dossiers autonomes (chemins relatifs, chacun avec son propre `manifest.json`/`sw.js` scopé à son dossier — aucun conflit entre les deux PWA).
 - `docs/` reste la copie utilisée par GitHub Pages ; `3d/` est la copie identique utilisée par Coolify. Les deux sont régénérées ensemble à chaque build (voir `CLAUDE.md`, étape 5).
 
+> 📋 **Avant de mettre en ligne, lire [`docs/DEPLOIEMENT.md`](docs/DEPLOIEMENT.md).**
+> Il liste ce qui a été vérifié (les sept pages se chargent sans erreur sur un
+> vrai serveur), les sept points qui manquent — dont **un urgent : les service
+> workers casseront le jeu 3D au premier redéploiement** — les trois questions
+> qui demandent une décision d'Emmanuel, et un mégaprompt prêt à coller pour
+> chaque tâche.
+
+La page d'accueil présente désormais **cinq jeux** : les trois versions de la
+série (Classic, Deluxe, City, à la racine) et les deux jeux de la branche
+parallèle (`2d/` Circus Alzahir, `3d/` la version Three.js).
+
 ## 🎮 Contrôles
 
 ### 3D (direction active)
