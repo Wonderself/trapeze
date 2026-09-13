@@ -18,6 +18,7 @@ Règle d'or du projet : **tout doit rester gratuit, hors-ligne et sans dépendan
 - [x] Identité personnages (2026-07-19) : **Marc petit, blond, natte animée** (vole en vrille, traîne en swing) ; **Claire plus grande, blond clair, cheveux longs + étoile d'or** — tailles compensées au point de prise (les mains restent sur la barre)
 - [x] PWA et caches 2D/3D fiables : service workers séparés, redéploiement et rechargement hors ligne couverts par `npm run test:sw`
 - [x] GitHub Pages en production : build racine vers `/3d` + `/_site`, publication de `/_site` depuis `main`; `docs/` reste exclusivement documentaire. `PASS_PRODUCTION` le 2026-09-13 (commit initial `a69e34d`, run `34778875942`)
+- [x] Sélecteur central des cinq versions et retour **Toutes les versions** depuis chacun des cinq jeux, vérifiés sur quatre formats d'écran
 
 ### Jeu 2D (`2d/` — terminé, conservé)
 - [x] 4 mondes × 3 niveaux + cérémonie + finale, musique 100 % procédurale
@@ -30,9 +31,9 @@ Règle d'or du projet : **tout doit rester gratuit, hors-ligne et sans dépendan
 
 ## 🎯 Validations et décisions encore ouvertes
 
-- **QA téléphones physiques** : **NOT_RUN** sur iOS/Android réels; à planifier si Emmanuel souhaite une validation matérielle avant diffusion large.
+- **QA téléphones physiques** : **BLOCKED_ACCESS** sur iPhone/iPad/Android réels; la recette est prête dans [`docs/QA-APPAREILS-REELS.md`](docs/QA-APPAREILS-REELS.md), mais aucun appareil ni service distant authentifié n'est disponible.
 - **Leaderboard WORLD Supabase** : **DEFERRED_USER**. Choisir entre conserver le mode LOCAL par défaut ou fournir l'URL et la clé anon selon `game3d/SUPABASE_SETUP.md`.
-- **Miroir Coolify** : **BLOCKED_ACCESS**. Optionnel et non requis pour GitHub Pages; aucune ressource, URL, configuration TLS ou preuve publique n'est disponible.
+- **Miroir Coolify** : **READY_TO_DEPLOY**. Le projet `Trapeze` et sa ressource `main` existent; le service arrêté doit encore être redéployé, passé en HTTPS et validé publiquement. GitHub Pages reste canonique.
 
 ## 💡 Futurs choix non réalisés (toujours gratuits)
 

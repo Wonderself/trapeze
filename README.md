@@ -28,11 +28,15 @@ Le site canonique est **<https://wonderself.github.io/trapeze/>**. Une
 publication n'a lieu qu'après le passage du workflow de vérification sur
 `main`.
 
-Le dépôt reste compatible avec **Coolify Static Site** : build
-`npm ci --prefix game3d && npm run build:artifact`, dossier publié `_site`.
+Le dépôt reste compatible avec **Coolify Static Site**. Le miroir historique
+sert directement la racine versionnée : le snapshot `3d/` doit donc toujours
+être régénéré et commité avec `npm run build`. GitHub Pages, lui, publie
+l'artefact isolé `_site/`.
 `2d/` et `3d/` sont autonomes et leurs service workers ont des caches séparés,
 une navigation network-first et un repli hors ligne. Le runbook complet et le
-rollback sont dans [`docs/DEPLOIEMENT.md`](docs/DEPLOIEMENT.md).
+rollback sont dans [`docs/DEPLOIEMENT.md`](docs/DEPLOIEMENT.md). La recette
+iPhone/iPad/Android réelle, distincte de l'émulation Chromium, est dans
+[`docs/QA-APPAREILS-REELS.md`](docs/QA-APPAREILS-REELS.md).
 
 La page d'accueil présente désormais **cinq jeux** : les trois versions de la
 série (Classic, Deluxe, City, à la racine) et les deux jeux de la branche
@@ -74,7 +78,7 @@ Fiches complètes (2D et 3D) : [CHARACTERS.md](CHARACTERS.md).
 
 | Chemin | Rôle |
 |---|---|
-| `index.html` | Page de choix 2D/3D à la racine (sert de page d'accueil pour Coolify/GitHub Pages/tout hébergement statique) |
+| `index.html` | Sélecteur central des cinq versions (page d'accueil Coolify/GitHub Pages/tout hébergement statique) |
 | `2d/` | Jeu 2D complet (HTML + CSS + JS, canvas 800×450) + PWA (`manifest.json`, `sw.js`, icônes) |
 | `game3d/` | Jeu 3D — source : Three.js + Vite (`src/main.js` jeu/état, `scene.js` rendu, `world.js` décor, `player.js` héros) |
 | `docs/` | Documentation et runbooks, jamais publiée comme build |

@@ -1,6 +1,6 @@
-# Déploiement — runbook GitHub Pages
+# Déploiement — GitHub Pages et miroir Coolify
 
-Dernière mise à jour : **2026-09-13**.
+Dernière mise à jour : **2026-09-14**.
 
 ## État et cible
 
@@ -27,7 +27,8 @@ commit `a69e34d95e2faa76b09ff915a179ec3ee76fff60` et le
 [run GitHub Actions 34778875942](https://github.com/Wonderself/trapeze/actions/runs/34778875942) :
 jobs `verify` et `deploy` verts, sept routes en HTTP 200 et 404 personnalisée
 confirmée. Ce statut couvre GitHub Pages; il ne prouve ni l'activation
-Supabase, ni un miroir Coolify, ni une QA sur appareils physiques.
+Supabase, ni une QA sur appareils physiques. Le miroir Coolify possède sa
+propre procédure de preuve et de rollback ci-dessous.
 
 ## Configuration GitHub à conserver
 
@@ -213,25 +214,45 @@ gh run rerun --repo Wonderself/trapeze <GOOD_RUN_ID>
 Cette mesure temporaire doit être suivie d'un revert sur `main`, afin que la
 branche et la production ne divergent pas.
 
-## Coolify — optionnel
+## Miroir Coolify
 
-Statut : **`BLOCKED_ACCESS`**. Aucun accès, domaine, TLS ni ressource Coolify
-active n'est prouvé dans le dépôt. Coolify n'est pas requis pour la cible
-canonique GitHub Pages et ne doit pas bloquer sa publication.
+Statut avant remise en ligne : **`READY_TO_DEPLOY`**. La ressource historique
+existe, mais elle est arrêtée et ne devient `PASS_PRODUCTION_MIRROR` qu'après
+un certificat HTTPS valide, un SHA identifié et un smoke public vert.
 
-Si Emmanuel décide plus tard d'ajouter un miroir Coolify :
+Configuration vérifiée dans Coolify :
 
-- type : Static Site ;
-- dépôt : `Wonderself/trapeze` ;
-- branche : `main` ;
-- Node : 22 ;
-- commande de build : `npm ci --prefix game3d && npm run build:artifact` ;
-- répertoire publié : `_site` ;
-- HTML : cache court ou `no-cache` ; assets hachés : cache long ;
-- domaine, TLS, redirections, webhook et premier smoke public à vérifier dans
-  l'interface Coolify.
+- projet : `Trapeze`, environnement `production` ;
+- application : `ns4sg8w44wow0wkowg0co4kk` ;
+- dépôt : `Wonderself/trapeze`, branche `main`, révision `HEAD` ;
+- type : Static, image `nginx:alpine`, port `80` ;
+- base publiée : racine versionnée `/.` ;
+- domaine cible : `https://trapeze.188.245.182.200.sslip.io` ;
+- déploiement : manuel — aucun webhook GitHub n'est actuellement présent.
 
-Ne pas appeler ce miroir « déployé » sans URL, SHA et smoke public vérifiés.
+Cette ressource ne publie pas `_site/` : elle sert directement les fichiers
+versionnés. Il faut donc exécuter `npm run build`, commiter le snapshot `3d/`,
+attendre la CI GitHub verte, puis lancer **Deploy (without cache)** sur le SHA
+de `main`. Ne pas modifier la configuration générale si Coolify affiche des
+changements non enregistrés dont l'origine n'est pas comprise.
+
+Routes du miroir, sans le préfixe `/trapeze` :
+
+```text
+/
+/2d/
+/3d/
+/3d/showcase.html
+/trapeze-stars-v1.html
+/trapeze-stars-v2.html
+/trapeze-city-v3.html
+```
+
+Après déploiement : vérifier le certificat sans `curl -k`, les sept réponses
+`200`, une vraie `404`, puis ouvrir accueil, 2D et 3D dans un navigateur sans
+erreur console. Relever le SHA et la preuve du déploiement. En cas d'échec,
+redéployer depuis Coolify le dernier déploiement réussi, puis aligner `main`
+par un `git revert` plutôt que par une réécriture d'historique.
 
 ## Leaderboard mondial — optionnel
 
@@ -252,7 +273,8 @@ déploiement du site.
 
 ## Appareils physiques
 
-Statut : **`NOT_RUN`**.
+Statut : **`BLOCKED_ACCESS`**. La recette détaillée est dans
+[`QA-APPAREILS-REELS.md`](QA-APPAREILS-REELS.md).
 
 Les simulations Chromium couvrent les formats, le multitouch, le stockage
 hostile, le taux de rafraîchissement et les mises à jour PWA. Elles ne prouvent

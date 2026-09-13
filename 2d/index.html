@@ -22,13 +22,15 @@ canvas{display:block;width:100%;aspect-ratio:800/450;border-radius:10px;box-shad
 #btnFs:hover,#btnFs:active{background:rgba(255,255,255,0.2);color:#fff;}
 #btnQuit{position:absolute;top:8px;left:8px;min-width:68px;height:44px;padding:0 12px;border:none;border-radius:9px;background:rgba(0,0,0,0.42);border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.7);font-size:12px;font-family:'Trebuchet MS',Avenir,Arial,sans-serif;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:20;white-space:nowrap;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transition:background .12s,color .12s;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
 #btnQuit:hover,#btnQuit:active{background:rgba(255,60,60,0.32);color:#fff;border-color:rgba(255,100,100,0.4);}
+.versions-link{position:absolute;top:8px;left:50%;z-index:25;min-height:44px;padding:0 11px;border:1px solid rgba(255,215,0,.42);border-radius:999px;background:rgba(10,2,36,.76);color:#FFE58A;font:700 12px/1 'Trebuchet MS',Avenir,Arial,sans-serif;text-decoration:none;display:flex;align-items:center;justify-content:center;white-space:nowrap;transform:translateX(-50%);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.versions-link:hover,.versions-link:active{background:rgba(255,215,0,.22);color:#fff}
 #ctrl{position:absolute;inset:0;pointer-events:none;display:none}
 @media(hover:none),(pointer:coarse){#ctrl{display:flex;align-items:flex-end;justify-content:space-between;padding:0 3% 3%}}
 #move{display:flex;gap:10px;align-items:flex-end;pointer-events:auto;}
 #acts{display:flex;gap:10px;align-items:flex-end;pointer-events:auto;}
 .cb{border:none;outline:none;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none;font-family:'Trebuchet MS',Avenir,Arial,sans-serif;transition:background .06s,transform .06s;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);width:clamp(68px,17vw,82px);height:clamp(68px,17vw,82px);font-size:clamp(26px,7vw,34px);background:rgba(10,2,40,0.72);border:2px solid rgba(255,255,255,0.28);color:#fff;box-shadow:0 3px 18px rgba(0,0,0,0.65);}
 .cb:active,.cb.pressed{transform:scale(0.86);background:rgba(255,255,255,0.22);}
-#btnFs:focus-visible,#btnQuit:focus-visible,.cb:focus-visible{outline:3px solid #FFD700;outline-offset:2px}
+#btnFs:focus-visible,#btnQuit:focus-visible,.versions-link:focus-visible,.cb:focus-visible{outline:3px solid #FFD700;outline-offset:2px}
 #bL,#bR{background:rgba(25,8,55,0.65);border-color:rgba(160,110,255,0.5);}
 #bGrab{background:rgba(10,120,50,0.35);border-color:rgba(60,220,110,0.5);font-size:clamp(14px,4vw,18px);}
 #bJ{background:radial-gradient(circle at 38% 32%,rgba(255,235,80,0.65),rgba(255,120,0,0.5));border-color:rgba(255,210,0,0.9);color:#FFD700;box-shadow:0 0 28px rgba(255,200,0,0.6),0 3px 14px rgba(0,0,0,0.6);width:clamp(76px,20vw,90px);height:clamp(76px,20vw,90px);font-size:clamp(30px,8vw,38px);}
@@ -42,6 +44,7 @@ canvas{display:block;width:100%;aspect-ratio:800/450;border-radius:10px;box-shad
 <body>
 <div id="wrap">
   <canvas id="c"></canvas>
+  <a class="versions-link" data-versions-link href="../" aria-label="Toutes les versions de Trapeze Stars">← Toutes les versions</a>
   <button id="btnFs" title="Fullscreen" aria-label="Fullscreen">⛶</button>
   <button id="btnQuit" aria-label="Menu">← Menu</button>
   <div id="ctrl">
@@ -1870,7 +1873,7 @@ requestAnimationFrame(loop);
 if('serviceWorker' in navigator){
   // Bump this public version whenever the self-contained 2D app changes.
   // The cache name is scoped by this query string inside sw.js.
-  const PWA_VERSION='20260913-2';
+  const PWA_VERSION='20260913-3';
   window.addEventListener('load',()=>{navigator.serviceWorker.register(`sw.js?v=${PWA_VERSION}`).catch(()=>{});});
 }
 let deferredPrompt=null;

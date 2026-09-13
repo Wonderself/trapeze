@@ -21,6 +21,10 @@ canvas{display:block;width:100%;aspect-ratio:800/450;border-radius:10px;box-shad
 #btnQuit:hover,#btnQuit:active{background:rgba(255,60,60,0.32);color:#fff;border-color:rgba(255,100,100,0.4);}
 #btnPause{position:absolute;top:8px;right:46px;width:32px;height:32px;border:none;border-radius:7px;background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.75);font-size:12px;letter-spacing:1px;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:20;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
 #btnPause:hover,#btnPause:active{background:rgba(255,255,255,0.2);color:#fff;}
+.versions-link{position:absolute;top:8px;left:50%;z-index:10000;min-height:32px;padding:0 11px;border:1px solid rgba(255,215,0,.42);border-radius:999px;background:rgba(10,2,36,.76);color:#FFE58A;font:700 12px/1 Avenir,Verdana,sans-serif;text-decoration:none;display:flex;align-items:center;justify-content:center;white-space:nowrap;transform:translateX(-50%);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.versions-link:hover,.versions-link:active{background:rgba(255,215,0,.22);color:#fff}
+#btnFs:focus-visible,#btnQuit:focus-visible,#btnPause:focus-visible,.versions-link:focus-visible,.cb:focus-visible{outline:3px solid #FFD700;outline-offset:2px}
+@media(hover:none),(pointer:coarse){.versions-link{min-height:44px;top:2px}}
 #ctrl{position:absolute;inset:0;pointer-events:none;display:none}
 @media(hover:none),(pointer:coarse){#ctrl{display:flex;align-items:flex-end;justify-content:space-between;padding:0 3% 3%}}
 #move{display:flex;gap:10px;align-items:flex-end;pointer-events:auto;}
@@ -44,6 +48,7 @@ canvas{display:block;width:100%;aspect-ratio:800/450;border-radius:10px;box-shad
 <div id="rotate"><div class="g">📱</div><p>Tournez votre appareil pour jouer&nbsp;: le jeu a besoin de plus de largeur que de hauteur.</p></div>
 <div id="wrap">
   <canvas id="c"></canvas>
+  <a class="versions-link" data-versions-link href="./" aria-label="Toutes les versions de Trapeze Stars">← Toutes les versions</a>
   <button id="btnFs" title="Plein écran / מסך מלא" aria-label="Plein écran">⛶</button>
   <button id="btnQuit" aria-label="Retour au menu">← Menu</button>
   <button id="btnPause" aria-label="Pause">❚❚</button>

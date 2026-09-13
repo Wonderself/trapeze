@@ -15,6 +15,29 @@ const routes = [
   '/trapeze-stars-v2.html',
   '/trapeze-city-v3.html',
 ];
+const versionRoutes = new Set([
+  '/2d/',
+  '/3d/',
+  '/trapeze-stars-v1.html',
+  '/trapeze-stars-v2.html',
+  '/trapeze-city-v3.html',
+]);
+const expectedVersionTargets = [
+  '/trapeze-stars-v1.html',
+  '/trapeze-stars-v2.html',
+  '/trapeze-city-v3.html',
+  '/2d/',
+  '/3d/',
+];
+const screenshotNames = new Map([
+  ['/', 'home'],
+  ['/2d/', 'circus-2d'],
+  ['/3d/?lowfx', 'stars-3d'],
+  ['/3d/showcase.html', 'showcase-3d'],
+  ['/trapeze-stars-v1.html', 'classic'],
+  ['/trapeze-stars-v2.html', 'deluxe'],
+  ['/trapeze-city-v3.html', 'city'],
+]);
 const failures = [];
 const results = [];
 const internalLinks = new Set();
@@ -99,6 +122,63 @@ try {
       if (externalRequests.size) pageFailures.push(`external requests: ${[...externalRequests].join(', ')}`);
       layout.internalLinks.forEach(link => internalLinks.add(link));
 
+      if (route === '/') {
+        const selector = await page.evaluate(() => {
+          const cards = [...document.querySelectorAll('#versions .card[href]')];
+          const compare = document.getElementById('compare');
+          return {
+            heading: document.getElementById('versions-title')?.textContent.trim(),
+            targets: cards.map(card => new URL(card.href).pathname),
+            labels: cards.map(card => card.getAttribute('aria-label') || ''),
+            oldClaimPresent: document.body.textContent.includes('Trois versions jouables'),
+            allBeforeCompare: cards.every(card => Boolean(card.compareDocumentPosition(compare) & Node.DOCUMENT_POSITION_FOLLOWING)),
+            visualOrder: Math.max(...cards.map(card => card.getBoundingClientRect().bottom)) <= compare.getBoundingClientRect().top + 1,
+          };
+        });
+        if (selector.heading !== 'Choisissez votre version') pageFailures.push(`version selector heading mismatch: ${selector.heading}`);
+        if (JSON.stringify(selector.targets) !== JSON.stringify(expectedVersionTargets)) pageFailures.push(`version selector targets mismatch: ${JSON.stringify(selector.targets)}`);
+        if (selector.labels.some(label => !label.trim())) pageFailures.push(`version selector has unnamed cards: ${JSON.stringify(selector.labels)}`);
+        if (selector.oldClaimPresent) pageFailures.push('obsolete three-version claim is still visible');
+        if (!selector.allBeforeCompare || !selector.visualOrder) pageFailures.push(`not all five versions appear before comparison: ${JSON.stringify(selector)}`);
+      }
+
+      const routePath = new URL(route, server.origin).pathname;
+      if (versionRoutes.has(routePath)) {
+        const returnLink = await page.evaluate(() => {
+          const link = document.querySelector('a[data-versions-link]');
+          if (!link) return null;
+          const rect = link.getBoundingClientRect();
+          const intersects = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+          const visibleButtons = [...document.querySelectorAll('button')]
+            .filter(button => {
+              const style = getComputedStyle(button);
+              const buttonRect = button.getBoundingClientRect();
+              return style.display !== 'none' && style.visibility !== 'hidden' && buttonRect.width && buttonRect.height;
+            });
+          return {
+            text: link.textContent.trim(),
+            label: link.getAttribute('aria-label') || '',
+            pathname: new URL(link.href).pathname,
+            rect: [rect.left, rect.top, rect.right, rect.bottom],
+            visible: getComputedStyle(link).display !== 'none' && rect.width > 0 && rect.height > 0,
+            hitTarget: document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)?.closest('[data-versions-link]') === link,
+            overlappingButtons: visibleButtons.filter(button => intersects(rect, button.getBoundingClientRect())).map(button => button.id || button.textContent.trim()),
+          };
+        });
+        if (!returnLink) pageFailures.push('missing Toutes les versions link');
+        else {
+          const [left, top, right, bottom] = returnLink.rect;
+          const requiredTarget = touch ? 44 : 32;
+          if (!returnLink.visible) pageFailures.push(`Toutes les versions link is hidden: ${JSON.stringify(returnLink)}`);
+          if (!returnLink.hitTarget) pageFailures.push(`Toutes les versions link is covered: ${JSON.stringify(returnLink)}`);
+          if (!returnLink.text.includes('Toutes les versions') || !returnLink.label.includes('Toutes les versions')) pageFailures.push(`Toutes les versions link has an unclear name: ${JSON.stringify(returnLink)}`);
+          if (returnLink.pathname !== '/') pageFailures.push(`Toutes les versions link targets ${returnLink.pathname}, expected /`);
+          if (right - left < requiredTarget || bottom - top < requiredTarget) pageFailures.push(`Toutes les versions target below ${requiredTarget}px: ${returnLink.rect.join(',')}`);
+          if (left < -1 || top < -1 || right > width + 1 || bottom > height + 1) pageFailures.push(`Toutes les versions link clipped: ${returnLink.rect.join(',')}`);
+          if (returnLink.overlappingButtons.length) pageFailures.push(`Toutes les versions overlaps controls: ${returnLink.overlappingButtons.join(', ')}`);
+        }
+      }
+
       if (route === '/2d/') {
         const touchLayout = await page.evaluate(() => ({
           wrap: (() => { const r = document.getElementById('wrap').getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; })(),
@@ -150,8 +230,8 @@ try {
 
       results.push({ route, viewport: `${width}x${height}`, title: layout.title, overflow: layout.overflow, accessibility: 'basic-pass' });
       failures.push(...pageFailures.map(failure => `${route} @${width}x${height}: ${failure}`));
-      if (screenshotDirectory && ['/', '/2d/', '/3d/?lowfx'].includes(route)) {
-        const name = route === '/' ? 'home' : route.startsWith('/2d') ? '2d' : '3d';
+      if (screenshotDirectory) {
+        const name = screenshotNames.get(route);
         // Viewport captures are stable across desktop and mobile-emulation CDP;
         // layout completeness is asserted separately from the screenshot.
         await page.screenshot({ path: path.join(screenshotDirectory, `${name}-${width}x${height}.png`) });

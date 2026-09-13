@@ -6,10 +6,10 @@
 
 ## 🎮 Le projet en une phrase
 « Trapeze Stars » — jeu de trapèze offert en cadeau à **Marc & Claire** (des enfants : générosité > punition).
-Deux versions coexistent : le **canvas 2D** historique (`2d/`, ✅ terminé, ne plus y toucher) et la direction
-active **Trapeze Stars 3D** (`game3d/`, Three.js + Vite), qu'on fait monter en gamme session par session.
-La racine (`index.html`) est une page de choix statique qui renvoie vers `2d/` ou `3d/` — ne pas y remettre
-de logique de jeu.
+Cinq versions jouables coexistent : **Classic**, **Deluxe**, **City**, **Circus Alzahir 2D** (`2d/`) et la
+direction active **Trapeze Stars 3D** (`game3d/`, Three.js + Vite). La racine (`index.html`) est leur
+sélecteur central statique et chaque jeu propose un retour **Toutes les versions** — ne pas y remettre de
+logique de jeu.
 
 ## 🤖 Protocole d'auto-avancement (à exécuter à chaque session, sans attendre d'instruction)
 0. **Vérifie Git AVANT toute analyse** (leçon du 2026-07-19 : un clone de session peut être périmé et mono-branche) : exécute `git status --short --branch`, puis `git fetch origin main`. Si l'arbre est propre, passe sur `main` et avance uniquement avec `git pull --ff-only origin main`. S'il contient des changements, préserve-les et inspecte leur provenance avant toute synchronisation. Vérifie enfin `git log --oneline -3`. Ne réécris jamais l'historique et n'utilise jamais `reset --hard` pour « nettoyer » le travail d'une autre session.

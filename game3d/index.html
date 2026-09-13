@@ -39,6 +39,9 @@
   #menu{justify-content:space-between;padding:30px 24px 26px;background:radial-gradient(ellipse at 50% 52%,rgba(3,0,12,0) 26%,rgba(3,0,12,.5) 72%,rgba(3,0,12,.82) 100%)}
   .menuTop,.menuBottom{display:flex;flex-direction:column;align-items:center;width:100%}
   .hidden{display:none!important}
+  .versions-link{min-height:44px;padding:0 15px;margin-bottom:6px;border:1px solid rgba(255,207,63,.42);border-radius:999px;background:rgba(14,5,32,.70);color:#ffe9a8;font-size:12px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;backdrop-filter:blur(6px);touch-action:manipulation}
+  .versions-link:hover,.versions-link:active{background:rgba(255,207,63,.20);color:#fff}
+  .versions-link:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
   #title{font-size:clamp(38px,11vw,86px);font-weight:700;line-height:.95;background:linear-gradient(180deg,#fff2b0,#ffb43c);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 22px rgba(255,180,40,.55));letter-spacing:1px}
   #subtitle{margin-top:10px;font-size:clamp(14px,4vw,20px);color:#ffd7ef;font-weight:600;letter-spacing:1px}
   #dedication{margin-top:6px;font-size:clamp(11px,3vw,14px);color:#b79bff;font-weight:500;letter-spacing:3px;text-transform:uppercase}
@@ -199,6 +202,7 @@
 
 <div id="menu" class="screen">
   <div class="menuTop">
+    <a class="versions-link" data-versions-link href="../" aria-label="Toutes les versions de Trapeze Stars">← Toutes les versions</a>
     <div id="title">TRAPEZE<br>STARS</div>
     <div id="subtitle">Starring&nbsp; MARC &amp; CLAIRE</div>
     <div id="dedication">★ young champions ★</div>

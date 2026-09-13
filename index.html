@@ -15,7 +15,7 @@
 <meta property="og:image" content="https://wonderself.github.io/trapeze/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Illustration de Trapeze Stars et de ses trois versions principales">
+<meta property="og:image:alt" content="Illustration de Trapeze Stars Classic, Deluxe et City">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Trapeze Stars — Cinq jeux de cirque à découvrir">
 <meta name="twitter:description" content="Classic, Deluxe et City, plus Circus Alzahir et Trapeze Stars 3D — gratuits et jouables dans le navigateur.">
@@ -81,31 +81,43 @@ h1 .l2{display:block;
 .sub{color:var(--ink2);font-size:clamp(15px,4vw,19px);max-width:56ch;margin:16px auto 0}
 
 /* ── Cartes de version ───────────────────────────────────── */
-.cards{
-  display:grid;gap:clamp(18px,4vw,26px);
-  grid-template-columns:1fr;
-  padding-bottom:clamp(32px,8vh,64px);
+.selector{padding:0 0 clamp(32px,8vh,64px)}
+.selector-title{
+  text-align:center;font-size:clamp(25px,6vw,34px);font-weight:900;
+  letter-spacing:-.01em;margin-bottom:7px;
 }
-/* Une colonne en portrait, deux dès 820px, les trois à partir de 1080px —
-   la carte City ne doit jamais se retrouver seule sur une ligne. */
+.selector-lead{color:var(--ink2);text-align:center;max-width:62ch;margin:0 auto 24px;font-size:15.5px}
+.cards{display:grid;gap:clamp(18px,4vw,26px);grid-template-columns:1fr}
+/* Une colonne en portrait, deux sur tablette et 3 + 2 cartes centrées sur
+   grand écran : aucune version n'est reléguée dans une autre section. */
 @media(min-width:820px){.cards{grid-template-columns:1fr 1fr;align-items:start}}
-@media(min-width:1080px){.cards{grid-template-columns:1fr 1fr 1fr}}
+@media(min-width:1080px){
+  .cards{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .card{grid-column:span 2}
+  .card:nth-child(4){grid-column:2 / span 2}
+  .card:nth-child(5){grid-column:4 / span 2}
+}
 
 .card{
   background:linear-gradient(168deg,var(--card2),var(--card));
   border:1px solid var(--line);border-radius:var(--r);
   overflow:hidden;position:relative;
   display:flex;flex-direction:column;
+  color:inherit;text-decoration:none;
   transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease;
 }
 @media(hover:hover){.card:hover{transform:translateY(-4px);box-shadow:0 20px 50px rgba(0,0,0,.45)}}
 .card.v1{border-color:rgba(255,197,61,.24)}
 .card.v2{border-color:rgba(77,210,255,.30)}
 .card.v3{border-color:rgba(255,46,136,.30)}
+.card.v4{border-color:rgba(95,227,161,.30)}
+.card.v5{border-color:rgba(155,107,255,.34)}
 @media(hover:hover){
   .card.v1:hover{border-color:rgba(255,197,61,.5)}
   .card.v2:hover{border-color:rgba(77,210,255,.62)}
   .card.v3:hover{border-color:rgba(255,46,136,.62)}
+  .card.v4:hover{border-color:rgba(95,227,161,.62)}
+  .card.v5:hover{border-color:rgba(155,107,255,.68)}
 }
 .card.v2::before{
   content:'';position:absolute;inset:0;pointer-events:none;
@@ -115,11 +127,19 @@ h1 .l2{display:block;
   content:'';position:absolute;inset:0;pointer-events:none;
   background:radial-gradient(120% 60% at 50% 0%,rgba(255,46,136,.14),transparent 62%);
 }
+.card.v4::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(120% 60% at 50% 0%,rgba(95,227,161,.12),transparent 62%);
+}
+.card.v5::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(120% 60% at 50% 0%,rgba(155,107,255,.14),transparent 62%);
+}
 .shot{
   position:relative;aspect-ratio:16/9;background:#05010f;
   border-bottom:1px solid var(--line);
 }
-.shot canvas{width:100%;height:100%}
+.shot canvas,.shot img{width:100%;height:100%;object-fit:cover}
 .tag{
   position:absolute;top:12px;left:12px;z-index:2;
   font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
@@ -128,9 +148,11 @@ h1 .l2{display:block;
 .tag.a{background:rgba(255,197,61,.18);color:var(--gold);border:1px solid rgba(255,197,61,.4)}
 .tag.b{background:rgba(77,210,255,.18);color:var(--cyan);border:1px solid rgba(77,210,255,.45)}
 .tag.c{background:rgba(255,46,136,.18);color:var(--pink);border:1px solid rgba(255,46,136,.45)}
+.tag.d{background:rgba(95,227,161,.18);color:var(--green);border:1px solid rgba(95,227,161,.45)}
+.tag.e{background:rgba(155,107,255,.20);color:#C9ADFF;border:1px solid rgba(178,139,255,.48)}
 .body{padding:clamp(18px,4.5vw,26px);display:flex;flex-direction:column;flex:1;gap:14px}
-.card h2{font-size:clamp(22px,5.6vw,28px);font-weight:900;letter-spacing:-.01em;line-height:1.15}
-.card h2 small{display:block;font-size:13px;font-weight:700;color:var(--ink3);letter-spacing:.05em;margin-top:4px}
+.card h3{font-size:clamp(22px,5.6vw,28px);font-weight:900;letter-spacing:-.01em;line-height:1.15;margin:0}
+.card h3 small{display:block;font-size:13px;font-weight:700;color:var(--ink3);letter-spacing:.05em;margin-top:4px}
 .desc{color:var(--ink2);font-size:15px}
 ul.feat{list-style:none;display:flex;flex-direction:column;gap:8px;font-size:14.5px}
 ul.feat li{display:flex;gap:10px;align-items:flex-start;color:var(--ink2)}
@@ -147,34 +169,18 @@ ul.feat li b{color:var(--ink);font-weight:700}
 .cta.a{background:linear-gradient(96deg,#FFC53D,#FF8A3D);color:#2A1000}
 .cta.b{background:linear-gradient(96deg,#4DD2FF,#9B6BFF);color:#04101F}
 .cta.c{background:linear-gradient(96deg,#FF2E88,#FF8A3D);color:#2A0016}
+.cta.d{background:linear-gradient(96deg,#5FE3A1,#4DD2FF);color:#031C16}
+.cta.e{background:linear-gradient(96deg,#B78AFF,#FF6B9D);color:#160524}
 .cta:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
 
-/* ── Les deux autres jeux du dépôt ────────────────────────
-   Cartes plus sobres que les trois principales : ce sont des jeux
-   voisins, pas une quatrième et une cinquième version de la série. */
-.alt{display:grid;gap:clamp(16px,3.5vw,22px);grid-template-columns:1fr}
-@media(min-width:820px){.alt{grid-template-columns:1fr 1fr}}
-.alt a.item{
-  display:flex;flex-direction:column;text-decoration:none;color:inherit;
-  background:linear-gradient(168deg,var(--card2),var(--card));
-  border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
-  transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease;
+.lineage-note{
+  margin:22px 0 0;padding:18px 20px;border:1px solid var(--line);border-radius:14px;
+  background:rgba(255,255,255,.022);color:var(--ink2);font-size:14.5px;line-height:1.6;
 }
-@media(hover:hover){.alt a.item:hover{transform:translateY(-4px);border-color:rgba(95,227,161,.5);box-shadow:0 20px 50px rgba(0,0,0,.45)}}
-.alt img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:#05010f;border-bottom:1px solid var(--line)}
-.alt .b{padding:clamp(16px,4vw,22px);display:flex;flex-direction:column;gap:9px;flex:1}
-.alt h4{font-size:19px;font-weight:900;letter-spacing:-.01em}
-.alt .k{
-  align-self:flex-start;font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
-  padding:4px 10px;border-radius:999px;
-  background:rgba(95,227,161,.15);color:var(--green);border:1px solid rgba(95,227,161,.4);
-}
-.alt p{color:var(--ink2);font-size:14.5px;line-height:1.55}
-.alt .go{margin-top:auto;padding-top:4px;font-weight:800;color:var(--green);font-size:14.5px}
 
 /* ── Comparatif ──────────────────────────────────────────── */
 section{padding:clamp(30px,8vh,58px) 0}
-h3{font-size:clamp(21px,5.2vw,28px);font-weight:900;margin-bottom:8px;letter-spacing:-.01em}
+section>h2{font-size:clamp(21px,5.2vw,28px);font-weight:900;margin-bottom:8px;letter-spacing:-.01em}
 .lead{color:var(--ink2);margin-bottom:22px;max-width:62ch;font-size:15.5px}
 .tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;
   border:1px solid var(--line);border-radius:var(--r);background:rgba(255,255,255,.022)}
@@ -227,28 +233,30 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
 <div class="wrap">
 
 <header>
-  <div class="kicker">🎪 Trois versions jouables</div>
+  <div class="kicker">🎪 Cinq versions jouables</div>
   <h1>TRAPEZE<span class="l2">STARS</span></h1>
   <p class="sub">
-    Le même cirque, trois jeux différents. <b>Classic</b> est un platformer en vue de côté.
-    <b>Deluxe</b> est une refonte complète en perspective, où l’on s’élance vers le fond du chapiteau.
-    <b>City</b> pose le même trapèze sur les toits d’une ville néon, avec la présentation d’un jeu
-    urbain moderne. Rien à installer&nbsp;: ça se joue dans le navigateur, au clavier comme au doigt.
+    Cinq façons de jouer le même numéro&nbsp;: trois variations Classic, Deluxe et City,
+    la branche 2D installable Circus Alzahir et une reprise complète avec un vrai moteur 3D.
+    Rien à installer&nbsp;: choisissez une version et entrez en piste, au clavier comme au doigt.
   </p>
 </header>
 
 <main>
+<section class="selector" id="versions" aria-labelledby="versions-title">
+<h2 class="selector-title" id="versions-title">Choisissez votre version</h2>
+<p class="selector-lead">Les cinq jeux sont accessibles ici. Chaque carte montre ce qui rend sa version unique.</p>
 <div class="cards">
 
   <!-- ── V1 ─────────────────────────────────────────────── -->
-  <article class="card v1">
+  <a class="card v1" href="trapeze-stars-v1.html" aria-label="Jouer à Classic, version 1 en 2D">
     <div class="shot">
       <span class="tag a">Version 1 · 2D</span>
       <canvas id="pv1" width="480" height="270" role="img"
         aria-label="Aperçu animé : un artiste court et saute de plateforme en plateforme, vu de côté."></canvas>
     </div>
     <div class="body">
-      <h2>Classic<small>PLATEFORMER EN VUE DE CÔTÉ</small></h2>
+      <h3>Classic<small>PLATEFORMER EN VUE DE CÔTÉ</small></h3>
       <p class="desc">
         Le jeu d’origine, entièrement débogué et resserré. On court, on saute,
         on rebondit sur les trampolines et on écrase les fâcheux d’un saut sur la tête.
@@ -259,19 +267,19 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
         <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FFC53D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span>Trapèze, cerceaux, trampolines et <b>porteur</b></span></li>
         <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FFC53D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span>Pause, barre de progression, difficulté adaptative</span></li>
       </ul>
-      <a class="cta a" href="trapeze-stars-v1.html">▶ Jouer à Classic</a>
+      <span class="cta a" aria-hidden="true">▶ Jouer à Classic</span>
     </div>
-  </article>
+  </a>
 
   <!-- ── V2 ─────────────────────────────────────────────── -->
-  <article class="card v2">
+  <a class="card v2" href="trapeze-stars-v2.html" aria-label="Jouer à Deluxe, version 2 en perspective">
     <div class="shot">
       <span class="tag b">Version 2 · Perspective 3D</span>
       <canvas id="pv2" width="480" height="270" role="img"
         aria-label="Aperçu animé : vue en perspective vers le fond du chapiteau, des trapèzes et des cerceaux défilent en profondeur."></canvas>
     </div>
     <div class="body">
-      <h2>Deluxe<small>REFONTE EN PERSPECTIVE</small></h2>
+      <h3>Deluxe<small>REFONTE EN PERSPECTIVE</small></h3>
       <p class="desc">
         Un autre jeu. La caméra passe derrière l’artiste, le chapiteau s’ouvre en profondeur,
         et le trapèze devient le cœur des mécaniques&nbsp;: on pompe pour prendre de l’ampleur,
@@ -283,19 +291,19 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
         <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#4DD2FF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Chaleur du public</b> à trois paliers, jusqu’à l’ovation</span></li>
         <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#4DD2FF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Filet de sécurité</b>&nbsp;: tomber coûte le score, jamais la partie</span></li>
       </ul>
-      <a class="cta b" href="trapeze-stars-v2.html">▶ Jouer à Deluxe</a>
+      <span class="cta b" aria-hidden="true">▶ Jouer à Deluxe</span>
     </div>
-  </article>
+  </a>
 
   <!-- ── V3 ─────────────────────────────────────────────── -->
-  <article class="card v3">
+  <a class="card v3" href="trapeze-city-v3.html" aria-label="Jouer à City, version 3 sur les toits">
     <div class="shot">
       <span class="tag c">Version 3 · Trapeze City</span>
       <canvas id="pv3" width="480" height="270" role="img"
         aria-label="Aperçu animé : toits d'une ville néon au crépuscule, un acrobate se balance entre deux rigs de trapèze pendant qu'un drone de télévision tourne autour de lui."></canvas>
     </div>
     <div class="body">
-      <h2>City<small>LA TRAVERSÉE, SUR LES TOITS D’UNE VILLE</small></h2>
+      <h3>City<small>LA TRAVERSÉE, SUR LES TOITS D’UNE VILLE</small></h3>
       <p class="desc">
         Le même trapèze, une troisième peau. La caméra devient libre en 3D, le chapiteau
         laisse place à une ville générée par graine et éclairée au néon, et le numéro devient
@@ -307,14 +315,67 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
         <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FF2E88" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Radar des toits</b> et HUD façon jeu urbain&nbsp;: mêmes mécaniques de trapèze, présentation neuve</span></li>
         <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FF2E88" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Porteur, filet et vent latéral</b>&nbsp;: la chute coûte la cagnotte, jamais la traversée</span></li>
       </ul>
-      <a class="cta c" href="trapeze-city-v3.html">▶ Jouer à City</a>
+      <span class="cta c" aria-hidden="true">▶ Jouer à City</span>
     </div>
-  </article>
+  </a>
+
+  <!-- ── V4 ────────────────────────────────────────────────────── -->
+  <a class="card v4" href="2d/" aria-label="Jouer à Circus Alzahir, version 2D installable">
+    <div class="shot">
+      <span class="tag d">Version 4 · 2D installable</span>
+      <img src="assets/shot-2d.jpg" width="960" height="560" loading="lazy"
+        alt="Écran-titre de Circus Alzahir avec Marc et Claire sous le chapiteau.">
+    </div>
+    <div class="body">
+      <h3>Circus Alzahir<small>LA BRANCHE 2D INSTALLABLE</small></h3>
+      <p class="desc">
+        Une autre évolution du jeu 2D d’origine, avec sa propre mise en scène et une
+        installation possible sur l’écran d’accueil.
+      </p>
+      <ul class="feat">
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#5FE3A1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Cinématique d’ouverture</b> et annonces de monde</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#5FE3A1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Musique par monde</b>, médailles et parallaxe enrichie</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#5FE3A1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>PWA installable</b> avec fonctionnement hors connexion</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#5FE3A1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span>Écran maintenu allumé pendant la partie</span></li>
+      </ul>
+      <span class="cta d" aria-hidden="true">▶ Jouer à Circus Alzahir</span>
+    </div>
+  </a>
+
+  <!-- ── V5 ────────────────────────────────────────────────────── -->
+  <a class="card v5" href="3d/" aria-label="Jouer à Trapeze Stars 3D avec le moteur Three.js">
+    <div class="shot">
+      <span class="tag e">Version 5 · Three.js</span>
+      <img src="3d/shots/menu.jpg" width="960" height="560" loading="lazy"
+        alt="Piste de Trapeze Stars 3D avec Marc et Claire sous les projecteurs.">
+    </div>
+    <div class="body">
+      <h3>Trapeze Stars 3D<small>LE NUMÉRO EN VRAIE 3D</small></h3>
+      <p class="desc">
+        Une reprise complète en volume avec Three.js, des prises notées au timing et une
+        caméra qui suit l’acrobate dans le chapiteau.
+      </p>
+      <ul class="feat">
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#C9ADFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Personnages et piste en volume</b> avec rendu WebGL</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#C9ADFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Quatre mondes</b>, figures, combos et vies</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#C9ADFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Tableau des scores</b> local et photo finish</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#C9ADFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span>Clavier, tactile et manette pris en charge</span></li>
+      </ul>
+      <span class="cta e" aria-hidden="true">▶ Jouer à Trapeze Stars 3D</span>
+    </div>
+  </a>
 
 </div>
 
+<aside class="lineage-note">
+  <b>Classic et Circus Alzahir</b> sont deux branches du même jeu 2D, développées
+  en parallèle. Elles restent toutes les deux jouables ici&nbsp;: aucune version n’est masquée
+  ni remplacée par l’autre.
+</aside>
+</section>
+
 <section id="compare">
-  <h3>Ce qui change entre les trois</h3>
+  <h2>Classic, Deluxe et City en détail</h2>
   <p class="lead">
     Ce n’est pas le même jeu avec de meilleurs graphismes à chaque version&nbsp;: les règles
     elles-mêmes changent. City reprend les mécaniques de Deluxe (pompage, qualités de prise,
@@ -343,58 +404,8 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
   </div>
 </section>
 
-<section id="autres">
-  <h3>Les deux autres jeux du dépôt</h3>
-  <p class="lead">
-    Ce dépôt ne contient pas que la série ci-dessus. Deux autres jeux y vivent, issus d’une
-    branche parallèle&nbsp;: le jeu 2D d’origine, emballé en application installable, et une
-    reprise complète en trois dimensions avec un vrai moteur 3D.
-  </p>
-  <div class="alt">
-
-    <a class="item" href="2d/index.html">
-      <img src="assets/shot-2d.jpg" width="960" height="560" loading="lazy"
-        alt="Écran-titre du jeu 2D : le chapiteau, Marc et Claire côte à côte, un bouton jouer.">
-      <div class="b">
-        <span class="k">2D · installable</span>
-        <h4>Circus Alzahir</h4>
-        <p>
-          Le jeu 2D d’origine, poursuivi de son côté&nbsp;: cinématique d’ouverture, musique
-          qui boucle par monde, médailles, annonces de monde en plein écran. Il s’installe sur
-          l’écran d’accueil (manifeste, service worker) et garde l’écran allumé pendant qu’on joue.
-        </p>
-        <span class="go">Jouer à Circus Alzahir ▸</span>
-      </div>
-    </a>
-
-    <a class="item" href="3d/index.html">
-      <img src="3d/shots/menu.jpg" width="960" height="560" loading="lazy"
-        alt="Écran-titre du jeu 3D : une piste de cirque en volume, deux personnages sous les projecteurs.">
-      <div class="b">
-        <span class="k">Three.js · vraie 3D</span>
-        <h4>Trapeze Stars 3D</h4>
-        <p>
-          Une reprise du même numéro avec un moteur 3D et des personnages en volume&nbsp;:
-          chapiteau, prises notées au timing, figures, quatre mondes et un tableau des scores.
-          C’est le seul jeu du dépôt qui n’est pas du Canvas 2D écrit à la main.
-        </p>
-        <span class="go">Jouer en 3D ▸</span>
-      </div>
-    </a>
-
-  </div>
-  <p class="lead" style="margin-top:22px;margin-bottom:0">
-    <b>Une précision honnête&nbsp;:</b> <i>Classic</i> et <i>Circus Alzahir</i> sont deux
-    branches du <b>même</b> jeu 2D, développées en parallèle et jamais réunies. Chacune a ce que
-    l’autre n’a pas — trampolines, porteurs, plateformes mobiles, difficulté adaptative et pause
-    automatique d’un côté&nbsp;; installation, cinématique, musique en boucle et parallaxe
-    supplémentaire de l’autre. Les réunir est un vrai chantier, pas une fusion de fichiers&nbsp;:
-    cette décision produit reste volontairement hors du déploiement actuel.
-  </p>
-</section>
-
 <section id="tech">
-  <h3>Sous le capot</h3>
+  <h2>Sous le capot</h2>
   <p class="lead">Les cinq jeux sont servis comme un site entièrement statique. Classic, Deluxe,
     City et <i>Circus Alzahir</i> sont autonomes&nbsp;; le jeu 3D est compilé avec Three.js,
     puis livré sans requête vers une bibliothèque externe.</p>
@@ -426,21 +437,21 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
   <details>
     <summary>Accessibilité et confort</summary>
     <div class="in">
-      Les trois jeux respectent <code>prefers-reduced-motion</code>, plafonnent l’opacité des
+      Classic, Deluxe et City respectent <code>prefers-reduced-motion</code>, plafonnent l’opacité des
       flashs, et se mettent en pause tout seuls quand l’onglet passe en arrière-plan ou qu’un
       appel arrive. Classic et Deluxe donnent aux dangers une forme reconnaissable en plus de
       leur couleur. City ajoute un écran de réglages dédié&nbsp;: réduction des secousses et des
       flashs, taille de texte, contraste renforcé, sensibilité de caméra et inversion d’axe —
       persistés d’une partie à l’autre. Les zones tactiles font au moins 56&nbsp;px et
-      respectent les encoches sur les trois versions.
+      respectent les encoches sur ces trois jeux.
     </div>
   </details>
 </section>
 </main>
 
 <footer>
-  <p>Trapeze Stars — Classic, Deluxe &amp; City, plus <a href="2d/index.html">Circus Alzahir</a>
-     et <a href="3d/index.html">la version 3D</a>.</p>
+  <p>Trapeze Stars — Classic, Deluxe &amp; City, plus <a href="2d/">Circus Alzahir</a>
+     et <a href="3d/">la version 3D</a>.</p>
 </footer>
 
 </div>

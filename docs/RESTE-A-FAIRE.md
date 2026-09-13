@@ -1,6 +1,6 @@
 # Reste à faire
 
-> **État au 2026-09-13.** La production GitHub Pages est
+> **État au 2026-09-14.** La production GitHub Pages est
 > **`PASS_PRODUCTION`** : le workflow `main` construit
 > un artefact isolé `_site/`, vérifie les sept routes dans quatre viewports
 > (28 passages), les liens, l'accessibilité de base et les mises à jour PWA,
@@ -21,8 +21,8 @@ reste de développement.
 |---|---|---|
 | Classement mondial 3D avec Supabase | `DEFERRED_USER` | Choix produit d'Emmanuel, création du projet, valeurs publiques et validation RLS/réseau. Le top 10 local reste le comportement livré. |
 | Réunir Classic et Circus Alzahir | `DEFERRED_USER` | Choisir si cette dette de contenu mérite un chantier dédié ; porter les systèmes un par un, jamais par fusion automatique. |
-| QA iPhone/iPad et Android physiques | `NOT_RUN` | Tests sur matériel réel : Safari, GPU/mémoire mobile, installation PWA, offline et ressenti tactile. |
-| Miroir Coolify | `BLOCKED_ACCESS` | Option non nécessaire à GitHub Pages ; il manque une ressource, un domaine, TLS et une preuve publique vérifiable. |
+| QA iPhone/iPad et Android physiques | `BLOCKED_ACCESS` | La recette [`QA-APPAREILS-REELS.md`](QA-APPAREILS-REELS.md) est prête, mais aucun appareil ni service distant authentifié n'est disponible. |
+| Miroir Coolify | `READY_TO_DEPLOY` | Le projet `Trapeze`, sa ressource `main` et son domaine ont été retrouvés ; il reste à redémarrer le service, activer HTTPS et produire le smoke public. |
 
 Les idées telles qu'un trailer, une localisation de la vitrine ou de nouveaux
 modes sont des choix produit futurs, pas des correctifs requis pour la mise en
@@ -284,8 +284,8 @@ dans `docs/`.
 | WP-E Art direction | ✅ | tokens par monde, perspective, personnage articulé, décor par monde (S8) |
 | WP-F UI/UX | ✅ | HUD, pause, contrôles contextuels, tutoriel, réglages (S1), niveaux (S2) |
 | WP-G Audio | ✅ | bus séparés, limiteur, effets, musique en couches (S3) |
-| WP-H Page de garde | ✅ | `index.html` |
-| WP-I QA | ◐ / `NOT_RUN` matériel | harnais + captures Chromium multi-format faits ; appareils réels restants |
+| WP-H Sélecteur cinq versions + retours | ✅ | `index.html` et lien **Toutes les versions** dans chacun des cinq jeux |
+| WP-I QA | ◐ / `BLOCKED_ACCESS` matériel | harnais + captures Chromium multi-format faits ; appareils réels indisponibles — voir [`QA-APPAREILS-REELS.md`](QA-APPAREILS-REELS.md) |
 | S1 Réglages | ✅ | musique, effets, langue, qualité, vibrations, guide, vitesse |
 | S2 Sélection de niveau | ✅ | grille 12 niveaux, étoiles, meilleur score, verrouillage |
 | S3 Musique en couches | ✅ | mélodie à l'ola, cuivres à l'ovation, atténuation au hit-stop |
@@ -294,7 +294,7 @@ dans `docs/`.
 | S6 Lisibilité du personnage V1 | ✅ | halo de contraste derrière le joueur |
 | S7 Accessibilité | ✅ | `prefers-reduced-motion` (les deux versions), vitesse globale (V2) |
 | S8 Décors par monde | ✅ (version légère) | décor latéral par monde, sans mise en cache hors écran |
-| S9 Tests appareils réels | `NOT_RUN` matériel | tout ce qui est vérifiable sans matériel est fait — voir ci-dessous |
+| S9 Tests appareils réels | `BLOCKED_ACCESS` matériel | tout ce qui est vérifiable sans matériel est fait ; recette physique prête — voir ci-dessous |
 | Limitation V1 portrait | ✅ | écran « tournez votre appareil », pause automatique |
 | V3 « Trapeze City » (S1 à S5) | ✅ | socle 3D, gameplay, direction artistique, HUD/audio/tactile, intégration — détail plus haut et dans `docs/V3-PLAN.md` |
 | V3 relecture adversariale des mécaniques | ✅ | quatre défauts réels mesurés puis corrigés (qualités de prise, portée du vol final, économie de hype, manche virtuel), six soupçons écartés — détail plus haut |
