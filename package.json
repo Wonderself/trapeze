@@ -1,0 +1,12 @@
+{
+  "name": "trapeze-site",
+  "private": true,
+  "scripts": {
+    "build:3d": "npm --prefix game3d run build",
+    "build:artifact": "npm run build:3d && node tools/prepare_site.mjs --output _site",
+    "build": "npm run build:3d && node tools/prepare_site.mjs --sync-3d --output _site",
+    "test:site": "node tools/site_smoke.mjs _site",
+    "test:sw": "node tools/sw_redeploy_test.mjs _site",
+    "verify:deploy": "npm run build && npm run test:site && npm run test:sw"
+  }
+}

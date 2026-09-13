@@ -1,9 +1,9 @@
 // Test adversarial : entrees aleatoires (clavier + tap ecran + redimensionnement)
 // a travers tous les etats du jeu, sur un grand nombre d'iterations. Cherche des
 // crashs que ni le bot "raisonnable" ni la lecture du code ne trouveraient.
-const fs=require('fs'),vm=require('vm');
+const fs=require('fs'),vm=require('vm'),path=require('path');
 const base=require(require('path').join(__dirname,'sandbox.js'));
-const file='/home/user/trapeze/trapeze-stars-v2.html';
+const file=path.join(__dirname,'..','trapeze-stars-v2.html');
 const html=fs.readFileSync(file,'utf8');
 const code=html.match(/<script>([\s\S]*?)<\/script>/)[1];
 const bridge=`

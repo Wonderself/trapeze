@@ -858,6 +858,12 @@ addEventListener('pointerup', handleUp);
 addEventListener('pointercancel', handleUp);
 tapBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); handleDown(); });
 tapBtn.addEventListener('pointerup', (e) => { e.stopPropagation(); handleUp(); });
+tapBtn.addEventListener('keydown', (e) => {
+  if ((e.code === 'Enter' || e.code === 'Space') && !e.repeat) { e.preventDefault(); e.stopPropagation(); handleDown(); }
+});
+tapBtn.addEventListener('keyup', (e) => {
+  if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); e.stopPropagation(); handleUp(); }
+});
 
 /* ══════════════ GAMEPAD — button A = grip/release (same as Space), d-pad/stick to navigate ══════════════ */
 let gpActive = false, gpPrevA = false;
@@ -1238,6 +1244,11 @@ async function sharePhoto() {
 }
 ui.shareBtn.addEventListener('click', () => { sfx.click(); sharePhoto(); });
 
+// The smoke harness can pause expensive WebGL rendering while it advances
+// gameplay in real time. Production never changes this flag. A pending photo
+// still forces one rendered frame so the feature itself remains exercised.
+let renderEnabled = true;
+
 /* ══════════════ TEST HARNESS ══════════════ */
 window.__game = {
   start: (c) => { if (c) { G.char = c; } startGame(); },
@@ -1260,6 +1271,7 @@ window.__game = {
   // photo finish (3D-6): the best (highest-combo) PERFECT catch of the run, captured via canvas.toBlob()
   photo: () => ({ hasPhoto: !!lastPhotoBlob, size: lastPhotoBlob ? lastPhotoBlob.size : 0, type: lastPhotoBlob ? lastPhotoBlob.type : null, url: !!lastPhotoURL }),
   sharePhoto: () => sharePhoto(),
+  setRender: (enabled) => { renderEnabled = !!enabled; },
   over: () => { if (G.mode === 'playing') endGame(); },
   wipe: () => {
     try { ['ts3d_high', 'ts3d_combo', 'ts3d_medals', 'ts3d_mute', 'ts3d_board', 'ts3d_daily'].forEach((k) => localStorage.removeItem(k)); } catch (e) {}
@@ -1379,7 +1391,7 @@ function frame(now) {
   if (gradeTimer > 0) { gradeTimer -= dt; if (gradeTimer <= 0) ui.grade.style.opacity = '0'; }
   if (flashV > 0) { flashV = Math.max(0, flashV - dt * 1.4); ui.flash.style.opacity = String(flashV); }
 
-  stage.render();
+  if (renderEnabled || pendingPhoto) stage.render();
   if (pendingPhoto) { pendingPhoto = false; grabPhotoFrame(); }
   requestAnimationFrame(frame);
 }
@@ -1387,5 +1399,8 @@ requestAnimationFrame(frame);
 
 /* ══════════════ PWA ══════════════ */
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+  // Vite replaces __TRAPEZE_BUILD_ID__ with a deterministic source hash.
+  // A changed build therefore gets a fresh cache namespace automatically.
+  const swUrl = `./sw.js?v=${encodeURIComponent(__TRAPEZE_BUILD_ID__)}`;
+  window.addEventListener('load', () => navigator.serviceWorker.register(swUrl).catch(() => {}));
 }

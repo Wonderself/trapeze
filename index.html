@@ -4,15 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#08021a">
-<title>Trapeze Stars — Trois versions à essayer</title>
-<meta name="description" content="Trapeze Stars en trois versions jouables : Classic, un platformer 2D, Deluxe, une refonte en perspective 3D, et City, une traversée en trapèze sur les toits d'une ville néon. Jouable au clavier et au tactile, sans installation.">
+<title>Trapeze Stars — Cinq jeux de cirque à découvrir</title>
+<meta name="description" content="Découvrez cinq jeux de cirque gratuits dans le navigateur : Trapeze Stars Classic, Deluxe et City, Circus Alzahir et l'expérience Three.js Trapeze Stars 3D.">
+<link rel="canonical" href="https://wonderself.github.io/trapeze/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Trapeze Stars — Trois versions à essayer">
-<meta property="og:description" content="Classic, le platformer 2D. Deluxe, la refonte en perspective 3D. City, la traversée sur les toits d'une ville néon. Trois jeux jouables dans le navigateur, sans installation.">
-<meta property="og:image" content="assets/og-cover.png">
+<meta property="og:title" content="Trapeze Stars — Cinq jeux de cirque à découvrir">
+<meta property="og:description" content="Classic, Deluxe et City, plus Circus Alzahir et Trapeze Stars 3D : cinq expériences jouables gratuitement dans le navigateur.">
+<meta property="og:url" content="https://wonderself.github.io/trapeze/">
+<meta property="og:site_name" content="Trapeze Stars">
+<meta property="og:image" content="https://wonderself.github.io/trapeze/assets/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Illustration de Trapeze Stars et de ses trois versions principales">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Trapeze Stars — Trois versions à essayer">
-<meta name="twitter:description" content="Classic, le platformer 2D. Deluxe, la refonte en perspective 3D. City, la traversée en direct sur les toits.">
+<meta name="twitter:title" content="Trapeze Stars — Cinq jeux de cirque à découvrir">
+<meta name="twitter:description" content="Classic, Deluxe et City, plus Circus Alzahir et Trapeze Stars 3D — gratuits et jouables dans le navigateur.">
+<meta name="twitter:image" content="https://wonderself.github.io/trapeze/assets/og-cover.png">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎪</text></svg>">
 <style>
 :root{
@@ -382,20 +389,20 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
     l’autre n’a pas — trampolines, porteurs, plateformes mobiles, difficulté adaptative et pause
     automatique d’un côté&nbsp;; installation, cinématique, musique en boucle et parallaxe
     supplémentaire de l’autre. Les réunir est un vrai chantier, pas une fusion de fichiers&nbsp;:
-    il est décrit dans <a href="docs/RESTE-A-FAIRE.md">le reste à faire</a>.
+    cette décision produit reste volontairement hors du déploiement actuel.
   </p>
 </section>
 
 <section id="tech">
   <h3>Sous le capot</h3>
-  <p class="lead">Les trois versions ci-dessus&nbsp;: trois fichiers HTML autonomes, pas de moteur,
-    pas de bibliothèque, pas de build. (<i>Circus Alzahir</i> suit la même règle&nbsp;; le jeu 3D,
-    lui, est une application compilée qui embarque Three.js.)</p>
+  <p class="lead">Les cinq jeux sont servis comme un site entièrement statique. Classic, Deluxe,
+    City et <i>Circus Alzahir</i> sont autonomes&nbsp;; le jeu 3D est compilé avec Three.js,
+    puis livré sans requête vers une bibliothèque externe.</p>
   <div class="specs">
-    <div class="spec"><b>0</b><span>dépendance externe</span></div>
-    <div class="spec c"><b>1</b><span>fichier par version</span></div>
-    <div class="spec p"><b>2D + 3D</b><span>Canvas 2D uniquement</span></div>
-    <div class="spec g"><b>60 fps</b><span>mobile et ordinateur</span></div>
+    <div class="spec"><b>0</b><span>requête tierce au démarrage</span></div>
+    <div class="spec c"><b>5</b><span>jeux dans un seul site</span></div>
+    <div class="spec p"><b>2D + 3D</b><span>Canvas et WebGL</span></div>
+    <div class="spec g"><b>Fluide</b><span>cadence adaptée à l’écran</span></div>
   </div>
 
   <details>
@@ -433,8 +440,7 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
 
 <footer>
   <p>Trapeze Stars — Classic, Deluxe &amp; City, plus <a href="2d/index.html">Circus Alzahir</a>
-     et <a href="3d/index.html">la version 3D</a>.
-     <a href="docs/MEGA-PLAN.md">Plan de développement</a></p>
+     et <a href="3d/index.html">la version 3D</a>.</p>
 </footer>
 
 </div>

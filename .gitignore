@@ -1,2 +1,5 @@
 node_modules/
 shots/
+_site/
+game3d/test/out/
+test/out/

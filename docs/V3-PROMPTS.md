@@ -159,8 +159,9 @@ VÉRIFICATION — tu ne déclares pas fini sans ça
    l'acrobate et capture des images à des moments choisis — dont une caméra
    collée contre un mur, pour prouver que le découpage au plan proche marche,
    et une en plein balancé pour vérifier les membres.
-   Chromium préinstallé : /opt/pw-browsers/chromium-1194/chrome-linux/chrome ;
-   cd tools && npm install.
+   Chromium est résolu par `tools/browser_helpers.mjs` ; installer les
+   dépendances avec `npm ci --prefix tools`, puis au besoin
+   `npx --prefix tools playwright-core install chromium`.
 3. REGARDE les captures avec l'outil Read. Ne te contente pas de « le script
    n'a pas planté ». Le rendu se vérifie à l'œil : c'est comme ça qu'on a
    trouvé la mise à l'échelle fausse et la police canvas invalide de V2.

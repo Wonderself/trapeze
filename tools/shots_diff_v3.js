@@ -19,9 +19,7 @@
 // getImageData) : aucune bibliotheque d'images a installer, fidele a la
 // regle de ce depot.
 const path=require('path'), fs=require('fs'), {execFileSync}=require('child_process');
-const {chromium}=require('playwright-core');
 const ROOT=path.resolve(__dirname,'..');
-const EXE=process.env.CHROME_EXE||'/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 
 const A=process.argv[2], B=process.argv[3];
 if(!A||!B){console.log('usage : node tools/shots_diff_v3.js <avant.html> <apres.html>');process.exit(2);}
@@ -41,6 +39,7 @@ function capture(dir,file){
 }
 
 (async()=>{
+  const {launchChromium}=await import('./browser_helpers.mjs');
   capture(dirA,path.resolve(A));
   capture(dirB,path.resolve(B));
   fs.mkdirSync(dirD,{recursive:true});
@@ -56,7 +55,7 @@ const HORS_COMPARAISON=['13-enchainement.png'];
     .filter(f=>!HORS_COMPARAISON.includes(f))
     .filter(f=>fs.existsSync(path.join(dirB,f))).sort();
 
-  const browser=await chromium.launch({executablePath:EXE,args:['--no-sandbox','--disable-dev-shm-usage']});
+  const browser=await launchChromium({args:['--no-sandbox','--disable-dev-shm-usage']});
   const ctx=await browser.newContext();
   const page=await ctx.newPage();
   await page.goto('about:blank');

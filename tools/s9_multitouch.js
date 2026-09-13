@@ -1,6 +1,7 @@
-const { chromium } = require('playwright-core');
+const path = require('path');
 (async()=>{
-  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
+  const {launchChromium}=await import('./browser_helpers.mjs');
+  const b=await launchChromium({
     args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=swiftshader','--enable-unsafe-swiftshader']});
   const errors=[];
   // V1 exige desormais le paysage sur mobile (correctif de la limitation
@@ -14,7 +15,7 @@ const { chromium } = require('playwright-core');
     const ctx=await b.newContext({viewport:{width:c.w,height:c.h},deviceScaleFactor:3,hasTouch:true,isMobile:true});
     const p=await ctx.newPage();
     p.on('pageerror',e=>errors.push('['+c.file+'] '+e.message));
-    await p.goto('file:///home/user/trapeze/'+c.file);
+    await p.goto('file://'+path.join(__dirname,'..',c.file));
     await p.waitForTimeout(700);
     const startFn=c.file.includes('v1')?'startGame':'startRun';
     await p.evaluate((fn)=>{ window[fn](); },startFn);

@@ -4,9 +4,9 @@
 // compare la progression du joueur. Sans acces a un vrai ecran 120Hz,
 // c'est le test direct de la logique qui compte : l'accumulateur a pas
 // fixe, pas le materiel d'affichage.
-const fs=require('fs'),vm=require('vm');
-const base=require(require('path').join(__dirname,'sandbox.js'));
-const file='/home/user/trapeze/trapeze-stars-v2.html';
+const fs=require('fs'),vm=require('vm'),path=require('path');
+const base=require(path.join(__dirname,'sandbox.js'));
+const file=path.join(__dirname,'..','trapeze-stars-v2.html');
 const html=fs.readFileSync(file,'utf8');
 const code=html.match(/<script>([\s\S]*?)<\/script>/)[1];
 const bridge=`\n;globalThis.__g={get gs(){return gs;},get frame(){return frame;},P,startRun,frameLoop};`;

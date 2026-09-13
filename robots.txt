@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /3d/shots/
+Disallow: /trapeze/3d/shots/
+Disallow: /tools/
+Disallow: /trapeze/tools/
+
+Sitemap: https://wonderself.github.io/trapeze/sitemap.xml

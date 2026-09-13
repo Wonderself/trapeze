@@ -84,10 +84,11 @@ export const SUPABASE_ANON_KEY = 'eyJ...ta-cle-anon...';
 
 ## Étape 5 — Rebuild et déployer
 ```bash
-cd game3d && npm run build
-# puis remplacer le contenu de docs/ par celui de game3d/dist/ (garder docs/.nojekyll)
+cd /chemin/vers/trapeze
+npm run verify:deploy
 ```
-Commit + push : GitHub Pages sert la nouvelle version.
+Commit + push sur `main` : le workflow vérifie puis publie `_site/` sur GitHub
+Pages. Ne jamais copier le build dans `docs/`, désormais réservé aux documents.
 
 ## C'est allumé ✅
 - Au menu et à l'écran de fin, le panneau HIGH SCORES gagne deux onglets

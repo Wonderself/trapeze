@@ -1,6 +1,7 @@
-const { chromium } = require('playwright-core');
+const path = require('path');
 (async()=>{
-  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
+  const {launchChromium}=await import('./browser_helpers.mjs');
+  const b=await launchChromium({
     args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=swiftshader','--enable-unsafe-swiftshader']});
   const errors=[];
   const FILES=[
@@ -30,14 +31,17 @@ const { chromium } = require('playwright-core');
       const boom=()=>{throw new DOMException('QuotaExceededError: mode prive simule','QuotaExceededError');};
       Object.defineProperty(window,'localStorage',{get(){return {getItem:boom,setItem:boom,removeItem:boom,clear:boom};}});
     });
-    await p.goto('file:///home/user/trapeze/'+file);
+    await p.goto('file://'+path.join(__dirname,'..',file));
     await p.waitForTimeout(700);
     await p.evaluate(start);
     await p.waitForTimeout(300);
     // Force un nouveau record : declenche le chemin d'ecriture qui plantait.
     await p.evaluate(force);
     const before=await p.evaluate(()=>typeof frameN!=='undefined'?frameN:frame);
-    await p.waitForTimeout(500);
+    // Les moteurs Canvas ralentissent parfois le rAF headless à 20 Hz. Une
+    // seconde conserve le seuil historique (> 10 images) sans faux négatif
+    // lorsque la boucle progresse réellement à cette cadence.
+    await p.waitForTimeout(1000);
     const after=await p.evaluate(()=>typeof frameN!=='undefined'?frameN:frame);
     const alive=after>before+10;
     console.log(file+' : record force -> frames '+before+'->'+after+' ('+(alive?'boucle vivante':'BOUCLE MORTE')+')');

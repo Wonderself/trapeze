@@ -169,10 +169,10 @@ du pire cas. C'est la seule mesure utile : le temps d'image vu du navigateur est
 synchronisation verticale et vaut 16,7 ms quoi qu'il arrive, y compris quand
 il reste dix fois la marge nécessaire.
 
-Ces scripts pilotent un vrai Chromium (le binaire préinstallé
-`/opt/pw-browsers/chromium-1194/chrome-linux/chrome` dans l'environnement de
-développement d'origine ; ailleurs, `playwright-core` télécharchera le sien
-sauf si `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` est positionné). Ils ont trouvé
+Ces scripts pilotent un vrai Chromium. Le lanceur partagé cherche d'abord
+`CHROME_EXE`, puis un navigateur Playwright mis en cache, un Chrome/Chromium
+système et enfin le navigateur installé par Playwright. Aucun chemin propre à
+une machine n'est codé en dur. Ils ont trouvé
 deux bugs réels que les outils sans dépendance ne pouvaient pas voir : un
 `localStorage.setItem` non protégé en V1 (plantait en navigation privée) et
 un bouton plein écran mort sur iOS Safari en V2. Voir `docs/RESTE-A-FAIRE.md`
@@ -180,6 +180,19 @@ pour le détail et pour ce qui reste hors de portée sans un vrai appareil
 (WebKit ne s'exécute pas dans un conteneur minimal — les bibliothèques
 système manquent — et aucune simulation ne remplace un vrai iPhone ou un
 vrai Android).
+
+## Vérification du site publié
+
+```bash
+npm run build              # rebuild 3D, snapshot /3d et artefact /_site
+npm run test:site          # 7 routes × 4 viewports, liens, tactile, métadonnées, 404
+npm run test:sw            # migration/upgrade des deux PWA puis rechargement hors ligne
+```
+
+`tools/prepare_site.mjs` construit l'artefact complet sans publier les sources
+ni la documentation. `tools/site_smoke.mjs` refuse aussi toute requête vers un
+tiers. `tools/sw_redeploy_test.mjs` rejoue un vrai changement de hash Vite et
+vérifie que les caches 2D et 3D coexistent sans se supprimer.
 
 ### `shots_diff_v3.js` — la régression visuelle, et pourquoi elle a été dure
 

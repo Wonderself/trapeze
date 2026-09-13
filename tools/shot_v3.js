@@ -10,10 +10,8 @@
 // une facade, ce qui est exactement le cas ou un pipeline 3D sans
 // decoupage au plan proche etale un polygone en travers de tout l'ecran.
 const path=require('path'), fs=require('fs');
-const {chromium}=require('playwright-core');
 const ROOT=path.resolve(__dirname,'..');
 const OUT=path.resolve(process.argv[2]||path.join(ROOT,'shots'));
-const EXE=process.env.CHROME_EXE||'/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 
 const SHOTS=[
   {name:'01-titre', w:1280,h:720, run:v=>{v.sim(900);}},
@@ -114,8 +112,9 @@ const SHOTS=[
 ];
 
 (async()=>{
+  const {launchChromium}=await import('./browser_helpers.mjs');
   fs.mkdirSync(OUT,{recursive:true});
-  const browser=await chromium.launch({executablePath:EXE,args:['--no-sandbox','--disable-dev-shm-usage']});
+  const browser=await launchChromium({args:['--no-sandbox','--disable-dev-shm-usage']});
   // Le fichier est un argument optionnel : c'est ce qui permet de
   // capturer les MEMES scenes sur deux versions du jeu et de comparer
   // les images, plutot que de juger vingt-huit captures a l'oeil nu.

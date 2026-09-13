@@ -12,15 +12,14 @@ La racine (`index.html`) est une page de choix statique qui renvoie vers `2d/` o
 de logique de jeu.
 
 ## 🤖 Protocole d'auto-avancement (à exécuter à chaque session, sans attendre d'instruction)
-0. **Resync git AVANT toute analyse** (leçon du 2026-07-19 : un clone de session peut être périmé et mono-branche, et t'envoyer travailler sur une base morte) :
-   `git fetch origin main && git checkout main && git reset --hard origin/main` — puis vérifie avec `git log --oneline -3` que tu vois bien les derniers commits d'`AUDIT.md`. Ne fais **jamais** confiance au listing local des branches ni au `HEAD` fourni par l'environnement. Si l'environnement t'impose une branche de travail `claude/*`, repars quand même de `origin/main` (`git checkout -B <branche-imposée> origin/main`).
+0. **Vérifie Git AVANT toute analyse** (leçon du 2026-07-19 : un clone de session peut être périmé et mono-branche) : exécute `git status --short --branch`, puis `git fetch origin main`. Si l'arbre est propre, passe sur `main` et avance uniquement avec `git pull --ff-only origin main`. S'il contient des changements, préserve-les et inspecte leur provenance avant toute synchronisation. Vérifie enfin `git log --oneline -3`. Ne réécris jamais l'historique et n'utilise jamais `reset --hard` pour « nettoyer » le travail d'une autre session.
 1. **Lis `AUDIT.md`** en entier — diagnostic, roadmap, référence technique et prompts y sont. **Ne re-diagnostique pas** le code.
 2. Repère dans le **TABLEAU DES SESSIONS** la **première ligne `⬜ À faire`** = la prochaine session. La colonne **« Modèle conseillé »** dit quel modèle Emmanuel doit choisir en ouvrant la session (Fable 5 pour le lourd/délicat, Opus 4.8 pour le moyen bien spécifié, Sonnet 5 pour le léger). Si le modèle courant ne correspond pas, le signaler en une ligne mais **faire la session quand même**.
 3. **Exécute-la exactement** comme décrite dans « DÉTAIL DES SESSIONS » (le « Prompt de lancement » est ta feuille de route).
-4. **Teste** : `node game3d/test/smoke3d.mjs` (étends-le si la session ajoute des mécaniques) + captures visuelles à vérifier toi-même. Zéro erreur JS tolérée (l'`ERR_CONNECTION_RESET` de la font Google en sandbox est le seul bruit accepté).
-5. **Rebuild & deploy** : `cd game3d && npm run build`, puis remplace le contenu de **`/docs`** (GitHub Pages, garde `docs/.nojekyll`) **et de `/3d`** (Coolify — même contenu, pas de `.nojekyll` nécessaire) par celui de `game3d/dist/`. Les deux dossiers doivent toujours être identiques.
+4. **Teste** : `node game3d/test/smoke3d.mjs` (étends-le si la session ajoute des mécaniques) + captures visuelles à vérifier toi-même. Zéro erreur JS tolérée.
+5. **Rebuild & deploy** : à la racine, `npm run build`. Cette commande rebuild le 3D, remplace le snapshot statique **`/3d`** par `game3d/dist/`, puis prépare **`/_site`** (ignoré par Git) avec les sept pages publiques. Ne remets jamais de build dans `docs/` : ce dossier contient uniquement la documentation.
 6. **Mets à jour `AUDIT.md`** : statut de la session → `✅ Fait (AAAA-MM-JJ)`, ligne d'historique, pointeur `NEXT` vers la suite.
-7. **Commit + push sur `main`**, puis compte-rendu concis (diffs, pas de fichiers entiers).
+7. **Commit + push sur `main`**. Le workflow `.github/workflows/deploy-pages.yml` rejoue les tests, construit l'artefact complet et ne déploie GitHub Pages que si tout passe. Puis compte-rendu concis (diffs, pas de fichiers entiers).
 8. S'il ne reste aucune session `⬜` : ne rien coder d'office, proposer la suite et attendre validation.
 
 > ⚠️ **Une session à la fois.** N'enchaîne pas plusieurs sessions dans un même run sans validation explicite.
@@ -37,8 +36,10 @@ de logique de jeu.
 ```bash
 cd game3d && npm install        # une fois par environnement
 npm run dev                     # dev local
-npm run build                   # prod → game3d/dist/
-node game3d/test/smoke3d.mjs    # test headless WebGL (0 erreur JS + captures dans /home/claude/deliver/)
+cd .. && npm run build          # build 3D + snapshot /3d + artefact /_site
+npm run test:site               # sept pages, desktop/mobile, liens et réseau
+npm run test:sw                 # redéploiement PWA + rechargement hors ligne
+node game3d/test/smoke3d.mjs    # test headless WebGL complet
 ```
 Contrôles : **Space** (desktop) / **tap** (mobile) = lâcher, vrille en vol, pomper en maintenant.
 
@@ -52,10 +53,11 @@ Contrôles : **Space** (desktop) / **tap** (mobile) = lâcher, vrille en vol, po
 | Chemin | Rôle |
 |---|---|
 | `game3d/` | 🚀 **Direction active** : Trapeze Stars 3D. Source `game3d/src/` (`main.js` jeu/état, `scene.js` rendu/bloom, `world.js` décor, `player.js` héros). |
-| `docs/` | Build de prod du 3D servi par GitHub Pages (`main:/docs`). Régénéré à chaque session (étape 5 du protocole). |
-| `3d/` | Build de prod du 3D servi par Coolify — copie identique de `docs/`, régénérée en même temps (étape 5). |
+| `docs/` | Documentation du projet uniquement. Ce dossier n'est plus une source de publication. |
+| `3d/` | Snapshot statique versionné du build 3D, compatible avec un hébergement direct/Coolify. Régénéré par `npm run build`. |
+| `_site/` | Artefact local complet, ignoré par Git, généré par `tools/prepare_site.mjs` et publié par GitHub Actions. |
 | `2d/` (`index.html` + `manifest.json`, `sw.js`, `icon-*.png`) | Jeu canvas 2D original, ✅ terminé, conservé tel quel. |
-| `index.html` (racine) | Page de choix statique 2D/3D — page d'accueil servie par Coolify/GitHub Pages/tout hébergeur statique. |
+| `index.html` (racine) | Page de choix statique des cinq jeux — source de la page d'accueil publiée. |
 | `AUDIT.md` | **Le plan** : état, roadmap 3D, détail des sessions, référence technique, historique. |
 | `CLAUDE.md` | Ce fichier : le protocole d'auto-avancement. |
 | `game3d/test/smoke3d.mjs` | Test headless WebGL (progression via `window.__game`, captures). |

@@ -2,35 +2,37 @@
 
 **Un jeu de trapèze volant offert à Marc & Claire — 100 % gratuit, hors-ligne, sans API payante.**
 
-Le dépôt contient **deux versions** du jeu, choisies depuis une page d'accueil unique (`index.html` à la racine) :
+Le dépôt contient **cinq jeux**, choisis depuis une page d'accueil unique (`index.html` à la racine) :
 
 | Version | Où | Statut |
 |---|---|---|
-| 🕹️ **Trapeze Stars 2D** (canvas) | `2d/index.html` | ✅ Terminé (conservé) |
-| 🚀 **Trapeze Stars 3D** (Three.js) | `game3d/` (source) → build servi depuis `docs/` (GitHub Pages) **et** `3d/` (Coolify) | 🔥 Direction active — sessions pilotées par `AUDIT.md` |
+| 🎪 **Classic** (canvas) | `trapeze-stars-v1.html` | ✅ Terminé |
+| ✨ **Deluxe** (canvas en perspective) | `trapeze-stars-v2.html` | ✅ Terminé |
+| 🌃 **Trapeze City** (canvas 3D logiciel) | `trapeze-city-v3.html` | ✅ Terminé |
+| 🕹️ **Circus Alzahir 2D** (canvas/PWA) | `2d/index.html` | ✅ Terminé (conservé) |
+| 🚀 **Trapeze Stars 3D** (Three.js) | `game3d/` (source) → `3d/` (snapshot statique) → artefact GitHub Pages | ✅ Terminé — sessions pilotées par `AUDIT.md` |
 
 ## 🚀 Jouer
 
-- **Racine** (`index.html`) : page de choix — bouton 2D / bouton 3D.
-- **2D** : `2d/index.html` directement, ou via la page de choix. Zéro installation, zéro réseau. PWA installable (manifest + service worker dans `2d/`).
-- **3D** : `3d/index.html` (build de prod, identique à `docs/`), ou en local :
+- **Racine** (`index.html`) : page de choix des cinq jeux.
+- **Canvas autonomes** : Classic, Deluxe et City via leur fichier HTML à la racine.
+- **Circus Alzahir 2D** : `2d/index.html` directement, ou via la page de choix. Zéro installation, zéro réseau. PWA installable (manifest + service worker dans `2d/`).
+- **3D** : `3d/index.html` (snapshot du build de production), ou en local :
   ```bash
   cd game3d && npm install && npm run dev
   ```
 
-## 🌐 Déploiement (Coolify / hébergement statique)
+## 🌐 Site en ligne et déploiement
 
-Le dépôt est servable tel quel comme **site statique** (aucun Dockerfile/serveur requis — nginx/Coolify sert simplement les fichiers) :
-- `index.html` à la racine = page de choix 2D/3D, servie sur le domaine configuré dans la ressource Coolify.
-- `2d/` et `3d/` sont des sous-dossiers autonomes (chemins relatifs, chacun avec son propre `manifest.json`/`sw.js` scopé à son dossier — aucun conflit entre les deux PWA).
-- `docs/` reste la copie utilisée par GitHub Pages ; `3d/` est la copie identique utilisée par Coolify. Les deux sont régénérées ensemble à chaque build (voir `CLAUDE.md`, étape 5).
+Le site canonique est **<https://wonderself.github.io/trapeze/>**. Une
+publication n'a lieu qu'après le passage du workflow de vérification sur
+`main`.
 
-> 📋 **Avant de mettre en ligne, lire [`docs/DEPLOIEMENT.md`](docs/DEPLOIEMENT.md).**
-> Il liste ce qui a été vérifié (les sept pages se chargent sans erreur sur un
-> vrai serveur), les sept points qui manquent — dont **un urgent : les service
-> workers casseront le jeu 3D au premier redéploiement** — les trois questions
-> qui demandent une décision d'Emmanuel, et un mégaprompt prêt à coller pour
-> chaque tâche.
+Le dépôt reste compatible avec **Coolify Static Site** : build
+`npm ci --prefix game3d && npm run build:artifact`, dossier publié `_site`.
+`2d/` et `3d/` sont autonomes et leurs service workers ont des caches séparés,
+une navigation network-first et un repli hors ligne. Le runbook complet et le
+rollback sont dans [`docs/DEPLOIEMENT.md`](docs/DEPLOIEMENT.md).
 
 La page d'accueil présente désormais **cinq jeux** : les trois versions de la
 série (Classic, Deluxe, City, à la racine) et les deux jeux de la branche
@@ -75,8 +77,9 @@ Fiches complètes (2D et 3D) : [CHARACTERS.md](CHARACTERS.md).
 | `index.html` | Page de choix 2D/3D à la racine (sert de page d'accueil pour Coolify/GitHub Pages/tout hébergement statique) |
 | `2d/` | Jeu 2D complet (HTML + CSS + JS, canvas 800×450) + PWA (`manifest.json`, `sw.js`, icônes) |
 | `game3d/` | Jeu 3D — source : Three.js + Vite (`src/main.js` jeu/état, `scene.js` rendu, `world.js` décor, `player.js` héros) |
-| `docs/` | Build de prod du jeu 3D servi par **GitHub Pages** (régénéré à chaque session) |
-| `3d/` | Copie identique du build 3D, servie par **Coolify** (même contenu que `docs/`, régénérée en même temps) |
+| `docs/` | Documentation et runbooks, jamais publiée comme build |
+| `3d/` | Snapshot statique versionné du build 3D (compatibilité hébergeur direct/Coolify) |
+| `_site/` | Artefact complet généré localement, ignoré par Git et publié par GitHub Actions |
 | `CLAUDE.md` | Protocole d'auto-avancement du repo (sessions pilotées) |
 | `AUDIT.md` | Diagnostic + tableau des sessions + historique |
 | `GAME_DESIGN.md` | Game design : mécaniques, niveaux, scoring, pipeline graphique |
@@ -88,6 +91,8 @@ Fiches complètes (2D et 3D) : [CHARACTERS.md](CHARACTERS.md).
 ```bash
 cd game3d && npm install        # une fois
 npm run dev                     # dev local
-npm run build                   # prod → game3d/dist/ (puis copier vers docs/ ET 3d/)
-node game3d/test/smoke3d.mjs    # test headless WebGL + captures
+cd .. && npm run build          # build 3D + /3d + /_site
+npm run test:site               # sept pages en desktop/mobile
+npm run test:sw                 # mise à jour PWA + mode hors ligne
+node game3d/test/smoke3d.mjs    # flux Three.js complet + captures
 ```

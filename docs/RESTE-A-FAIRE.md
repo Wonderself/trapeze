@@ -1,9 +1,30 @@
 # Reste à faire
 
-> 🚀 **Mise en ligne** : tout ce qui concerne le déploiement Coolify — état
-> vérifié, points manquants, questions ouvertes et mégaprompts prêts à
-> coller — vit désormais dans [`DEPLOIEMENT.md`](DEPLOIEMENT.md). Le présent
-> document reste celui du **contenu** des jeux.
+> **État au 2026-09-13.** Le déploiement technique est **✅ achevé côté
+> dépôt** : GitHub Pages est la cible canonique, le workflow `main` construit
+> un artefact isolé `_site/`, vérifie les sept routes dans quatre viewports
+> (28 passages), les liens, l'accessibilité de base et les mises à jour PWA,
+> puis le publie. `docs/` est désormais **uniquement le dossier de
+> documentation** ; aucun build de jeu ne doit plus y être copié. Le runbook,
+> le rollback et les statuts externes vivent dans
+> [`DEPLOIEMENT.md`](DEPLOIEMENT.md).
+
+La publication distante n'est prouvée que par un run GitHub Actions vert et
+un smoke sur <https://wonderself.github.io/trapeze/>. Ce contrôle de release
+est une opération récurrente, pas un reste de développement.
+
+## Les vrais restes
+
+| Sujet | Statut | Décision ou preuve encore nécessaire |
+|---|---|---|
+| Classement mondial 3D avec Supabase | `DEFERRED_USER` | Choix produit d'Emmanuel, création du projet, valeurs publiques et validation RLS/réseau. Le top 10 local reste le comportement livré. |
+| Réunir Classic et Circus Alzahir | `DEFERRED_USER` | Choisir si cette dette de contenu mérite un chantier dédié ; porter les systèmes un par un, jamais par fusion automatique. |
+| QA iPhone/iPad et Android physiques | `NOT_RUN` | Tests sur matériel réel : Safari, GPU/mémoire mobile, installation PWA, offline et ressenti tactile. |
+| Miroir Coolify | `BLOCKED_ACCESS` | Option non nécessaire à GitHub Pages ; il manque une ressource, un domaine, TLS et une preuve publique vérifiable. |
+
+Les idées telles qu'un trailer, une localisation de la vitrine ou de nouveaux
+modes sont des choix produit futurs, pas des correctifs requis pour la mise en
+ligne.
 
 État au terme de la session. Les lots ci-dessous sont volontairement cadrés
 pour être exécutés séparément, y compris par un modèle plus léger : chacun
@@ -240,11 +261,11 @@ le jeu à chaque étape. Le faire à l'intérieur d'un commit de fusion aurait �
 le meilleur moyen de casser un jeu qui tourne. C'est donc la dette assumée de
 cette fusion, et le tableau ci-dessus en est l'inventaire de départ.
 
-Autre point laissé tel quel, volontairement : `docs/` sert à la fois de site
-publié (`docs/index.html`, la version 3D compilée, côté `main`) et de dossier
-de documentation en markdown (côté cette branche). Les noms de fichiers ne se
-marchent pas dessus, rien ne casse — mais c'est un dossier qui fait deux
-métiers.
+L'ancien conflit de rôle de `docs/` est **résolu** : ce dossier ne contient
+plus que la documentation. GitHub Pages publie l'artefact éphémère `_site/`,
+qui reçoit le build frais de `game3d/dist/` sous `_site/3d/`. Le build suivi
+destiné aux hébergeurs statiques reste `3d/` ; aucun artefact n'est recopié
+dans `docs/`.
 
 ---
 
@@ -252,6 +273,7 @@ métiers.
 
 | Lot | État | Où |
 |---|---|---|
+| Déploiement technique GitHub Pages | ✅ | workflow `main` → `_site/`, sept routes, 404/sitemap, tests web et PWA, rollback documenté |
 | WP-0 Restructuration | ✅ | `index.html`, `trapeze-stars-v1.html`, `trapeze-stars-v2.html` |
 | WP-B V1 Classic, corrections | ✅ | les 20 défauts de l'audit sont corrigés |
 | WP-A Socle technique | ✅ | V2 : rendu responsive, pas fixe, qualité, i18n, sauvegarde |
@@ -261,7 +283,7 @@ métiers.
 | WP-F UI/UX | ✅ | HUD, pause, contrôles contextuels, tutoriel, réglages (S1), niveaux (S2) |
 | WP-G Audio | ✅ | bus séparés, limiteur, effets, musique en couches (S3) |
 | WP-H Page de garde | ✅ | `index.html` |
-| WP-I QA | ◐ | harnais + captures Chromium multi-format faits ; appareils réels restants |
+| WP-I QA | ◐ / `NOT_RUN` matériel | harnais + captures Chromium multi-format faits ; appareils réels restants |
 | S1 Réglages | ✅ | musique, effets, langue, qualité, vibrations, guide, vitesse |
 | S2 Sélection de niveau | ✅ | grille 12 niveaux, étoiles, meilleur score, verrouillage |
 | S3 Musique en couches | ✅ | mélodie à l'ola, cuivres à l'ovation, atténuation au hit-stop |
@@ -270,7 +292,7 @@ métiers.
 | S6 Lisibilité du personnage V1 | ✅ | halo de contraste derrière le joueur |
 | S7 Accessibilité | ✅ | `prefers-reduced-motion` (les deux versions), vitesse globale (V2) |
 | S8 Décors par monde | ✅ (version légère) | décor latéral par monde, sans mise en cache hors écran |
-| S9 Tests appareils réels | ◐ | tout ce qui est vérifiable sans matériel est fait — voir ci-dessous |
+| S9 Tests appareils réels | `NOT_RUN` matériel | tout ce qui est vérifiable sans matériel est fait — voir ci-dessous |
 | Limitation V1 portrait | ✅ | écran « tournez votre appareil », pause automatique |
 | V3 « Trapeze City » (S1 à S5) | ✅ | socle 3D, gameplay, direction artistique, HUD/audio/tactile, intégration — détail plus haut et dans `docs/V3-PLAN.md` |
 | V3 relecture adversariale des mécaniques | ✅ | quatre défauts réels mesurés puis corrigés (qualités de prise, portée du vol final, économie de hype, manche virtuel), six soupçons écartés — détail plus haut |
@@ -435,8 +457,8 @@ scripts `monkey_*.js` couvrent un angle différent : la robustesse de la
 *machine à états* face à des entrées désordonnées. Lancer les trois après
 toute modification.
 
-Les captures Chromium (via `playwright-core` + le binaire préinstallé
-`/opt/pw-browsers/chromium-1194/chrome-linux/chrome`) ont trouvé, cette
+Les captures Chromium (via le `playwright-core` verrouillé dans `tools/` et
+la résolution portable de `tools/browser_helpers.mjs`) ont trouvé, cette
 session-ci comme la précédente, des défauts qu'aucun test headless ne peut
 attraper : mise à l'échelle, police canvas invalide, convention d'angle
 inversée. **Toujours regarder le rendu réel après un changement visuel**,

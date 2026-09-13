@@ -2,7 +2,7 @@
 
 Règle d'or du projet : **tout doit rester gratuit, hors-ligne et sans dépendance payante**. Chaque idée ci-dessous n'utilise que des APIs navigateur natives (0 €) ou du code local.
 
-> 🎯 **La roadmap opérationnelle du jeu 3D vit dans `AUDIT.md`** (tableau des sessions 3D-1 → 3D-4, protocole dans `CLAUDE.md`). Ce fichier liste l'état global et les idées au-delà des sessions planifiées.
+> 🎯 **La roadmap opérationnelle du jeu 3D vit dans `AUDIT.md`** (sessions 3D-1 → 3D-8, protocole dans `CLAUDE.md`). Les huit sessions sont terminées; aucune nouvelle session ne démarre sans choix explicite d'Emmanuel.
 
 ## ✅ Déjà en place
 
@@ -11,8 +11,13 @@ Règle d'or du projet : **tout doit rester gratuit, hors-ligne et sans dépendan
 - [x] Session 3D-2 : beauté & identité — chapiteau complet, menu podium 3D tournant, rideau, bloom, rim light
 - [x] Session 3D-3 : diversité & mondes — 4 mondes (Cirque/Jungle/Plage/Espace), 1 mécanique par monde (barres dérivantes / rafales de vent / gravité réduite + anneaux mobiles), filet bonus 1×/monde, transitions fog/lumière + bannière
 - [x] Session 3D-4 : addiction & rétention — musique générative + SFX par monde (100 % WebAudio), high score/best combo/médailles par monde persistés (`ts3d_*`), mode infini (+5 % vitesse, fenêtres −5 % par monde), écran de fin enrichi + REPLAY instantané, bouton 🔊/🔇
+- [x] Session 3D-5 : Gamepad API + top 10 local persistant avec saisie de nom
+- [x] Session 3D-6 : reduced-motion, réduction des flashs, contraste HUD, photo finish + Web Share
+- [x] Session 3D-7 : intro cinématique, mode attract, feu d'artifice, défi quotidien déterministe et vitrine
+- [x] Session 3D-8 : client leaderboard mondial Supabase avec repli LOCAL silencieux; activation distante facultative
 - [x] Identité personnages (2026-07-19) : **Marc petit, blond, natte animée** (vole en vrille, traîne en swing) ; **Claire plus grande, blond clair, cheveux longs + étoile d'or** — tailles compensées au point de prise (les mains restent sur la barre)
-- [x] PWA (manifest + service worker), test smoke headless WebGL avec captures
+- [x] PWA et caches 2D/3D fiables : service workers séparés, redéploiement et rechargement hors ligne couverts par `npm run test:sw`
+- [x] Préparation GitHub Pages : build racine vers `/3d` + `/_site`, publication de `/_site` depuis `main`; `docs/` reste exclusivement documentaire
 
 ### Jeu 2D (`2d/` — terminé, conservé)
 - [x] 4 mondes × 3 niveaux + cérémonie + finale, musique 100 % procédurale
@@ -21,20 +26,22 @@ Règle d'or du projet : **tout doit rester gratuit, hors-ligne et sans dépendan
 - [x] Difficulté adaptative, buffers d'input, prévisualisation de trajectoire
 - [x] Mobile complet + **Vibration API** + **Screen Wake Lock** + PWA (`2d/`)
 - [x] Record persistant (`localStorage`)
+- [x] Livraison accessible : zoom navigateur autorisé, reduced-motion, focus clavier, sortie mobile et canvas ajusté aux paysages courts
 
-## 🎯 Prochaines étapes (dans l'ordre — une session par conversation, modèle conseillé entre parenthèses)
+## 🎯 Validations et décisions encore ouvertes
 
-1. **Session 3D-5 — Manette & podium local** (`AUDIT.md`, **Opus 4.8**) : Gamepad API + top 10 local avec initiales (localStorage — pas de serveur).
-2. **Session 3D-6 — Accessibilité & partage** (`AUDIT.md`, **Sonnet 5**) : reduced-motion, réduction des flashs, contraste HUD, photo finish + Web Share.
+- **Publication GitHub Pages** : préparation locale complète; confirmer le site public après commit/push sur `main` et workflow vert.
+- **QA téléphones physiques** : **NOT_RUN** sur iOS/Android réels; à planifier si Emmanuel souhaite une validation matérielle avant diffusion large.
+- **Leaderboard WORLD Supabase** : **DEFERRED_USER**. Choisir entre conserver le mode LOCAL par défaut ou fournir l'URL et la clé anon selon `game3d/SUPABASE_SETUP.md`.
 
-## 💡 Idées au-delà (toujours gratuit, natif)
+## 💡 Futurs choix non réalisés (toujours gratuits)
 
 - **Mode duo alterné** : Marc puis Claire, une vie chacun — relais au trapèze.
 - **Ghost replay** : rejouer le fantôme de sa meilleure course (positions enregistrées localement).
-- **Défis quotidiens déterministes** : seed dérivée de la date → même niveau pour tous, sans serveur.
-- **Photo finish** : `canvas.toBlob()` + Web Share API pour partager sa plus belle figure.
 - **Annonceur de cirque** : Web Speech Synthesis (« Mesdames et messieurs… ») — à doser.
-- **Accessibilité** : option « réduire les flashs », `prefers-reduced-motion`, contraste HUD.
+- **Trailer vidéo** : capturer une course orchestrée avec le harnais `window.__game`.
+- **Localisation de la vitrine** : version FR/EN de `showcase.html`, sans modifier l'UI anglaise du jeu.
+- **Optimisation bundle** : code-splitting Vite uniquement si les mesures réseau/mobile le justifient.
 
 ## 🚫 Ce qu'on ne fera pas
 

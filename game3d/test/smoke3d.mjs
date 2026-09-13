@@ -3,25 +3,16 @@
 // 3D-5 (k) gamepad mapping + full-name entry (up to 20 chars, real text field) + persistent top-10 leaderboard,
 // 3D-8 (r/s/t) world leaderboard: inert when unconfigured, mocked Supabase GET/POST, silent fallback.
 // Environment-agnostic: resolves playwright + paths so it runs anywhere.
-import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { mkdirSync, existsSync, readFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
+import { launchChromium } from '../../tools/browser_helpers.mjs';
 
-const require = createRequire(import.meta.url);
 const scriptDir = fileURLToPath(new URL('.', import.meta.url));
 const DIST = path.resolve(scriptDir, '../dist');
 
-let chromium;
-for (const p of [process.env.PLAYWRIGHT_PATH, '/opt/node22/lib/node_modules/playwright',
-                 '/home/claude/.npm-global/lib/node_modules/playwright', 'playwright']) {
-  if (!p) continue;
-  try { ({ chromium } = require(p)); break; } catch {}
-}
-if (!chromium) { console.log('HARNESS ERROR: playwright not found'); process.exit(4); }
-
-let OUT = process.env.DELIVER_DIR || '/home/claude/deliver';
+let OUT = process.env.DELIVER_DIR || path.join(scriptDir, 'out');
 try { mkdirSync(OUT, { recursive: true }); } catch { OUT = path.join(scriptDir, 'out'); mkdirSync(OUT, { recursive: true }); }
 if (!existsSync(DIST)) { console.log('HARNESS ERROR: build missing at ' + DIST + ' (run npm run build)'); process.exit(4); }
 
@@ -32,7 +23,7 @@ const errors = [];
 const results = {};
 let code = 0;
 try {
-  const browser = await chromium.launch({
+  const browser = await launchChromium({
     args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--autoplay-policy=no-user-gesture-required']
   });
   const page = await browser.newPage({ viewport: { width: 960, height: 560 } });
@@ -43,6 +34,12 @@ try {
 
   // ---- (n) cinematic intro: plays on a fresh full-fx load, skipIntro() hands the menu back ----
   await page.waitForFunction(() => !!window.__game, null, { timeout: 15000 });
+  const capture = async (file) => {
+    await page.evaluate(() => window.__game.setRender(true));
+    await page.waitForTimeout(180);
+    await page.screenshot({ path: file });
+    await page.evaluate(() => window.__game.setRender(false));
+  };
   results.n_intro = await page.evaluate(() => {
     const before = window.__game.intro();
     window.__game.skipIntro();
@@ -55,12 +52,17 @@ try {
     };
   });
 
+  // SwiftShader can make one rendered frame much slower than the simulation.
+  // Pause rendering between evidence captures so gameplay assertions do not
+  // depend on the CI machine's software-GPU throughput.
+  await page.evaluate(() => window.__game.setRender(false));
+
   // curtain opens on the game clock (dt-clamped), so under slow headless GPUs it needs
   // more real time than on a 60fps device — poll until it's open instead of guessing.
   await page.waitForFunction(() => window.__game && window.__game.menu().curtainOpen >= 0.9, null, { timeout: 20000 }).catch(() => {});
   await page.evaluate(() => window.__game.wipe());   // clean records for a deterministic run
   await page.waitForTimeout(400);
-  await page.screenshot({ path: `${OUT}/3d4-menu.png` }); // podium + open curtain
+  await capture(`${OUT}/3d4-menu.png`); // podium + open curtain
 
   // ---- (l1) accessibility: default state (no OS reduced-motion in this headless profile) + toggling
   // "reduce flashes" via its real HUD button (#fxBtn) is reflected instantly ----
@@ -160,7 +162,7 @@ try {
   // ---- (c) flip during that flight ----
   await page.evaluate(() => window.__game.down()); // trick
   await page.waitForTimeout(420);
-  await page.screenshot({ path: `${OUT}/3d4-fly.png` }); // trail + tent visible in flight
+  await capture(`${OUT}/3d4-fly.png`); // trail + tent visible in flight
   results.c_flip = await page.evaluate(() => new Promise((res) => {
     const t0 = performance.now();
     const chk = () => {
@@ -212,13 +214,13 @@ try {
   // ---- (i) world captures via warp: all 4 environments render, world index tracks ----
   for (const [bar, name, expW] of [[5, 'circus', 0], [17, 'jungle', 1], [29, 'beach', 2], [41, 'space', 3]]) {
     await page.evaluate((b) => window.__game.warp(b), bar);
-    await page.waitForTimeout(1100); // let mood/camera settle
+    await page.waitForTimeout(180); // let mood/camera settle
     results['i_' + name] = await page.evaluate(() => {
       const s = window.__game.state();
       return { world: s.world, name: s.worldName };
     });
     results['i_' + name].expected = expW;
-    await page.screenshot({ path: `${OUT}/3d4-world-${name}.png` });
+    await capture(`${OUT}/3d4-world-${name}.png`);
   }
 
   // ---- (j) audio harness alive: context created by the programmatic start, no JS errors ----
@@ -228,6 +230,7 @@ try {
   await page.setViewportSize({ width: 480, height: 270 });
   await page.goto('http://localhost:8130/index.html?lowfx', { waitUntil: 'load' });
   await page.waitForTimeout(800);
+  await page.evaluate(() => window.__game.setRender(false));
   await page.evaluate(() => { window.__game.wipe(); window.__game.start('marc'); });
   await page.waitForTimeout(300);
   results.d_endless = await page.evaluate(() => new Promise((res) => {
@@ -242,7 +245,14 @@ try {
       if (s.state === 'swing') {
         flipped = false;
         if (phase !== 'hold') { window.__game.down(); phase = 'hold'; }
-        else if (s.omega > 0 && Math.abs(s.theta - 0.45 * s.amp) < 0.2 * s.amp && s.amp > 1.18) { window.__game.up(); phase = 'fly'; }
+        else {
+          // Force the first catch inside the PERFECT window so the tour
+          // exercises photo finish once; keep later catches fast and lenient.
+          const releaseWindow = s.active === 0 ? 0.08 : 0.2;
+          if (s.omega > 0 && Math.abs(s.theta - 0.45 * s.amp) < releaseWindow * s.amp && s.amp > 1.18) {
+            window.__game.up(); phase = 'fly';
+          }
+        }
       } else {
         if (phase === 'hold') phase = 'fly';
         // Beach: tap mid-air to flip — flips fight the wind drift
@@ -251,8 +261,9 @@ try {
       requestAnimationFrame(loop);
     }; loop();
   }));
+  await page.waitForFunction(() => window.__game.photo().hasPhoto, null, { timeout: 15_000 });
   await page.waitForTimeout(600);
-  await page.screenshot({ path: `${OUT}/3d4-lap2.png` });   // endless banner / lap 2 under way
+  await capture(`${OUT}/3d4-lap2.png`);   // endless banner / lap 2 under way
 
   // ---- (k2) a top-10 run stops for a full-name entry (real <input maxlength="20">), driven by
   //      real keyboard typing — also exercises the 20-char cap with a name longer than that ----
@@ -261,7 +272,7 @@ try {
   await page.click('#entryInput');
   await page.keyboard.type(LONG_NAME);
   results.k_entryValue = await page.evaluate(() => window.__game.entry().value);
-  await page.screenshot({ path: `${OUT}/3d5-entry.png` });
+  await capture(`${OUT}/3d5-entry.png`);
   await page.keyboard.press('Enter'); // confirm
 
   // ---- (e) enriched end screen + records + leaderboard entry written ----
@@ -280,7 +291,7 @@ try {
       boardLen: b.length, top: b[0],
     };
   });
-  await page.screenshot({ path: `${OUT}/3d5-end.png` });
+  await capture(`${OUT}/3d5-end.png`);
 
   // ---- (m) photo finish: canvas.toBlob() fired on the run's best PERFECT catch, share/download wired ----
   results.m_photo = await page.evaluate(() => window.__game.photo());
@@ -301,6 +312,7 @@ try {
   results.p_daily1 = await page.evaluate(() => { window.__game.startDaily(); return window.__game.daily(); });
   await page.goto('http://localhost:8130/index.html?lowfx', { waitUntil: 'load' });
   await page.waitForFunction(() => !!window.__game, null, { timeout: 15000 });
+  await page.evaluate(() => window.__game.setRender(false));
   results.p_daily2 = await page.evaluate(() => { window.__game.startDaily(); return window.__game.daily(); });
   // and the base rail (PLAY) must differ from the daily one — a real re-roll, not a no-op
   results.p_base = await page.evaluate(() => { window.__game.start('marc'); return window.__game.daily(); });
@@ -340,7 +352,7 @@ try {
     rowCount: document.querySelectorAll('#menuBoard .bRow').length,
     topIn: (document.querySelector('#menuBoard .bRow .bIn') || {}).textContent || '',
   }));
-  await page.screenshot({ path: `${OUT}/3d8-world.png` });
+  await capture(`${OUT}/3d8-world.png`);
   // short run: one good catch for a non-zero score, then end it -> initials -> POST
   await page.evaluate(() => window.__game.start('marc'));
   await page.waitForTimeout(300);
@@ -367,7 +379,7 @@ try {
   results.s_post = postedBodies.length ? postedBodies[0] : null;
   results.s_postCount = postedBodies.length;
   results.s_net2 = await page.evaluate(() => window.__game.net());
-  await page.screenshot({ path: `${OUT}/3d8-post.png` });
+  await capture(`${OUT}/3d8-post.png`);
 
   // ---- (t) mocked network failure: silent LOCAL fallback, zero JS error (3D-8) ----
   await page.unroute('**/rest/v1/scores*');

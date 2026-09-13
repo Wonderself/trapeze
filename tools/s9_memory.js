@@ -2,16 +2,17 @@
 // 60 fps) en avancant l'horloge de la boucle a pas fixe directement,
 // plutot que d'attendre en temps reel. Verifie que le tas JS ne derive
 // pas de facon monotone (indice de fuite) et que la boucle reste vivante.
-const { chromium } = require('playwright-core');
 (async()=>{
-  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
+  const path=require('path');
+  const {launchChromium}=await import('./browser_helpers.mjs');
+  const b=await launchChromium({
     args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=swiftshader','--enable-unsafe-swiftshader',
           '--js-flags=--expose-gc']});
   const ctx=await b.newContext({viewport:{width:1000,height:620}});
   const p=await ctx.newPage();
   const errors=[];
   p.on('pageerror',e=>errors.push(e.message));
-  await p.goto('file:///home/user/trapeze/trapeze-stars-v2.html');
+  await p.goto('file://'+path.join(__dirname,'..','trapeze-stars-v2.html'));
   await p.waitForTimeout(700);
   await p.evaluate(()=>{ startRun(); });
 

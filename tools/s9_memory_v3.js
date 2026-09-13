@@ -12,10 +12,10 @@
 // dizaines de fois. C'est un test PLUS dur que l'original : il exerce
 // aussi le nettoyage d'etat au redemarrage (respawn, remise a zero des
 // listes libres), pas seulement une session continue.
-const { chromium } = require('playwright-core');
 const path = require('path');
 (async()=>{
-  const b=await chromium.launch({executablePath:process.env.CHROME_EXE||'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
+  const {launchChromium}=await import('./browser_helpers.mjs');
+  const b=await launchChromium({
     args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=swiftshader','--enable-unsafe-swiftshader',
           '--js-flags=--expose-gc']});
   const ctx=await b.newContext({viewport:{width:1280,height:720}});

@@ -7,12 +7,11 @@
 //
 // Modele : tools/s9_multitouch.js.
 const path=require('path');
-const {chromium}=require('playwright-core');
-const EXE=process.env.CHROME_EXE||'/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const url='file://'+path.join(__dirname,'..','trapeze-city-v3.html');
 
 (async()=>{
-  const b=await chromium.launch({executablePath:EXE,
+  const {launchChromium}=await import('./browser_helpers.mjs');
+  const b=await launchChromium({
     args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=swiftshader','--enable-unsafe-swiftshader']});
   const errors=[];
   const ctx=await b.newContext({viewport:{width:844,height:390},deviceScaleFactor:2,hasTouch:true,isMobile:true});

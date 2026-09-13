@@ -1,25 +1,25 @@
 // Headless smoke test for Trapeze Stars — verifies no console errors, captures screenshots.
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
-const { chromium } = require('/home/claude/.npm-global/lib/node_modules/playwright');
-import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { mkdirSync } from 'node:fs';
+import path from 'node:path';
+import { launchChromium, startStaticServer } from '../tools/browser_helpers.mjs';
 
-const OUT = '/home/claude/deliver';
+const scriptDir = fileURLToPath(new URL('.', import.meta.url));
+const ROOT = path.resolve(scriptDir, '..');
+const OUT = process.env.DELIVER_DIR || path.join(scriptDir, 'out');
 mkdirSync(OUT, { recursive: true });
 
-const srv = spawn('python3', ['-m', 'http.server', '8123'], { cwd: '/home/claude/trapeze', stdio: 'ignore' });
-await new Promise(r => setTimeout(r, 900));
+const srv = await startStaticServer(ROOT);
 
 const errors = [];
 let exitCode = 0;
 try {
-  const browser = await chromium.launch();
+  const browser = await launchChromium();
   const page = await browser.newPage({ viewport: { width: 900, height: 520 } });
   page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
 
-  await page.goto('http://localhost:8123/2d/index.html', { waitUntil: 'load' });
+  await page.goto(`${srv.origin}/2d/index.html`, { waitUntil: 'load' });
   await page.waitForTimeout(3200);
   await page.screenshot({ path: `${OUT}/s2-title.png` });
 
@@ -48,6 +48,6 @@ try {
   console.log('TEST HARNESS ERROR:', e.message);
   exitCode = 3;
 } finally {
-  srv.kill('SIGKILL');
+  await srv.close();
 }
 process.exit(exitCode);

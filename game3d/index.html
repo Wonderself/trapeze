@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="theme-color" content="#05010f" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
@@ -11,11 +11,10 @@
 <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
 <link rel="icon" href="./icon-192.png" type="image/png" />
 <title>Trapeze Stars 3D ✨ — a circus gift for Marc &amp; Claire</title>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet" />
 <style>
   :root{ --gold:#ffcf3f; --pink:#ff6db0; --blue:#54c8ff; }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{height:100%;overflow:hidden;background:#05010f;font-family:'Fredoka',system-ui,Arial,sans-serif;color:#fff;user-select:none;-webkit-user-select:none;overscroll-behavior:none;touch-action:none}
+  html,body{height:100%;overflow:hidden;background:#05010f;font-family:ui-rounded,'Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif;color:#fff;user-select:none;-webkit-user-select:none;overscroll-behavior:none;touch-action:none}
   #app{position:fixed;inset:0}
   canvas{display:block;width:100%;height:100%}
 
@@ -62,7 +61,7 @@
     #banner.show{animation:bannerIn 2.6s linear forwards}
     #newBest{animation:none}
   }
-  #hint{margin-top:16px;font-size:12px;color:#7d6bb0;line-height:1.7}
+  .hint{margin-top:16px;font-size:12px;color:#7d6bb0;line-height:1.7}
   #bigmsg{font-size:clamp(30px,9vw,60px);font-weight:700;color:#fff}
   #bigsub{margin-top:10px;font-size:clamp(15px,4vw,20px);color:var(--gold)}
 
@@ -152,6 +151,34 @@
   /* ---- daily challenge (3D-7) ---- */
   #dailyBtn{margin-top:10px;font-size:15px;padding:10px 26px}
   #dailyBest{margin-top:5px;font-size:11px;color:#8fd0ff;letter-spacing:1px}
+
+  /* ---- compact phones and short landscape viewports ---- */
+  @media (max-height:600px){
+    #menu{padding:10px 12px 8px}
+    #title{font-size:32px;line-height:.9}
+    #subtitle{margin-top:4px;font-size:12px}
+    #dedication{margin-top:3px;font-size:9px;letter-spacing:2px}
+    .pickRow{gap:clamp(44px,12vw,80px);margin-bottom:4px}
+    .pick{min-width:92px;padding:4px 6px;border-radius:12px}
+    .pick .nm{font-size:14px}
+    .pick .tag{font-size:8px}
+    .btn{margin-top:2px;padding:8px 28px;font-size:16px}
+    #dailyBtn{margin-top:3px;padding:6px 20px;font-size:13px}
+    #dailyBest{margin-top:2px;font-size:9px}
+    .hint{margin-top:4px;font-size:9px;line-height:1.25}
+  }
+  @media (max-width:480px) and (orientation:portrait){
+    #menuBoard{left:50%;right:auto;top:clamp(150px,22vh,185px);transform:translateX(-50%);width:min(208px,calc(100vw - 32px));max-height:90px;overflow:auto;z-index:11}
+    #menuBoard.board{padding:6px 8px}
+    #menuBoard .bTitle{font-size:11px;margin-bottom:3px}
+    #menuBoard .bTabs{margin-bottom:3px}
+    #menuBoard .bRow{line-height:1.3}
+    #menu .menuBottom{padding-bottom:54px}
+  }
+  @media (orientation:landscape) and (max-width:600px){
+    .pickRow{gap:12px}
+    #menuBoard{right:6px;width:128px;max-height:65vh;padding:4px 6px}
+  }
 </style>
 </head>
 <body>
@@ -168,7 +195,7 @@
 <div id="grade"></div>
 <div id="comboHold"><span>COMBO x2</span><div id="comboBar"><div id="comboFill"></div></div></div>
 <div id="flash"></div>
-<button id="tapBtn">✊</button>
+<button id="tapBtn" aria-label="Hold to grip and pump; release at the top to fly; tap in the air to flip">✊</button>
 
 <div id="menu" class="screen">
   <div class="menuTop">
@@ -185,7 +212,7 @@
     <button class="btn" id="playBtn">▶ PLAY</button>
     <button class="btn ghost" id="dailyBtn">📅 DAILY</button>
     <div id="dailyBest"></div>
-    <div id="hint"><b>Hold</b> to grip &amp; pump your swing — <b>let go</b> at the top to fly!<br>Tap in the air for a <b>FLIP</b> bonus. Space / gamepad <b>A</b> also work.</div>
+    <div id="menuHint" class="hint"><b>Hold</b> to grip &amp; pump your swing — <b>let go</b> at the top to fly!<br>Tap in the air for a <b>FLIP</b> bonus. Space / gamepad <b>A</b> also work.</div>
   </div>
   <div id="menuBoard" class="board"></div>
 </div>
@@ -203,7 +230,7 @@
     <button class="btn ghost hidden" id="shareBtn">📤 SHARE</button>
     <button class="btn ghost" id="againBtn">MENU</button>
   </div>
-  <div id="hint">Made with ❤ for Marc &amp; Claire</div>
+  <div id="endHint" class="hint">Made with ❤ for Marc &amp; Claire</div>
 </div>
 
 <div id="entry" class="screen hidden">

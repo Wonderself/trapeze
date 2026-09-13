@@ -9,8 +9,8 @@
  *   3. Récupère dans Settings → API :
  *        - Project URL   → SUPABASE_URL   (ex. 'https://abcdefgh.supabase.co')
  *        - anon public   → SUPABASE_ANON_KEY (longue chaîne 'eyJ...')
- *   4. Colle-les ci-dessous, puis rebuild :  cd game3d && npm run build
- *      et copie dist/ → docs/ comme d'habitude.
+ *   4. Colle-les ci-dessous, puis lance `npm run verify:deploy` à la racine.
+ *      Le workflow GitHub Pages publie ensuite l'artefact `_site/` depuis `main`.
  *
  * La clé « anon » est PUBLIQUE PAR CONCEPTION : elle finit toujours dans le
  * code client, et la sécurité est assurée côté serveur par la Row Level
