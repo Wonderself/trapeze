@@ -8,6 +8,9 @@ Dernière mise à jour : **2026-09-14**.
   `.github/workflows/deploy-pages.yml` construit, vérifie et publie le site.
 - **Hébergement canonique : GitHub Pages.** URL publique :
   <https://wonderself.github.io/trapeze/>.
+- **Miroir Coolify : `PASS_PRODUCTION_MIRROR`.** La ressource historique est
+  conservée sur <https://trapeze.188.245.182.200.sslip.io/> ; elle ne remplace
+  pas l'origine canonique GitHub Pages.
 - **Branche de livraison : `main`.** Une pull request vers `main` exécute les
   vérifications sans publier. Un push sur `main`, ou un lancement manuel dont
   la référence est précisément `main`, publie seulement après succès de toutes
@@ -29,6 +32,12 @@ jobs `verify` et `deploy` verts, sept routes en HTTP 200 et 404 personnalisée
 confirmée. Ce statut couvre GitHub Pages; il ne prouve ni l'activation
 Supabase, ni une QA sur appareils physiques. Le miroir Coolify possède sa
 propre procédure de preuve et de rollback ci-dessous.
+
+La release du sélecteur des cinq versions est en production depuis le
+**2026-09-14** au commit `a5bd5bb765c4d8faaa06b78142ae2b6fb9fe7df6`,
+avec le
+[run GitHub Actions 34783583874](https://github.com/Wonderself/trapeze/actions/runs/34783583874)
+vert et les sept routes publiques de nouveau vérifiées.
 
 ## Configuration GitHub à conserver
 
@@ -216,9 +225,20 @@ branche et la production ne divergent pas.
 
 ## Miroir Coolify
 
-Statut avant remise en ligne : **`READY_TO_DEPLOY`**. La ressource historique
-existe, mais elle est arrêtée et ne devient `PASS_PRODUCTION_MIRROR` qu'après
-un certificat HTTPS valide, un SHA identifié et un smoke public vert.
+Statut : **`PASS_PRODUCTION_MIRROR`**. La ressource historique a été remise en
+ligne sans recréation ni changement de dépôt, de branche, de type de build ou
+de port. Le déploiement `ccpqtdpd7ftrfs4fiib57peu` a importé le commit
+`a5bd5bb765c4d8faaa06b78142ae2b6fb9fe7df6`, construit le site statique avec
+`nginx:alpine`, puis terminé avec succès en 15 secondes. La ressource est
+`Running (no healthcheck)`.
+
+La preuve publique du **2026-09-14** comprend : certificat Let's Encrypt
+valide sans contournement TLS, redirection HTTP→HTTPS, sept routes `200`, 404
+personnalisée, bon asset 3D et consoles navigateur sans erreur sur l'accueil,
+la 2D et la 3D. Coolify signale que les domaines publics `sslip.io` peuvent
+subir les limites d'émission Let's Encrypt ; le certificat actuel est bien
+valide, mais un domaine personnalisé réduira ce risque futur si Emmanuel le
+choisit.
 
 Configuration vérifiée dans Coolify :
 

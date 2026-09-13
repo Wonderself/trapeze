@@ -28,6 +28,11 @@ Le site canonique est **<https://wonderself.github.io/trapeze/>**. Une
 publication n'a lieu qu'après le passage du workflow de vérification sur
 `main`.
 
+Le miroir Coolify existant est également en production sur
+**<https://trapeze.188.245.182.200.sslip.io/>**. Il sert le même dépôt et le
+même snapshot `3d/`; GitHub Pages reste l'origine canonique des métadonnées et
+du sitemap.
+
 Le dépôt reste compatible avec **Coolify Static Site**. Le miroir historique
 sert directement la racine versionnée : le snapshot `3d/` doit donc toujours
 être régénéré et commité avec `npm run build`. GitHub Pages, lui, publie

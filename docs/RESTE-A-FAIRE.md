@@ -1,11 +1,12 @@
 # Reste à faire
 
 > **État au 2026-09-14.** La production GitHub Pages est
-> **`PASS_PRODUCTION`** : le workflow `main` construit
-> un artefact isolé `_site/`, vérifie les sept routes dans quatre viewports
-> (28 passages), les liens, l'accessibilité de base et les mises à jour PWA,
-> puis le publie. `docs/` est désormais **uniquement le dossier de
-> documentation** ; aucun build de jeu ne doit plus y être copié. Le runbook,
+> **`PASS_PRODUCTION`** : le workflow `main` construit un artefact isolé
+> `_site/`, vérifie les sept routes dans quatre viewports (28 passages), les
+> liens, l'accessibilité de base et les mises à jour PWA, puis le publie.
+> Le miroir Coolify, déployé manuellement et sans webhook, est séparément
+> **`PASS_PRODUCTION_MIRROR`**. `docs/` est désormais **uniquement le dossier
+> de documentation** ; aucun build de jeu ne doit plus y être copié. Le runbook,
 > le rollback et les statuts externes vivent dans
 > [`DEPLOIEMENT.md`](DEPLOIEMENT.md).
 
@@ -15,6 +16,11 @@ sur <https://wonderself.github.io/trapeze/> et la 404 personnalisée confirmée.
 Ce contrôle de release reste récurrent à chaque livraison ; ce n'est plus un
 reste de développement.
 
+Le miroir Coolify existant a été conservé puis remis en ligne au SHA
+`a5bd5bb` par le déploiement `ccpqtdpd7ftrfs4fiib57peu`. Son certificat
+Let's Encrypt, la redirection HTTP→HTTPS, les sept routes `200`, la 404
+personnalisée et les consoles navigateur accueil/2D/3D ont été vérifiés.
+
 ## Les vrais restes
 
 | Sujet | Statut | Décision ou preuve encore nécessaire |
@@ -22,7 +28,6 @@ reste de développement.
 | Classement mondial 3D avec Supabase | `DEFERRED_USER` | Choix produit d'Emmanuel, création du projet, valeurs publiques et validation RLS/réseau. Le top 10 local reste le comportement livré. |
 | Réunir Classic et Circus Alzahir | `DEFERRED_USER` | Choisir si cette dette de contenu mérite un chantier dédié ; porter les systèmes un par un, jamais par fusion automatique. |
 | QA iPhone/iPad et Android physiques | `BLOCKED_ACCESS` | La recette [`QA-APPAREILS-REELS.md`](QA-APPAREILS-REELS.md) est prête, mais aucun appareil ni service distant authentifié n'est disponible. |
-| Miroir Coolify | `READY_TO_DEPLOY` | Le projet `Trapeze`, sa ressource `main` et son domaine ont été retrouvés ; il reste à redémarrer le service, activer HTTPS et produire le smoke public. |
 
 Les idées telles qu'un trailer, une localisation de la vitrine ou de nouveaux
 modes sont des choix produit futurs, pas des correctifs requis pour la mise en
@@ -275,7 +280,8 @@ dans `docs/`.
 
 | Lot | État | Où |
 |---|---|---|
-| Mise en production GitHub Pages | `PASS_PRODUCTION` | `main` au commit initial `a69e34d`; run `34778875942`; sept routes HTTP 200 et 404 personnalisée vérifiées |
+| Mise en production GitHub Pages | `PASS_PRODUCTION` | release cinq versions `a5bd5bb`; run `34783583874`; sept routes HTTP 200 et 404 personnalisée vérifiées |
+| Miroir Coolify existant | `PASS_PRODUCTION_MIRROR` | application `ns4sg8w44wow0wkowg0co4kk`; déploiement initial `ccpqtdpd7ftrfs4fiib57peu` du SHA `a5bd5bb`; HTTPS et smoke public verts |
 | WP-0 Restructuration | ✅ | `index.html`, `trapeze-stars-v1.html`, `trapeze-stars-v2.html` |
 | WP-B V1 Classic, corrections | ✅ | les 20 défauts de l'audit sont corrigés |
 | WP-A Socle technique | ✅ | V2 : rendu responsive, pas fixe, qualité, i18n, sauvegarde |
