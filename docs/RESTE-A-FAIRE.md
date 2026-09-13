@@ -1,7 +1,7 @@
 # Reste à faire
 
-> **État au 2026-09-13.** Le déploiement technique est **✅ achevé côté
-> dépôt** : GitHub Pages est la cible canonique, le workflow `main` construit
+> **État au 2026-09-13.** La production GitHub Pages est
+> **`PASS_PRODUCTION`** : le workflow `main` construit
 > un artefact isolé `_site/`, vérifie les sept routes dans quatre viewports
 > (28 passages), les liens, l'accessibilité de base et les mises à jour PWA,
 > puis le publie. `docs/` est désormais **uniquement le dossier de
@@ -9,9 +9,11 @@
 > le rollback et les statuts externes vivent dans
 > [`DEPLOIEMENT.md`](DEPLOIEMENT.md).
 
-La publication distante n'est prouvée que par un run GitHub Actions vert et
-un smoke sur <https://wonderself.github.io/trapeze/>. Ce contrôle de release
-est une opération récurrente, pas un reste de développement.
+La première preuve distante est le commit `a69e34d` et le run GitHub Actions
+`34778875942`, avec jobs `verify` et `deploy` verts, sept routes en HTTP 200
+sur <https://wonderself.github.io/trapeze/> et la 404 personnalisée confirmée.
+Ce contrôle de release reste récurrent à chaque livraison ; ce n'est plus un
+reste de développement.
 
 ## Les vrais restes
 
@@ -273,7 +275,7 @@ dans `docs/`.
 
 | Lot | État | Où |
 |---|---|---|
-| Déploiement technique GitHub Pages | ✅ | workflow `main` → `_site/`, sept routes, 404/sitemap, tests web et PWA, rollback documenté |
+| Mise en production GitHub Pages | `PASS_PRODUCTION` | `main` au commit initial `a69e34d`; run `34778875942`; sept routes HTTP 200 et 404 personnalisée vérifiées |
 | WP-0 Restructuration | ✅ | `index.html`, `trapeze-stars-v1.html`, `trapeze-stars-v2.html` |
 | WP-B V1 Classic, corrections | ✅ | les 20 défauts de l'audit sont corrigés |
 | WP-A Socle technique | ✅ | V2 : rendu responsive, pas fixe, qualité, i18n, sauvegarde |

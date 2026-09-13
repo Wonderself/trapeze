@@ -17,7 +17,7 @@ Règle d'or du projet : **tout doit rester gratuit, hors-ligne et sans dépendan
 - [x] Session 3D-8 : client leaderboard mondial Supabase avec repli LOCAL silencieux; activation distante facultative
 - [x] Identité personnages (2026-07-19) : **Marc petit, blond, natte animée** (vole en vrille, traîne en swing) ; **Claire plus grande, blond clair, cheveux longs + étoile d'or** — tailles compensées au point de prise (les mains restent sur la barre)
 - [x] PWA et caches 2D/3D fiables : service workers séparés, redéploiement et rechargement hors ligne couverts par `npm run test:sw`
-- [x] Préparation GitHub Pages : build racine vers `/3d` + `/_site`, publication de `/_site` depuis `main`; `docs/` reste exclusivement documentaire
+- [x] GitHub Pages en production : build racine vers `/3d` + `/_site`, publication de `/_site` depuis `main`; `docs/` reste exclusivement documentaire. `PASS_PRODUCTION` le 2026-09-13 (commit initial `a69e34d`, run `34778875942`)
 
 ### Jeu 2D (`2d/` — terminé, conservé)
 - [x] 4 mondes × 3 niveaux + cérémonie + finale, musique 100 % procédurale
@@ -30,9 +30,9 @@ Règle d'or du projet : **tout doit rester gratuit, hors-ligne et sans dépendan
 
 ## 🎯 Validations et décisions encore ouvertes
 
-- **Publication GitHub Pages** : préparation locale complète; confirmer le site public après commit/push sur `main` et workflow vert.
 - **QA téléphones physiques** : **NOT_RUN** sur iOS/Android réels; à planifier si Emmanuel souhaite une validation matérielle avant diffusion large.
 - **Leaderboard WORLD Supabase** : **DEFERRED_USER**. Choisir entre conserver le mode LOCAL par défaut ou fournir l'URL et la clé anon selon `game3d/SUPABASE_SETUP.md`.
+- **Miroir Coolify** : **BLOCKED_ACCESS**. Optionnel et non requis pour GitHub Pages; aucune ressource, URL, configuration TLS ou preuve publique n'est disponible.
 
 ## 💡 Futurs choix non réalisés (toujours gratuits)
 

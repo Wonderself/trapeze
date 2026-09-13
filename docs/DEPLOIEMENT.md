@@ -4,7 +4,7 @@ Dernière mise à jour : **2026-09-13**.
 
 ## État et cible
 
-- **Déploiement technique : achevé côté dépôt.** Le workflow
+- **Production : `PASS_PRODUCTION`.** Le workflow
   `.github/workflows/deploy-pages.yml` construit, vérifie et publie le site.
 - **Hébergement canonique : GitHub Pages.** URL publique :
   <https://wonderself.github.io/trapeze/>.
@@ -21,6 +21,13 @@ Dernière mise à jour : **2026-09-13**.
 Une livraison n'est `PASS_PRODUCTION` qu'après un workflow vert **et** la
 vérification des sept routes sur l'URL publique. Un build local, même vert,
 n'est pas une preuve de production.
+
+La première preuve de production a été obtenue le **2026-09-13** avec le
+commit `a69e34d95e2faa76b09ff915a179ec3ee76fff60` et le
+[run GitHub Actions 34778875942](https://github.com/Wonderself/trapeze/actions/runs/34778875942) :
+jobs `verify` et `deploy` verts, sept routes en HTTP 200 et 404 personnalisée
+confirmée. Ce statut couvre GitHub Pages; il ne prouve ni l'activation
+Supabase, ni un miroir Coolify, ni une QA sur appareils physiques.
 
 ## Configuration GitHub à conserver
 
