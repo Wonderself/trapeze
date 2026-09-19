@@ -7,7 +7,7 @@ import * as THREE from 'three';
 //  - Claire : a bit TALLER. Long bright blonde hair with a gold star, pink outfit, tutu.
 // Body parts live in an inner group scaled about the hand-grip height, so both
 // characters still grip the bar at the same point despite different sizes.
-const GRIP_Y = 1.92;
+export const GRIP_Y = 1.92;
 
 export function createHero(char) {
   const claire = char === 'claire';
@@ -144,6 +144,7 @@ export function createHero(char) {
 
   // ---- arms as shoulder pivots (default: raised toward the bar) ----
   const arms = [];
+  const hands = [];
   for (const sx of [-1, 1]) {
     const pivot = new THREE.Group();
     pivot.position.set(sx * 0.34, 1.02, 0);
@@ -159,6 +160,7 @@ export function createHero(char) {
     pivot.add(band);
     body.add(pivot);
     arms.push(pivot);
+    hands.push(hand);
   }
 
   // ---- legs (animated) ----
@@ -185,6 +187,7 @@ export function createHero(char) {
 
   g.userData.legs = legs;
   g.userData.arms = arms;
+  g.userData.hands = hands;
   g.userData.char = char;
   return g;
 }

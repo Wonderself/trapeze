@@ -59,6 +59,7 @@ function dodge(G){
 }
 
 G.startRun();
+G.press(); // Explicit first game command; the game no longer auto-runs while idle.
 const start={z:G.P.z,goal:G.goalZ};
 console.log('niveau 1 : depart z='+start.z.toFixed(0)+', arrivee z='+start.goal.toFixed(0));
 
@@ -131,6 +132,7 @@ want(G.gs==='levelend'||reached>0.95,'le niveau peut etre termine');
 // ── Phase 2 : les 12 niveaux, les 4 mondes ──
 console.log('parcours complet des 12 niveaux :');
 G.startRun();
+G.press();
 let cleared=0, lvFails=[];
 for(let lv=0;lv<12;lv++){
   let f=0, done=false;
@@ -157,6 +159,7 @@ for(let lv=0;lv<12;lv++){
   else{lvFails.push(lv+1);console.log('  niv '+(lv+1)+' ('+name+') NON termine (etat '+G.gs+', z '+G.P.z.toFixed(0)+'/'+goal.toFixed(0)+')');}
   if(G.gs==='gameover'){console.log('  partie perdue au niveau '+(lv+1));break;}
   G.nextLevel();
+  if(G.gs==='play')G.press();
   if(G.gs==='finale'){console.log('  FINAL atteint');break;}
 }
 console.log('');

@@ -65,6 +65,10 @@
     #newBest{animation:none}
   }
   .hint{margin-top:16px;font-size:12px;color:#7d6bb0;line-height:1.7}
+  #menuHint{max-width:min(730px,calc(100vw - 24px));padding:7px 10px;border:1px solid rgba(255,207,63,.3);border-radius:12px;background:rgba(10,4,26,.82);color:#eee2ff;font-size:13px;line-height:1.35}
+  #menuHint span{display:block}
+  #menuHint .help-touch{display:none}
+  @media (hover:none),(pointer:coarse){#menuHint .help-desktop{display:none}#menuHint .help-touch{display:block}}
   #bigmsg{font-size:clamp(30px,9vw,60px);font-weight:700;color:#fff}
   #bigsub{margin-top:10px;font-size:clamp(15px,4vw,20px);color:var(--gold)}
 
@@ -95,6 +99,16 @@
   #tapBtn{position:fixed;right:22px;bottom:26px;width:96px;height:96px;border-radius:50%;border:3px solid rgba(255,215,60,.85);background:radial-gradient(circle at 38% 32%,rgba(255,235,120,.55),rgba(255,140,0,.5));color:#fff;font-size:15px;font-weight:700;display:none;align-items:center;justify-content:center;z-index:6;box-shadow:0 0 34px rgba(255,180,20,.6);touch-action:manipulation}
   #tapBtn:active{transform:scale(.9)}
   @media (hover:none),(pointer:coarse){ #tapBtn.on{display:flex} }
+  #pauseBtn{position:fixed;left:120px;bottom:18px;z-index:12;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.4);background:rgba(14,5,32,.78);color:#fff;font-size:19px;cursor:pointer;backdrop-filter:blur(4px)}
+  #pauseBtn:active{transform:scale(.9)}
+  #timingCue{position:fixed;left:50%;bottom:25px;transform:translateX(-50%);z-index:6;display:none;padding:7px 14px;border-radius:999px;background:rgba(10,4,26,.78);border:1px solid rgba(255,255,255,.28);color:#ffe9a8;font-size:12px;font-weight:700;letter-spacing:1px;text-align:center;pointer-events:none;white-space:nowrap}
+  #timingCue.ready{border-color:var(--gold);color:#fff;box-shadow:0 0 18px rgba(255,207,63,.55)}
+  .help-touch{display:none}
+  @media (hover:none),(pointer:coarse){.help-touch{display:block}.help-desktop{display:none}#timingCue{bottom:135px}}
+  #pauseTitle{font-size:clamp(34px,9vw,60px);color:var(--gold)}
+  #pauseHelp{max-width:520px;margin:24px 0 16px;padding:16px 22px;border:1px solid rgba(255,207,63,.35);border-radius:18px;background:rgba(10,4,26,.75);color:#e8dcff;font-size:clamp(15px,3vw,18px);line-height:1.55}
+  #pauseHelp p+p{margin-top:10px}
+  #pauseHelp strong{color:var(--gold)}
   #flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:8}
 
   /* ---- worlds ---- */
@@ -169,6 +183,7 @@
     #dailyBtn{margin-top:3px;padding:6px 20px;font-size:13px}
     #dailyBest{margin-top:2px;font-size:9px}
     .hint{margin-top:4px;font-size:9px;line-height:1.25}
+    #menuHint{font-size:12px;line-height:1.25;padding:5px 8px}
   }
   @media (max-width:480px) and (orientation:portrait){
     #menuBoard{left:50%;right:auto;top:clamp(150px,22vh,185px);transform:translateX(-50%);width:min(208px,calc(100vw - 32px));max-height:90px;overflow:auto;z-index:11}
@@ -185,7 +200,7 @@
 </style>
 </head>
 <body>
-<div id="app"></div>
+<div id="app" tabindex="-1"></div>
 
 <div id="hud">
   <div><div id="score">0<small>SCORE</small></div><div id="worldTag">CIRCUS</div></div>
@@ -198,11 +213,12 @@
 <div id="grade"></div>
 <div id="comboHold"><span>COMBO x2</span><div id="comboBar"><div id="comboFill"></div></div></div>
 <div id="flash"></div>
-<button id="tapBtn" aria-label="Hold to grip and pump; release at the top to fly; tap in the air to flip">✊</button>
+<button id="tapBtn" aria-label="Hold to pump the swing, release while moving forward to fly, tap in the air to flip">HOLD</button>
+<div id="timingCue" aria-hidden="true">HOLD TO PUMP</div>
 
 <div id="menu" class="screen">
   <div class="menuTop">
-    <a class="versions-link" data-versions-link href="../" aria-label="Toutes les versions de Trapeze Stars">← Toutes les versions</a>
+    <a class="versions-link" data-versions-link href="../" aria-label="All versions of Trapeze Stars">← All versions</a>
     <div id="title">TRAPEZE<br>STARS</div>
     <div id="subtitle">Starring&nbsp; MARC &amp; CLAIRE</div>
     <div id="dedication">★ young champions ★</div>
@@ -216,9 +232,26 @@
     <button class="btn" id="playBtn">▶ PLAY</button>
     <button class="btn ghost" id="dailyBtn">📅 DAILY</button>
     <div id="dailyBest"></div>
-    <div id="menuHint" class="hint"><b>Hold</b> to grip &amp; pump your swing — <b>let go</b> at the top to fly!<br>Tap in the air for a <b>FLIP</b> bonus. Space / gamepad <b>A</b> also work.</div>
+    <div id="menuHint" class="hint">
+      <span class="help-desktop"><b>Mouse / Space:</b> hold to pump; release forward when the cue glows; press midair to flip.</span>
+      <span class="help-touch"><b>Touch:</b> hold the big button; release on the glowing cue; tap midair to flip.</span>
+      <span><b>Gamepad:</b> hold A; Start pauses. First miss per world is saved by the net.</span>
+    </div>
   </div>
   <div id="menuBoard" class="board"></div>
+</div>
+
+<div id="pause" class="screen hidden" role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
+  <h2 id="pauseTitle">PAUSED</h2>
+  <div id="pauseHelp">
+    <p class="help-desktop"><strong>Mouse or Space:</strong> hold to pump your swing. Release while moving forward when the cue glows. Press again in the air to flip.</p>
+    <p class="help-touch"><strong>Touch:</strong> hold the big HOLD button. Release when the cue glows. Tap it again in the air to flip.</p>
+    <p><strong>Gamepad:</strong> hold and release A; Start pauses. The first missed jump in each world is caught by the net.</p>
+    <p class="help-desktop"><strong>Pause:</strong> Escape or the pause button.</p>
+    <p class="help-touch"><strong>Pause:</strong> tap the pause button at bottom left.</p>
+  </div>
+  <button class="btn" id="resumeBtn">▶ RESUME</button>
+  <button class="btn ghost" id="pauseMenuBtn">MENU</button>
 </div>
 
 <div id="over" class="screen hidden">
@@ -252,6 +285,7 @@
 <button id="muteBtn" aria-label="Sound on/off">🔊</button>
 <button id="fxBtn" aria-label="Reduce flashes" aria-pressed="false">✨</button>
 <button id="introBtn" aria-label="Replay intro">🎬</button>
+<button id="pauseBtn" class="hidden" aria-label="Pause game">Ⅱ</button>
 
 <script type="module" src="./src/main.js"></script>
 </body>

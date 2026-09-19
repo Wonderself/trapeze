@@ -52,6 +52,7 @@ jobs:
       - name: Check pages, responsive layout and service-worker upgrades
         run: |
           npm run test:site
+          npm run test:controls
           npm run test:sw
       - name: Check full Three.js game flow
         run: node game3d/test/smoke3d.mjs
@@ -69,6 +70,7 @@ jobs:
     needs: verify
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       pages: write
       id-token: write
     environment:
@@ -78,3 +80,6 @@ jobs:
       - name: Deploy GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+      - uses: actions/checkout@v7
+      - name: Verify public site from GitHub runner
+        run: node tools/public_smoke.mjs https://wonderself.github.io/trapeze/

@@ -1,24 +1,23 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * net-config.js — LE SEUL FICHIER À ÉDITER pour allumer le leaderboard mondial.
+ * net-config.js — THE ONLY FILE TO EDIT to enable the worldwide leaderboard.
  *
- * 👉 Mode d'emploi complet (5 min, 0 €) : voir game3d/SUPABASE_SETUP.md
+ * 👉 Full setup guide (about five minutes): see game3d/SUPABASE_SETUP.md
  *
- * En deux mots :
- *   1. Crée un projet Supabase gratuit (https://supabase.com — sans carte bancaire).
- *   2. Colle le script SQL fourni dans SUPABASE_SETUP.md (table `scores` + RLS).
- *   3. Récupère dans Settings → API :
- *        - Project URL   → SUPABASE_URL   (ex. 'https://abcdefgh.supabase.co')
- *        - anon public   → SUPABASE_ANON_KEY (longue chaîne 'eyJ...')
- *   4. Colle-les ci-dessous, puis lance `npm run verify:deploy` à la racine.
- *      Le workflow GitHub Pages publie ensuite l'artefact `_site/` depuis `main`.
+ * In short:
+ *   1. Create a Supabase project (https://supabase.com).
+ *   2. Run the SQL in SUPABASE_SETUP.md (`scores` table and RLS).
+ *   3. In Settings → API, copy:
+ *        - Project URL   → SUPABASE_URL   (e.g. 'https://abcdefgh.supabase.co')
+ *        - anon public   → SUPABASE_ANON_KEY (the long 'eyJ...' string)
+ *   4. Paste both below, then run `npm run verify:deploy` at the repository root.
+ *      The GitHub Pages workflow publishes `_site/` from `main`.
  *
- * La clé « anon » est PUBLIQUE PAR CONCEPTION : elle finit toujours dans le
- * code client, et la sécurité est assurée côté serveur par la Row Level
- * Security (la table n'accepte que INSERT/SELECT anonymes, avec des bornes).
+ * The anon key is PUBLIC BY DESIGN: it is included in the client bundle.
+ * Server-side Row Level Security enforces anonymous INSERT/SELECT limits.
  *
- * Tant que ces deux valeurs sont vides, le jeu se comporte exactement comme
- * aujourd'hui : top-10 local (localStorage), zéro requête réseau.
+ * While both values remain empty, the game uses its local top 10
+ * (localStorage) and makes no leaderboard network requests.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-export const SUPABASE_URL = '';        // ex. 'https://abcdefgh.supabase.co'
-export const SUPABASE_ANON_KEY = '';   // clé « anon public » (sûre à embarquer)
+export const SUPABASE_URL = '';        // e.g. 'https://abcdefgh.supabase.co'
+export const SUPABASE_ANON_KEY = '';   // public anon key (safe to embed)

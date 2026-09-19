@@ -1,6 +1,6 @@
 # Déploiement — GitHub Pages et miroir Coolify
 
-Dernière mise à jour : **2026-09-14**.
+Dernière mise à jour : **2026-09-19**.
 
 ## État et cible
 
@@ -38,6 +38,12 @@ La release du sélecteur des cinq versions est en production depuis le
 avec le
 [run GitHub Actions 34783583874](https://github.com/Wonderself/trapeze/actions/runs/34783583874)
 vert et les sept routes publiques de nouveau vérifiées.
+
+La release du **2026-09-19** conserve les cinq choix visibles, rend l'interface
+publique entièrement anglaise et ajoute des guides de commande distincts selon
+l'appareil, y compris sur l'écran de pause. Les contrôles locaux sont verts ;
+son statut cible doit être établi par le nouveau job de vérification externe
+GitHub Pages et par un redéploiement manuel de la ressource Coolify existante.
 
 ## Configuration GitHub à conserver
 
@@ -125,6 +131,10 @@ npx --prefix tools playwright-core install --with-deps chromium
   844×390 et 1280×720), soit 28 contrôles ; zéro erreur JS, débordement,
   contrôle tactile coupé, lien interne cassé, ressource interne en échec ou
   dépendance réseau tierce ; métadonnées, image 1200×630, sitemap et vraie 404 ;
+- `npm run test:controls` : parcours clavier/tactile ciblés de Classic,
+  Deluxe, City et Circus Alzahir ; guides de démarrage/pause, attente sans
+  progression avant la première action, pause d'inactivité et trois tailles
+  tactiles ;
 - `npm run test:sw` : migration des anciens caches publiés, redéploiement avec
   nouveau hash, rechargement en ligne et hors ligne, et coexistence des caches
   2D/3D.
@@ -164,7 +174,10 @@ doit conserver `npm run test:sw` vert.
 2. Exiger le job `verify` vert.
 3. Fusionner ou pousser le commit validé sur `main`.
 4. Attendre le job `deploy` et relever le SHA ainsi que l'URL du run.
-5. Vérifier les sept routes publiques et la 404 personnalisée.
+5. Vérifier les sept routes publiques et la 404 personnalisée. Le job `deploy`
+   exécute désormais `tools/public_smoke.mjs` depuis son runner extérieur :
+   chaque page, le bundle 3D et les deux service workers doivent répondre avec
+   le contenu exact du checkout publié, pas seulement avec un code 200.
 
 Commandes de contrôle :
 

@@ -7,7 +7,10 @@ export function createStage(container) {
   // preserveDrawingBuffer: needed so canvas.toBlob() (photo-finish capture) can read back
   // the frame right after it's rendered, instead of a possibly-cleared buffer.
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  // A lower fill-rate cap on touch devices keeps bloom/shadows responsive on
+  // high-DPI phones without changing the desktop presentation.
+  const touchScreen = matchMedia('(hover: none), (pointer: coarse)').matches;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, touchScreen ? 1.5 : 2));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;

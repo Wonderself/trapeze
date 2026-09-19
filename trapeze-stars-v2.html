@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#05010f">
-<meta name="description" content="Trapeze Stars Deluxe — un jeu de trapèze en perspective 3D, jouable au clavier et au tactile.">
+<meta name="description" content="Trapeze Stars Deluxe — a perspective trapeze game for keyboard and touch.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
 <title>Trapeze Stars — Deluxe</title>
 <style>
@@ -113,19 +113,19 @@ body.touch #pad.on{display:block;}
 <body>
 <div id="stage">
   <canvas id="cv"></canvas>
-  <a class="versions-link" data-versions-link href="./" aria-label="Toutes les versions de Trapeze Stars">← Toutes les versions</a>
-  <button class="sysbtn" id="btnBack" aria-label="Retour au menu">←</button>
+  <a class="versions-link" data-versions-link href="./" aria-label="All versions of Trapeze Stars">← All versions</a>
+  <button class="sysbtn" id="btnBack" aria-label="Back to menu">←</button>
   <button class="sysbtn" id="btnPause" aria-label="Pause">❚❚</button>
-  <button class="sysbtn" id="btnFull" aria-label="Plein écran">⛶</button>
+  <button class="sysbtn" id="btnFull" aria-label="Fullscreen">⛶</button>
   <div id="pad">
     <div class="tz" id="tzMove"></div>
     <div class="tz" id="tzAct"></div>
-    <button class="btn" id="bL" aria-label="Aller à gauche"><span class="ico">◀</span></button>
-    <button class="btn" id="bR" aria-label="Aller à droite"><span class="ico">▶</span></button>
-    <button class="btn" id="bTrick" aria-label="Figure ou pompage"><span class="ico">🌀</span><span class="lbl" id="lblTrick">FIGURE</span></button>
-    <button class="btn" id="bAct" aria-label="Action principale"><span class="ico">⚡</span><span class="lbl" id="lblAct">SAUTER</span></button>
+    <button class="btn" id="bL" aria-label="Move left"><span class="ico">◀</span></button>
+    <button class="btn" id="bR" aria-label="Move right"><span class="ico">▶</span></button>
+    <button class="btn" id="bTrick" aria-label="Trick or pump"><span class="ico">🌀</span><span class="lbl" id="lblTrick">TRICK</span></button>
+    <button class="btn" id="bAct" aria-label="Main action"><span class="ico">⚡</span><span class="lbl" id="lblAct">JUMP</span></button>
   </div>
-  <div id="rotate"><div class="g">📱</div><div id="rotateTxt">Tournez l'appareil pour une vue plus large</div></div>
+  <div id="rotate"><div class="g">📱</div><div id="rotateTxt">Rotate your device for a wider view</div></div>
 </div>
 <script>
 /* ══════════════════════════════════════════════════════════════════════
@@ -202,31 +202,9 @@ const CFG={
 const VW=1280, VH=720;
 
 /* ─────────────────────────────────────────────────────────────
-   2. INTERNATIONALISATION
+   2. GAME COPY
    ───────────────────────────────────────────────────────────── */
 const I18N={
-  fr:{
-    play:'JOUER', resume:'REPRENDRE', restart:'RECOMMENCER', menu:'MENU',
-    paused:'PAUSE', gameover:'PARTIE TERMINÉE', levelDone:'NIVEAU RÉUSSI',
-    score:'Score', best:'Record', level:'Niveau', lives:'Vies',
-    heat:'Public', bank:'Cagnotte', tricks:'Figures', newBest:'Nouveau record !',
-    tapStart:'Touchez pour commencer', pressStart:'Espace pour commencer',
-    tapCont:'Touchez pour continuer', pressCont:'Espace pour continuer',
-    chooseChar:'Choisissez votre artiste', settings:'Réglages', levels:'Niveaux',
-    selectLevel:'Choisir un niveau', locked:'Verrouillé',
-    jump:'SAUTER', release:'LÂCHER', grab:'SAISIR', pump:'POMPER',
-    trick:'FIGURE', catcher:'PORTEUR !', giant:'GRAND SOLEIL !',
-    perfect:'PARFAIT !', good:'BIEN', net:'FILET', ovation:'OVATION !',
-    ola:'OLA !', combo:'ENCHAÎNEMENT', rotateHint:"Tournez l'appareil pour une vue plus large",
-    tutJump:'Sautez pour vous élancer', tutGrab:'Saisissez la barre',
-    tutPump:'Pompez en bas de l’arc pour prendre de l’ampleur',
-    tutPumpGuide:'Pompez en bas de l’arc — suivez la ligne pointillée pour viser votre lâcher',
-    tutRelease:'Lâchez au bon moment', tutTrick:'Enchaînez des figures en vol',
-    music:'Musique', sfx:'Effets', quality:'Qualité', lang:'Langue', speed:'Vitesse du jeu',
-    vibrate:'Vibrations', guide:'Guide de trajectoire', back:'Retour',
-    low:'Basse', med:'Moyenne', high:'Haute', on:'Oui', off:'Non',
-    world:['Cirque','Jungle','Plage','Futur'],
-  },
   en:{
     play:'PLAY', resume:'RESUME', restart:'RESTART', menu:'MENU',
     paused:'PAUSED', gameover:'GAME OVER', levelDone:'LEVEL CLEARED',
@@ -244,14 +222,13 @@ const I18N={
     tutPump:'Pump at the bottom of the arc to build height',
     tutPumpGuide:'Pump at the bottom of the arc — follow the dotted line to aim your release',
     tutRelease:'Release at the right moment', tutTrick:'Chain tricks in the air',
-    music:'Music', sfx:'Effects', quality:'Quality', lang:'Language', speed:'Game speed',
+    music:'Music', sfx:'Effects', quality:'Quality', speed:'Game speed',
     vibrate:'Vibration', guide:'Trajectory guide', back:'Back',
     low:'Low', med:'Medium', high:'High', on:'On', off:'Off',
     world:['Circus','Jungle','Beach','Future'],
   },
 };
-let LANG='fr';
-function t(k){const d=I18N[LANG]||I18N.fr;return d[k]!==undefined?d[k]:(I18N.fr[k]!==undefined?I18N.fr[k]:k);}
+function t(k){const d=I18N.en;return d[k]!==undefined?d[k]:k;}
 
 /* ─────────────────────────────────────────────────────────────
    3. SAUVEGARDE
@@ -260,7 +237,7 @@ function t(k){const d=I18N[LANG]||I18N.fr;return d[k]!==undefined?d[k]:(I18N.fr[
 const SAVE_KEY='trapeze.v2.save';
 const DEFAULT_SAVE={
   schema:1, best:0, bestLevel:{}, bestStars:{}, unlocked:1, char:'marc',
-  lang:null, quality:null, music:0.6, sfx:0.75, vibrate:true, guide:true, seen:{},
+  quality:null, music:0.6, sfx:0.75, vibrate:true, guide:true, seen:{},
   speed:1,
 };
 let SV=Object.assign({},DEFAULT_SAVE);
@@ -278,8 +255,7 @@ function persist(){
   setTimeout(()=>{saveQueued=false;
     try{localStorage.setItem(SAVE_KEY,JSON.stringify(SV));}catch(e){}},260);
 }
-loadSave();
-LANG=SV.lang||((navigator.language||'fr').slice(0,2)==='en'?'en':'fr');
+loadSave(); // Old language preferences are ignored; game copy is English-only.
 
 /* ─────────────────────────────────────────────────────────────
    4. VIEWPORT
@@ -815,6 +791,10 @@ function buildLevel(world,lv){
    11. ÉTAT DE JEU
    ───────────────────────────────────────────────────────────── */
 let gs='menu';               // menu | play | pause | levelend | gameover | finale | settings
+let hasPlayedInput=false;    // no automatic forward movement before the first game command
+let lastGameplayInputAt=0;
+const IDLE_PAUSE_MS=15000;
+function noteGameplayInput(){hasPlayedInput=true;lastGameplayInputAt=Date.now();}
 let score=0, lives=3, level=0, world=0, sub=1;
 let dda=0, deaths=0, runDeaths=0, netFalls=0;
 let heat=0, heatTier=0, ovation=0, olaT=0, clapT=0;
@@ -935,12 +915,12 @@ function pressAction(){
     if(levelSelIdx+1<=SV.unlocked)startAtLevel(levelSelIdx);
     return;
   }
-  if(gs==='play')P.jumpBuf=CFG.JUMP_BUF;
+  if(gs==='play'){noteGameplayInput();P.jumpBuf=CFG.JUMP_BUF;}
 }
 function releaseAction(){P.jumpHeld=false;}
 function pressTrick(){
   audioResume();
-  if(gs==='play')P.trickBuf=CFG.GRAB_BUF;
+  if(gs==='play'){noteGameplayInput();P.trickBuf=CFG.GRAB_BUF;}
   else pressAction();
 }
 function releaseTrick(){P.trickHeld=false;}
@@ -949,7 +929,7 @@ addEventListener('keydown',e=>{
   const k=e.key.length===1?e.key.toLowerCase():e.key;
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();
   if(e.repeat)return;
-  KEY[k]=true;
+  KEY[k.toLowerCase()]=true;
 
   // Écrans de navigation : réglages et sélection de niveau ont leurs
   // propres flèches, distinctes du déplacement en jeu.
@@ -985,7 +965,7 @@ addEventListener('keydown',e=>{
 });
 addEventListener('keyup',e=>{
   const k=e.key.length===1?e.key.toLowerCase():e.key;
-  KEY[k]=false;
+  KEY[k.toLowerCase()]=false;
   if(k===' '||k==='ArrowUp'||k==='w'||k==='z')releaseAction();
   if(k==='Shift'||k==='f'||k==='ArrowDown'||k==='x')releaseTrick();
 });
@@ -1001,8 +981,8 @@ function bindBtn(id,down,up){
   el.addEventListener('pointerleave',uf);
   return el;
 }
-bindBtn('bL',()=>{mLeft=true;},()=>{mLeft=false;});
-bindBtn('bR',()=>{mRight=true;},()=>{mRight=false;});
+bindBtn('bL',()=>{mLeft=true;if(gs==='play')noteGameplayInput();},()=>{mLeft=false;});
+bindBtn('bR',()=>{mRight=true;if(gs==='play')noteGameplayInput();},()=>{mRight=false;});
 const elAct=bindBtn('bAct',()=>{P.jumpHeld=true;pressAction();},releaseAction);
 const elTrick=bindBtn('bTrick',()=>{P.trickHeld=true;pressTrick();},releaseTrick);
 
@@ -1090,7 +1070,7 @@ function updateSwing(){
       P.pumped++;P.pumpFlash=16;
       sfx('pump');vibrate([6]);addHeat(2.2);
       sparkRing(P.x,P.y,P.z,TH.accent,8);
-      if(P.pumped===3)ftext(P.x,P.y+70,P.z,'RYTHME',TH.accent,24);
+      if(P.pumped===3)ftext(P.x,P.y+70,P.z,'RHYTHM',TH.accent,24);
     } else {
       P.angV*=CFG.PUMP_LOSS;
       P.pumpFlash=-10;
@@ -1241,6 +1221,7 @@ function startRun(){
   TH=THEMES[0];
   buildLevel(0,1);
   spawnPlayer();
+  hasPlayedInput=false;
   tutStep=SV.seen.tut?0:1;tutTimer=260;
   gs='play';
   musicPlay(0);
@@ -1251,7 +1232,7 @@ function toMenu(){
 }
 function togglePause(){
   if(gs==='play'){gs='pause';musicStop();}
-  else if(gs==='pause'){gs='play';audioResume();musicPlay(world);}
+  else if(gs==='pause'){gs='play';lastGameplayInputAt=Date.now();audioResume();musicPlay(world);}
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -1290,7 +1271,6 @@ function cycleSpeed(dir){
   const i=clamp(SPEED_OPTS.indexOf(SV.speed||1)+dir,0,SPEED_OPTS.length-1);
   SV.speed=SPEED_OPTS[i];persist();sfx('ui');
 }
-function setLang(l){LANG=l;SV.lang=l;persist();sfx('ui');}
 function stepVol(bus,d){
   const cur=bus==='music'?SV.music:SV.sfx;
   setVol(bus,clamp(Math.round((cur+d)*20)/20,0,1));sfx('ui');
@@ -1305,8 +1285,6 @@ function settingsRows(){
      left:()=>stepVol('music',-0.15),right:()=>stepVol('music',0.15)},
     {label:t('sfx'),val:()=>Math.round(SV.sfx*100)+'%',
      left:()=>stepVol('sfx',-0.15),right:()=>stepVol('sfx',0.15)},
-    {label:t('lang'),val:()=>LANG.toUpperCase(),
-     left:()=>setLang(LANG==='fr'?'en':'fr'),right:()=>setLang(LANG==='fr'?'en':'fr')},
     {label:t('quality'),val:()=>t(QUAL.name==='med'?'med':QUAL.name),
      left:()=>cycleQuality(-1),right:()=>cycleQuality(1)},
     {label:t('speed'),val:()=>Math.round((SV.speed||1)*100)+'%',
@@ -1318,6 +1296,8 @@ function settingsRows(){
   ];
 }
 function spawnPlayer(){
+  hasPlayedInput=false;
+  lastGameplayInputAt=Date.now();
   P.x=0;P.y=CFG.PEDESTAL;P.z=-120;
   P.vx=0;P.vy=0;P.vz=CFG.FWD_BASE;
   P.state='air';P.bar=null;P.catcher=null;P.catchT=0;
@@ -1344,6 +1324,13 @@ function duckMusic(down){
 }
 function step(){
   frame++;
+  if(!hasPlayedInput){
+    if(mLeft||mRight||P.jumpBuf>0||P.trickBuf>0||KEY['arrowleft']||KEY['arrowright']||KEY['a']||KEY['d']||KEY['q'])noteGameplayInput();
+    else return;
+  }
+  if(mLeft||mRight||P.jumpHeld||P.trickHeld||P.jumpBuf>0||P.trickBuf>0||
+     KEY['arrowleft']||KEY['arrowright']||KEY['a']||KEY['d']||KEY['q'])lastGameplayInputAt=Date.now();
+  else if(Date.now()-lastGameplayInputAt>=IDLE_PAUSE_MS){togglePause();return;}
   if(hitStop>0){hitStop--;duckMusic(true);updateParts();updateFText();return;}
   duckMusic(false);
 
@@ -2526,6 +2513,15 @@ function drawHUD(){
    Aucun écran n'est un cul-de-sac : tous offrent une sortie.
    ───────────────────────────────────────────────────────────── */
 let menuT=0;
+function drawControlGuide(y,atMenu){
+  const cx=SW*0.5;
+  const x=atMenu&&!portrait?18*uiScale:cx;
+  const align=atMenu&&!portrait?'left':'center';
+  const first=isTouch?'◀ ▶ MOVE  ·  ⚡ JUMP / GRAB / RELEASE':'← → MOVE  ·  SPACE JUMP / GRAB / RELEASE';
+  const second=isTouch?'🌀 PUMP / TRICK  ·  ❚❚ PAUSE':'SHIFT PUMP / TRICK  ·  P PAUSE';
+  outlineText(first,x,y,11,'rgba(230,240,255,0.92)',800,align);
+  outlineText(second,x,y+18*uiScale,11,'rgba(230,240,255,0.82)',700,align);
+}
 function drawMenuBackdrop(){
   menuT++;
   const g=CX.createLinearGradient(0,0,0,SH);
@@ -2567,6 +2563,7 @@ function drawMenu(){
   outlineText('STARS',0,(portrait?40:50)*uiScale,portrait?34:44,'#FF7BA8',900);
   CX.restore();
   outlineText('D E L U X E',cx,titleY+(portrait?76:92)*uiScale,13,'rgba(255,255,255,0.55)',700);
+  drawControlGuide(SH*(portrait?0.32:0.22),true);
 
   // Choix du personnage
   outlineText(t('chooseChar'),cx,SH*(portrait?0.42:0.44),14,'rgba(255,255,255,0.7)',700);
@@ -2644,17 +2641,18 @@ function drawPauseScreen(){
   outlineText(t('paused'),cx,SH*0.36,40,TH.reward,900);
   outlineText(t('score')+' '+score,cx,SH*0.47,20,'#FFF',800);
   outlineText(t('level')+' '+(level+1)+' · '+t('world')[world],cx,SH*0.53,15,'rgba(255,255,255,0.65)',700);
+  drawControlGuide(SH*0.61,false);
   const pulse=0.65+0.35*Math.sin(frame*0.09);
   CX.globalAlpha=pulse;
-  outlineText(isTouch?t('tapCont'):t('pressCont'),cx,SH*0.64,16,TH.accent,800);
+  outlineText(isTouch?t('tapCont'):t('pressCont'),cx,SH*0.76,16,TH.accent,800);
   CX.globalAlpha=1;
   // Bouton réglages : la pause est le seul autre point d'entrée.
-  const sw2=130*uiScale,sh2=38*uiScale,sy=SH*0.72;
+  const sw2=130*uiScale,sh2=38*uiScale,sy=SH*0.85;
   CX.strokeStyle='rgba(255,255,255,0.35)';CX.lineWidth=1.6;
   CX.beginPath();CX.roundRect(cx-sw2/2,sy-sh2/2,sw2,sh2,sh2*0.5);CX.stroke();
   outlineText('⚙ '+t('settings'),cx,sy,14,'rgba(255,255,255,0.75)',700);
   zone(cx-sw2/2,sy-sh2/2,sw2,sh2,openSettings);
-  outlineText('M · '+t('music')+'   ·   P · '+t('paused'),cx,SH-30*uiScale,12,'rgba(255,255,255,0.4)',600);
+  outlineText('M · '+t('music')+'   ·   P · '+t('paused'),cx,SH-18*uiScale,11,'rgba(255,255,255,0.4)',600);
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -2778,7 +2776,7 @@ function drawLevelEnd(){
     if(got&&pop===1&&endTimer===34+i*26+12){sfx('hoop');confetti(P.x,P.y+60,P.z,10);}
   }
   outlineText(t('score')+' : '+score,cx,SH*0.56,22,'#FFF',800);
-  const crit=['Terminer le niveau','Aucune chute','Score élevé'];
+  const crit=['Finish the level','No falls','High score'];
   for(let i=0;i<3;i++){
     CX.globalAlpha=i<endStars?0.9:0.4;
     outlineText((i<endStars?'✓ ':'· ')+crit[i],cx,SH*0.63+i*17*uiScale,12,

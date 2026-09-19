@@ -143,6 +143,66 @@ try {
     }; chk();
   }));
 
+  // Normal inactivity must never start an unsolicited automated loop.
+  results.u_idleMenu = await page.evaluate(() => new Promise((res) => {
+    window.__game.toMenu();
+    window.__game.idleForTest(25);
+    requestAnimationFrame(() => res({ mode: window.__game.state().mode, attract: window.__game.attract().active }));
+  }));
+
+  // Space must retain native keyboard activation on menu buttons.
+  await page.focus('#playBtn');
+  await page.keyboard.press('Space');
+  results.u_menuSpace = await page.evaluate(() => window.__game.state().mode);
+  await page.evaluate(() => window.__game.toMenu());
+
+  // Real pause controls freeze the game; idle play pauses instead of looping.
+  await page.evaluate(() => window.__game.start('marc'));
+  await page.click('#pauseBtn');
+  const pausedBefore = await page.evaluate(() => window.__game.state());
+  await page.waitForTimeout(320);
+  results.u_pause = await page.evaluate((before) => {
+    const after = window.__game.state();
+    return { mode: after.mode, visible: !document.getElementById('pause').classList.contains('hidden'),
+      frozen: after.t === before.t && after.theta === before.theta && after.score === before.score,
+      help: document.getElementById('pauseHelp').textContent.includes('Mouse or Space') && document.getElementById('pauseHelp').textContent.includes('Touch') };
+  }, pausedBefore);
+  await page.setViewportSize({ width: 320, height: 568 });
+  results.u_pause320 = await page.evaluate(() => {
+    const top = document.getElementById('pauseTitle').getBoundingClientRect();
+    const help = document.getElementById('pauseHelp').getBoundingClientRect();
+    const resume = document.getElementById('resumeBtn').getBoundingClientRect();
+    const menu = document.getElementById('pauseMenuBtn').getBoundingClientRect();
+    return { top: top.top, helpRight: help.right, resumeBottom: resume.bottom, menuBottom: menu.bottom,
+      viewportW: innerWidth, viewportH: innerHeight };
+  });
+  await page.setViewportSize({ width: 960, height: 560 });
+  await page.click('#resumeBtn');
+  results.u_resume = await page.evaluate(() => ({ mode: window.__game.state().mode, hidden: document.getElementById('pause').classList.contains('hidden') }));
+  await page.evaluate(() => window.__game.idleForTest(25));
+  await page.waitForFunction(() => window.__game.state().mode === 'paused', null, { timeout: 2500 });
+  results.u_idlePlay = await page.evaluate(() => ({ mode: window.__game.state().mode, title: document.getElementById('pauseTitle').textContent }));
+  await page.evaluate(() => { window.__game.toMenu(); window.__game.start('marc'); window.__game.warp(5); });
+  await page.waitForTimeout(130);
+  results.u_rig = await page.evaluate(() => window.__game.rig());
+  await capture(`${OUT}/3d-rig-angled.png`);
+  await page.evaluate(() => window.__game.toMenu());
+
+  // A finger lifted just at the forward apex gets GOOD, not an unfair fumble.
+  results.u_apex = await page.evaluate(() => new Promise((res) => {
+    window.__game.start('marc'); window.__game.down();
+    const deadline = performance.now() + 9000;
+    const check = () => {
+      const s = window.__game.state();
+      if (s.state === 'swing' && s.theta > 0.62 * s.amp && s.omega > -0.25 && s.omega <= 0.35) {
+        window.__game.up();
+        return res({ grade: window.__game.state().grade, state: window.__game.state().state });
+      }
+      if (performance.now() > deadline) return res({ timeout: true, state: s.state });
+      requestAnimationFrame(check);
+    }; check();
+  }));
+
   // ---- (a) release at the ideal moment -> PERFECT ----
   await page.evaluate(() => window.__game.start('claire'));
   await page.waitForTimeout(300);
@@ -442,6 +502,17 @@ try {
              && !results.n_intro.activeAfter && results.n_intro.menuVisible && results.n_intro.logoHidden)) code = 23;  // cinematic intro plays & is skippable
   else if (!(results.o_attract && results.o_attract.started && results.o_attract.barShown
              && !results.o_attract.activeAfter && results.o_attract.modeAfter === 'menu' && !results.o_attract.barAfter)) code = 24;  // attract mode starts, any key exits
+  else if (!(results.u_idleMenu && results.u_idleMenu.mode === 'menu' && !results.u_idleMenu.attract)) code = 31;
+  else if (results.u_menuSpace !== 'playing') code = 32;
+  else if (!(results.u_pause && results.u_pause.mode === 'paused' && results.u_pause.visible && results.u_pause.frozen && results.u_pause.help)) code = 33;
+  else if (!(results.u_pause320 && results.u_pause320.top >= 0 && results.u_pause320.helpRight <= results.u_pause320.viewportW && results.u_pause320.resumeBottom <= results.u_pause320.viewportH && results.u_pause320.menuBottom <= results.u_pause320.viewportH)) code = 37;
+  else if (!(results.u_resume && results.u_resume.mode === 'playing' && results.u_resume.hidden)) code = 34;
+  else if (!(results.u_idlePlay && results.u_idlePlay.mode === 'paused' && results.u_idlePlay.title === 'TAKE YOUR TIME')) code = 35;
+  else if (!(results.u_rig && results.u_rig.ropes === 2 && results.u_rig.anchors === 2 && results.u_rig.barHorizontal && results.u_rig.handGap === 0
+             && Math.abs(results.u_rig.theta) > 0.3 && results.u_rig.gripGap < 0.02 && results.u_rig.handSpan < 0.75
+             && results.u_rig.wireGap < 0.02 && Math.abs(results.u_rig.ropeAngle - results.u_rig.theta) < 0.15
+             && results.u_rig.mastZ <= -8)) code = 36;
+  else if (!(results.u_apex && results.u_apex.grade === 'good' && results.u_apex.state === 'fly')) code = 38;
   else if (!(results.p_daily1 && results.p_daily2 && results.p_daily1.active && results.p_daily2.active
              && results.p_daily1.seed === results.p_daily2.seed
              && JSON.stringify(results.p_daily1.bars) === JSON.stringify(results.p_daily2.bars)

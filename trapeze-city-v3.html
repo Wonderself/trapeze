@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0a0418">
-<meta name="description" content="Trapeze City — le trapèze sur les toits d'une ville néon. Sept rigs, trois actes, une traversée en direct.">
+<meta name="description" content="Trapeze City — rooftop trapeze across a neon city. Seven rigs, three acts, one live crossing.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌃</text></svg>">
 <title>Trapeze City</title>
 <style>
@@ -32,10 +32,11 @@ canvas{display:block;position:absolute;inset:0;width:100%;height:100%;touch-acti
 }
 .sysbtn:active{transform:scale(0.93);}
 #btnFull{top:calc(env(safe-area-inset-top,0px) + 10px);right:calc(env(safe-area-inset-right,0px) + 10px);}
+#btnPause{display:none;top:calc(env(safe-area-inset-top,0px) + 10px);right:calc(env(safe-area-inset-right,0px) + 56px);}
 .versions-link{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);left:50%;z-index:10000;min-height:36px;padding:0 12px;border:1px solid rgba(255,197,61,.44);border-radius:999px;background:rgba(10,4,24,.74);color:#FFE58A;font:700 12px/1 Avenir,sans-serif;text-decoration:none;display:flex;align-items:center;justify-content:center;white-space:nowrap;transform:translateX(-50%);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .versions-link:hover,.versions-link:active{background:rgba(255,197,61,.22);color:#fff}
 .sysbtn:focus-visible,.versions-link:focus-visible{outline:3px solid #FFC53D;outline-offset:2px}
-@media(hover:none),(pointer:coarse){.versions-link{min-height:44px;top:calc(env(safe-area-inset-top,0px) + 6px)}}
+@media(hover:none),(pointer:coarse){.versions-link{min-height:44px;top:calc(env(safe-area-inset-top,0px) + 6px)}.sysbtn{min-height:44px;min-width:44px}}
 
 /* Commandes tactiles minimales. Le pad complet est le lot de la session 4 ;
    ici il s'agit seulement que le jeu ne soit pas mort au doigt. */
@@ -93,16 +94,16 @@ body.touch #pad.on{display:block;}
 <body>
 <div id="stage">
   <canvas id="c"></canvas>
-  <a class="versions-link" data-versions-link href="./" aria-label="Toutes les versions de Trapeze Stars">← Toutes les versions</a>
+  <a class="versions-link" data-versions-link href="./" aria-label="All versions of Trapeze Stars">← All versions</a>
   <div id="pad">
-    <div id="stick"><div id="stickKnob"></div></div>
-    <div class="tbtn" id="tRel">LÂCHER</div>
-    <div class="tbtn" id="tFig">FIGURE</div>
-    <div class="tbtn" id="tAct">POMPER<br>SAISIR</div>
+    <div id="stick" role="group" aria-label="Look around"><div id="stickKnob" aria-hidden="true"></div></div>
+    <button class="tbtn" id="tRel" aria-label="Release the bar">RELEASE</button>
+    <button class="tbtn" id="tFig" aria-label="Perform a trick">TRICK</button>
+    <button class="tbtn" id="tAct" aria-label="Pump or catch the bar">PUMP<br>CATCH</button>
   </div>
-  <button class="sysbtn" id="btnFull" title="Plein écran">⛶</button>
-  <button class="sysbtn" id="btnPause" title="Pause">❚❚</button>
-  <div id="rotate">Tourne ton téléphone à l'horizontale.</div>
+  <button class="sysbtn" id="btnFull" title="Fullscreen" aria-label="Fullscreen">⛶</button>
+  <button class="sysbtn" id="btnPause" title="Pause" aria-label="Pause">❚❚</button>
+  <div id="rotate">Rotate your phone to landscape.</div>
 </div>
 <script>
 'use strict';
@@ -274,45 +275,6 @@ const DEG=Math.PI/180;
    maintenant, pour qu'aucune ne soit à retrouver plus tard.
    ───────────────────────────────────────────────────────────── */
 const I18N={
-  fr:{
-    title:'TRAPEZE CITY', sub:'Traversée en direct',
-    start:'Entrer en scène', hintStart:'ESPACE pour commencer',
-    pump:'ESPACE : pomper', release:'S : lâcher', grab:'ESPACE : saisir',
-    figure:'F : figure',
-    amp:'AMPLITUDE', giant:'GRAND SOLEIL', rig:'RIG',
-    perfect:'PRISE PARFAITE', good:'BONNE PRISE', poor:'PRISE JUSTE',
-    fall:'CHUTE', arrived:'TRAVERSÉE BOUCLÉE', again:'R pour recommencer',
-    paused:'PAUSE', resume:'P pour reprendre',
-    /* Session 2 */
-    hype:'HYPE', bank:'CAGNOTTE', tricks:'figures', chrono:'TEMPS',
-    demi:'DEMI-TOUR', salto:'SALTO', vrille:'VRILLE',
-    clean:'SORTIE PROPRE', chain:'ENCHAÎNEMENT',
-    net:'FILET', lost:'CAGNOTTE PERDUE', back:'REPRISE AU DERNIER TOIT',
-    porteur:'PORTEUR !', portReady:'PORTEUR — BRAS TENDUS', portGo:'RELANCE !',
-    wind:'VENT', windCalm:'VENT FAIBLE',
-    drone:'DRONE DE TÉLÉVISION EN APPROCHE',
-    act1:'ACTE I', act1s:'L\u2019ENTRÉE EN SCÈNE',
-    act2:'ACTE II', act2s:'LA TRAVERSÉE',
-    act3:'ACTE III', act3s:'LE FINAL',
-    gate:'DEUX ÉTOILES DE HYPE POUR OUVRIR LA TRAVERSÉE',
-    gateOpen:'LA TRAVERSÉE EST OUVERTE',
-    results:'FIN DE TRAVERSÉE', rTime:'TEMPS TOTAL', rChain:'MEILLEUR ENCHAÎNEMENT',
-    rStars:'ÉTOILES MAXIMALES', rFalls:'CHUTES', rBank:'CAGNOTTE TOTALE',
-    rScore:'SCORE', rGrade:'NOTE', rAgain:'ESPACE pour rejouer',
-    rCatch:'PRISES PARFAITES',
-    bow:'SALUT',
-    /* Session 4 : menus, réglages, HUD */
-    play:'JOUER', settings:'RÉGLAGES', back:'RETOUR', resume:'REPRENDRE',
-    quit:'QUITTER', tapStart:'TOUCHER POUR COMMENCER',
-    musicVol:'MUSIQUE', sfxVol:'EFFETS', lang:'LANGUE', quality:'QUALITÉ',
-    camSens:'SENSIBILITÉ CAMÉRA', invertY:'INVERSER L’AXE', aids:'AIDES VISUELLES',
-    reduceMotion:'RÉDUIRE LES SECOUSSES', reduceFlash:'RÉDUIRE LES FLASHS',
-    textSize:'TAILLE DU TEXTE', highContrast:'CONTRASTE RENFORCÉ',
-    on:'ACTIVÉ', off:'DÉSACTIVÉ', low:'BASSE', med:'MOYENNE', high:'HAUTE',
-    small:'PETIT', normal:'NORMAL', large:'GRAND',
-    nextRig:'PROCHAIN RIG', catchWindow:'FENÊTRE DE PRISE',
-    tapPlay:'ESPACE ou toucher : jouer', tapSettings:'toucher : réglages',
-  },
   en:{
     title:'TRAPEZE CITY', sub:'Live crossing',
     start:'Take the stage', hintStart:'SPACE to begin',
@@ -351,10 +313,16 @@ const I18N={
     small:'SMALL', normal:'NORMAL', large:'LARGE',
     nextRig:'NEXT RIG', catchWindow:'CATCH WINDOW',
     tapPlay:'SPACE or tap: play', tapSettings:'tap: settings',
+    keysMove:'SPACE: PUMP / CATCH  ·  S: RELEASE  ·  F: TRICK',
+    keysOther:'DRAG: LOOK AROUND  ·  P: PAUSE',
+    touchMove:'PUMP / CATCH  ·  RELEASE  ·  TRICK',
+    touchOther:'LEFT STICK: LOOK AROUND  ·  TOP-RIGHT: PAUSE / RESUME',
+    touchPump:'PUMP / CATCH', touchRelease:'RELEASE', touchGrab:'PUMP / CATCH', touchFigure:'TRICK',
+    ready:'READY WHEN YOU ARE',
   },
 };
-let LANG=(navigator.language||'fr').slice(0,2)==='en'?'en':'fr';
-function t(k){const d=I18N[LANG]||I18N.fr;return d[k]!==undefined?d[k]:(I18N.fr[k]!==undefined?I18N.fr[k]:k);}
+let LANG='en';
+function t(k){const d=I18N.en;return d[k]!==undefined?d[k]:k;}
 
 /* ─────────────────────────────────────────────────────────────
    3. SAUVEGARDE
@@ -389,7 +357,6 @@ const SV={
     if(typeof o.highContrast==='number')SV.highContrast=o.highContrast?1:0;
   }catch(e){}
 })();
-if(SV.lang)LANG=SV.lang;
 let _persistT=0;
 function persist(){
   if(_persistT)return;
@@ -398,6 +365,7 @@ function persist(){
     try{localStorage.setItem(SAVE_KEY,JSON.stringify(SV));}catch(e){}
   },280);
 }
+if(SV.lang!=='en'){SV.lang='en';persist();}
 
 /* ─────────────────────────────────────────────────────────────
    3 bis. AUDIO — entièrement synthétisé, WebAudio
@@ -568,7 +536,7 @@ let _prevDroneDist=0;
 function updateAmbience(){
   if(!AU.ready||!AU.wind)return;
   try{
-    const playing=(gs==='playing'||gs==='intro'||gs==='finale')&&!paused;
+    const playing=((gs==='playing'&&interactionStarted)||gs==='intro'||gs==='finale')&&!paused;
     const rig=RIGS[P.rig]||RIGS[0];
     const height=playing?Math.max(0,P.y-(rig?rig.roofY-CFG.NET_DROP:0)):0;
     const speed=playing?Math.hypot(P.vx,P.vy,P.vz):0;
@@ -760,10 +728,10 @@ function checkRotate(){
   const need=isTouch&&vh>vw&&vw<520;
   if(rotateEl.classList)rotateEl.classList.toggle('on',need);
   if(need){
-    if(gs==='playing'&&!paused){paused=true;autoPausedByRotate=true;}
+    if(gs==='playing'&&!paused){paused=true;pauseReason='rotate';heldInputs.clear();autoPausedByRotate=true;}
   }else if(autoPausedByRotate){
     autoPausedByRotate=false;
-    if(gs==='playing'&&paused)paused=false;
+    if(gs==='playing'&&paused){paused=false;idleSteps=0;lastGameInputAt=performance.now();}
   }
 }
 
@@ -2697,10 +2665,12 @@ function drawBar(rig,ang){
   if(!project(rig.ax-px,rig.ay,rig.az-pz))return;
   const cx2=_px,cy2=_py;
   const k=(k1+k2)*0.5;
-  CX.strokeStyle='rgba(226,214,196,0.55)';
-  CX.lineWidth=Math.max(0.7,0.028*k);
+  CX.strokeStyle='rgba(246,232,207,0.82)';
+  CX.lineWidth=Math.max(1.35*DPR,0.036*k);
   CX.beginPath();CX.moveTo(cx1,cy1);CX.lineTo(ax1,ay1);
   CX.moveTo(cx2,cy2);CX.lineTo(ax2,ay2);CX.stroke();
+  CX.fillStyle='#FFE8B0';
+  for(const a of [[cx1,cy1],[cx2,cy2]]){CX.beginPath();CX.arc(a[0],a[1],2.1*DPR,0,Math.PI*2);CX.fill();}
   CX.strokeStyle='#D8C28A';
   CX.lineWidth=Math.max(1.2,0.11*k);
   CX.lineCap='round';
@@ -3214,7 +3184,9 @@ let gs='menu';    // 'menu' | 'intro' | 'settings' | 'playing' | 'finale' | 'lev
 let introT=0;             // avancement de la cinématique d'ouverture
 let slowT=0;              // ralenti, en millisecondes de temps réel restant
 const INTRO_LEN=470;      // ~3,9 s à 120 Hz
-let paused=false;
+const IDLE_PAUSE_MS=8000;
+let paused=false,pauseReason='manual',interactionStarted=false,idleSteps=0,lastGameInputAt=performance.now();
+const heldInputs=new Set();
 let settingsFrom='menu';  // écran vers lequel revenir : 'menu' ou 'pause'
 let menuSel=0, settingsSel=0, pauseSel=0, resultsSel=0;
 
@@ -3498,8 +3470,6 @@ function settingsRowsV3(){
      left:function(){setVol('music',SV.music-0.1);},right:function(){setVol('music',SV.music+0.1);}},
     {label:t('sfxVol'),val:function(){return Math.round(SV.sfx*100)+'%';},
      left:function(){setVol('sfx',SV.sfx-0.1);},right:function(){setVol('sfx',SV.sfx+0.1);}},
-    {label:t('lang'),val:function(){return LANG.toUpperCase();},
-     left:function(){setLang(LANG==='fr'?'en':'fr');},right:function(){setLang(LANG==='fr'?'en':'fr');}},
     {label:t('quality'),val:function(){return t(QUAL.name==='med'?'med':QUAL.name);},
      left:function(){cycleQuality(-1);},right:function(){cycleQuality(1);}},
     {label:t('camSens'),val:function(){return Math.round(SV.camSens*100)+'%';},
@@ -3520,7 +3490,7 @@ function settingsRowsV3(){
      left:toggleHighContrast,right:toggleHighContrast},
   ];
 }
-function setLang(l){LANG=l;SV.lang=l;persist();}
+function setLang(){LANG='en';SV.lang='en';persist();}
 function toggleInvertY(){SV.invertY=SV.invertY?0:1;persist();}
 function toggleAids(){SV.aids=SV.aids?0:1;persist();}
 function toggleReduceMotion(){SV.reduceMotion=SV.reduceMotion?0:1;updateAccessFlags();persist();}
@@ -3568,7 +3538,9 @@ function drawMenuScreen(){
   zone(HW-sw2*0.5,sy-sh2*0.5,sw2,sh2,function(){openSettings();});
 
   const pulse=0.62+0.38*Math.sin(frame*0.035);
-  outlineText(isTouch?t('tapPlay'):t('hintStart'),HW,SH*0.86,14,'rgba(37,229,255,'+pulse.toFixed(2)+')',800);
+  const helpCol='rgba(37,229,255,'+pulse.toFixed(2)+')';
+  fitText(t(isTouch?'touchMove':'keysMove'),HW,SH*0.81,SW*0.92,13,helpCol,800);
+  fitText(t(isTouch?'touchOther':'keysOther'),HW,SH*0.86,SW*0.92,12,'rgba(255,255,255,0.8)',700);
   if(SV.best>0)outlineText('🏆 '+SV.best,HW,SH-18*u,12,'rgba(255,255,255,0.5)',700);
 }
 
@@ -3611,8 +3583,13 @@ function drawPauseScreen(){
   hitZones.length=0;
   menuVeil(0.66);
   const u=uiScale;
-  outlineText(t('paused'),HW,SH*0.30,32,'#FFD98A',900);
+  const panelW=Math.min(SW*0.68,460*u),panelY=SH*0.19,panelH=SH*0.58;
+  CX.fillStyle='rgba(7,3,22,0.40)';
+  CX.beginPath();CX.roundRect(HW-panelW*0.5,panelY,panelW,panelH,20*u);CX.fill();
+  outlineText(t(pauseReason==='idle'?'ready':'paused'),HW,SH*0.28,32,'#FFD98A',900);
   outlineText('$'+score+'   ·   '+t('rig')+' '+(P.rig+1)+'/'+RIGS.length,HW,SH*0.38,15,'rgba(255,255,255,0.68)',700);
+  fitText(t(isTouch?'touchMove':'keysMove'),HW,SH*0.43,SW*0.92,13,'#25E5FF',800);
+  fitText(t(isTouch?'touchOther':'keysOther'),HW,SH*0.48,SW*0.92,12,'rgba(255,255,255,0.8)',700);
 
   const items=[{k:'resume',fn:togglePause},{k:'settings',fn:openSettings},{k:'quit',fn:toMenu}];
   const iy=SH*0.52, ih=Math.min(50*u,SH*0.09);
@@ -3627,6 +3604,9 @@ function drawPauseScreen(){
 
 function drawHUD(){
   const u=uiScale;
+  const padEl=document.getElementById('pad'),pauseEl=document.getElementById('btnPause');
+  if(padEl)padEl.classList.toggle('on',isTouch&&gs==='playing'&&!paused);
+  if(pauseEl){pauseEl.style.display=gs==='playing'?'flex':'none';pauseEl.textContent=paused?'▶':'❚❚';pauseEl.title=paused?'Resume':'Pause';if(pauseEl.setAttribute)pauseEl.setAttribute('aria-label',paused?'Resume':'Pause');}
   if(gs==='menu'){drawMenuScreen();return;}
   if(gs==='settings'){drawSettingsScreen();return;}
   if(gs==='levelcomplete'){drawResults();return;}
@@ -3659,23 +3639,22 @@ function drawHUD(){
   drawRadar(radR+16*u,gy-70*u-radR,radR);
 
   // ── Étoiles de hype et multiplicateur, en haut à droite ──
-  // Le bouton plein écran est un élément HTML posé par-dessus le canvas :
-  // il faut lui laisser sa place, sinon le HUD passe dessous en portrait.
-  const rx=SW-(46*DPR+10*u);
-  drawHypeStars(rx,20*u,7*u,3*u);
+  // The two system buttons occupy the top-right corner on both input modes.
+  const rx=SW-20*u, statusTop=Math.max(66*DPR,62*u);
+  drawHypeStars(rx,statusTop,7*u,3*u);
   const st=hypeStars();
-  if(st>0)outlineText('×'+hypeMult().toFixed(1),rx,40*u,13,'#FFD98A',900,'right');
+  if(st>0)outlineText('×'+hypeMult().toFixed(1),rx,statusTop+20*u,13,'#FFD98A',900,'right');
   // ── Cagnotte, façon compteur de fric : la valeur affichée COURT après
   // le score réel, jamais un saut sec — c'est ce qui fait « compteur »
   // plutôt que « texte qui change ».
   if(displayScore<score)displayScore=Math.min(score,displayScore+Math.max(1,(score-displayScore)*0.14));
   else displayScore=score;
   const cashHot=bankVal>0||hypeMult()>1;
-  outlineText('$'+Math.round(displayScore),rx,64*u,22,cashHot?'#FFD98A':'#9CFF7A',900,'right');
+  outlineText('$'+Math.round(displayScore),rx,statusTop+44*u,22,cashHot?'#FFD98A':'#9CFF7A',900,'right');
   if(bankVal>0){
     outlineText('+'+Math.round(bankVal)+' × '+(hypeMult()).toFixed(1),
-      rx,86*u,14,'#FFD98A',800,'right');
-    outlineText(bankN+' '+t('tricks'),rx,102*u,11,'rgba(255,255,255,0.55)',700,'right');
+      rx,statusTop+66*u,14,'#FFD98A',800,'right');
+    outlineText(bankN+' '+t('tricks'),rx,statusTop+82*u,11,'rgba(255,255,255,0.55)',700,'right');
   }
 
   // ── Chrono et rig, en haut à gauche ──
@@ -3729,20 +3708,20 @@ function drawHUD(){
       wk<0.25?'#9CFF7A':'rgba(255,255,255,0.72)',800);
   }
 
-  if(toastT>0&&(gs==='playing'||gs==='finale'))outlineText(toast,HW,SH*0.22,22,toastCol,900);
+  if(toastT>0&&!paused&&(gs==='playing'||gs==='finale'))outlineText(toast,HW,SH*0.22,22,toastCol,900);
 
   // ── Flèche vers le prochain rig, quand il n'est pas dans le cadre ──
   if(SV.aids&&gs==='playing'&&!paused&&(P.state==='hang'||P.state==='fly'))drawNextRigArrow();
 
   // ── Acte 1 : la porte des deux étoiles ──
-  if(gs==='playing'&&!gateOpen)
+  if(gs==='playing'&&!paused&&interactionStarted&&!gateOpen)
     outlineText(t('gate'),HW,SH*0.30,15,'rgba(255,217,138,0.88)',800);
 
   // ── Carton d'acte ──
   // Ne s'affiche pas pendant la pause : les deux superposés se lisaient
   // mal (le pilule « REPRENDRE » venait chevaucher le sous-titre du
   // carton), et la pause a de toute façon la priorité visuelle.
-  if(actT>0&&!paused){
+  if(actT>0&&!paused&&interactionStarted){
     const p2=1-actT/ACT_CARD;
     // Entrée, tenue, sortie : trois temps, comme un carton de mission.
     const al=p2<0.14?p2/0.14:(p2>0.82?(1-p2)/0.18:1);
@@ -3766,9 +3745,14 @@ function drawHUD(){
   // ── Rappel contextuel de la commande utile à l'instant ──
   if(SV.aids&&gs==='playing'&&!paused){
     let hint='';
-    if(P.state==='fly')hint=t('grab')+'   ·   '+t('figure');
-    else if(P.state==='hang')hint=t('pump')+'   ·   '+t('release');
+    if(P.state==='fly')hint=t(isTouch?'touchGrab':'grab')+'   ·   '+t(isTouch?'touchFigure':'figure');
+    else if(P.state==='hang')hint=t(isTouch?'touchPump':'pump')+'   ·   '+t(isTouch?'touchRelease':'release');
     if(hint)outlineText(hint,HW,SH-22*u,12,'rgba(255,255,255,0.42)',700);
+  }
+  if(gs==='playing'&&!interactionStarted&&!paused){
+    outlineText(t('ready'),HW,SH*0.43,22,'#FFD98A',900);
+    fitText(t(isTouch?'touchMove':'keysMove'),HW,SH*0.50,SW*0.9,13,'#25E5FF',800);
+    fitText(t(isTouch?'touchOther':'keysOther'),HW,SH*0.55,SW*0.9,12,'#FFFFFF',700);
   }
   if(paused){drawPauseScreen();}
   if(gs==='finale'){
@@ -3783,13 +3767,13 @@ function drawHUD(){
   }
   if(debugOn){
     CX.fillStyle='rgba(0,0,0,0.55)';CX.fillRect(0,0,244*u,150*u);
-    const L=['fps '+fps.toFixed(0)+'   faces '+drawnFaces+(fnDropped?' (+'+fnDropped+' perdues)':''),
+    const L=['fps '+fps.toFixed(0)+'   faces '+drawnFaces+(fnDropped?' (+'+fnDropped+' dropped)':''),
       'qual '+QUAL.name+'   dpr '+DPR.toFixed(2)+'   '+SW+'x'+SH,
-      'etat '+P.state+'   rig '+(P.rig+1)+'/'+RIGS.length+'   acte '+act,
+      'state '+P.state+'   rig '+(P.rig+1)+'/'+RIGS.length+'   act '+act,
       'ang '+P.ang.toFixed(2)+'  angV '+P.angV.toFixed(2)+'  amp '+P.amp.toFixed(2),
       'pos '+P.x.toFixed(1)+' '+P.y.toFixed(1)+' '+P.z.toFixed(1),
-      'hype '+hype.toFixed(0)+' ('+hypeStars()+'*)  cagnotte '+Math.round(bankVal)+'/'+bankN,
-      'part '+pLive+'/'+pLiveMax+'   drone '+DRONE.fade.toFixed(2)+'   vent '+P.windA.toFixed(2),
+      'hype '+hype.toFixed(0)+' ('+hypeStars()+'*)  bank '+Math.round(bankVal)+'/'+bankN,
+      'particles '+pLive+'/'+pLiveMax+'   drone '+DRONE.fade.toFixed(2)+'   wind '+P.windA.toFixed(2),
       'cam yaw '+(CAM.yaw*180/Math.PI).toFixed(0)+'  pitch '+(CAM.pitch*180/Math.PI).toFixed(0)
         +'  fov '+(CAM.fov*180/Math.PI).toFixed(0)];
     for(let i=0;i<L.length;i++)outlineText(L[i],8*u,(14+i*17)*u,11,'#9CFF7A',700,'left');
@@ -3890,7 +3874,7 @@ function startGame(){
   // plan qui pose la ville, la hauteur et le premier rig. Elle se saute
   // d'une touche, et le mouvement réduit la supprime.
   gs=reducedMotion?'playing':'intro';
-  introT=0;slowT=0;paused=false;
+  introT=0;slowT=0;paused=false;pauseReason='manual';interactionStarted=false;idleSteps=0;lastGameInputAt=performance.now();heldInputs.clear();
   lives=5;score=0;level=1;displayScore=0;
   hype=0;starsNow=0;gateOpen=0;act=1;actT=ACT_CARD;
   bankVal=0;bankN=0;
@@ -3916,8 +3900,10 @@ function startFinale(){
   shake(9);
 }
 function endIntro(){if(gs==='intro'){gs='playing';introT=INTRO_LEN;}}
-function toMenu(){gs='menu';paused=false;introT=0;slowT=0;musicStop();}
-function togglePause(){if(gs==='playing')paused=!paused;}
+function toMenu(){gs='menu';paused=false;pauseReason='manual';introT=0;slowT=0;heldInputs.clear();musicStop();}
+function togglePause(){if(gs==='playing'){paused=!paused;pauseReason='manual';idleSteps=0;lastGameInputAt=performance.now();if(paused)heldInputs.clear();}}
+function noteGameInput(){if(gs==='playing'&&!paused){interactionStarted=true;idleSteps=0;lastGameInputAt=performance.now();}}
+document.addEventListener('visibilitychange',function(){if(document.hidden&&gs==='playing'&&!paused){paused=true;pauseReason='background';heldInputs.clear();}});
 
 /* ─────────────────────────────────────────────────────────────
    19. ENTRÉES
@@ -3931,6 +3917,7 @@ function action(){
   if(gs==='gameover'||gs==='levelcomplete'){startGame();return;}
   if(gs==='finale'){gs='levelcomplete';return;}   // passer le salut
   if(paused)return;
+  noteGameInput();
   if(P.state==='hang')pump();
   else P.grabBuf=CFG.GRAB_BUF;
 }
@@ -3938,6 +3925,7 @@ function doRelease(){
   audioResume();
   if(gs==='intro'){endIntro();return;}
   if(gs!=='playing'||paused)return;
+  noteGameInput();
   release();
 }
 // Figure. Maintenue, elle accélère la rotation ; une simple pression
@@ -3945,6 +3933,7 @@ function doRelease(){
 function figure(){
   audioResume();
   if(gs!=='playing'||paused)return;
+  noteGameInput();
   P.trickHeld=1;P.trickBuf=CFG.GRAB_BUF;
 }
 function figureEnd(){P.trickHeld=0;}
@@ -3965,6 +3954,7 @@ function menuActivate(){
 window.addEventListener('keydown',function(e){
   const k=e.key;
   const menuLike=gs==='menu'||gs==='settings'||paused;
+  if(gs==='playing'&&!paused&&[' ','Spacebar','z','s','S','f','F','x','Shift','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(k))heldInputs.add('key:'+k);
   if(menuLike){
     if(k==='ArrowUp'||k==='w'){e.preventDefault();menuNav(-1);return;}
     if(k==='ArrowDown'||k==='s'){e.preventDefault();menuNav(1);return;}
@@ -3988,6 +3978,7 @@ window.addEventListener('keydown',function(e){
 });
 window.addEventListener('keyup',function(e){
   const k=e.key;
+  heldInputs.delete('key:'+k);
   if(k==='f'||k==='F'||k==='x'||k==='ArrowLeft'||k==='ArrowRight')figureEnd();
 });
 // Regard libre. Il revient de lui-même : on ne laisse jamais le joueur
@@ -3995,6 +3986,7 @@ window.addEventListener('keyup',function(e){
 // réglages, pas des constantes : ils passent par SV à chaque appel.
 let dragId=-1, dragX=0, dragY=0;
 function look(dx,dy){
+  if(gs==='playing'&&interactionStarted&&!paused){idleSteps=0;lastGameInputAt=performance.now();}
   const s=SV.camSens, inv=SV.invertY?-1:1;
   CAMS.yawOff=clamp(CAMS.yawOff-dx*0.0032*s,-1.1,1.1);
   CAMS.pitchOff=clamp(CAMS.pitchOff+dy*0.0026*s*inv,-0.5,0.5);
@@ -4023,29 +4015,31 @@ CV.addEventListener('pointerdown',function(e){
   }
   if(gs==='intro'){endIntro();return;}
   if(gs==='finale'){audioResume();action();return;}   // tap-anywhere : passer le salut
-  if(dragId<0){dragId=e.pointerId;dragX=e.clientX;dragY=e.clientY;}
+  if(dragId<0){dragId=e.pointerId;dragX=e.clientX;dragY=e.clientY;heldInputs.add('drag');try{CV.setPointerCapture(dragId);}catch(err){}}
 });
 CV.addEventListener('pointermove',function(e){
   if(e.pointerId!==dragId)return;
   look(e.clientX-dragX,e.clientY-dragY);
   dragX=e.clientX;dragY=e.clientY;
 });
-function endDrag(e){if(e.pointerId===dragId)dragId=-1;}
+function endDrag(e){if(e.pointerId===dragId){dragId=-1;heldInputs.delete('drag');}}
 CV.addEventListener('pointerup',endDrag);
 CV.addEventListener('pointercancel',endDrag);
 
 (function bindTouch(){
   const a=document.getElementById('tAct'), r=document.getElementById('tRel');
   const f=document.getElementById('tFig');
-  const pad=document.getElementById('pad');
-  if(pad&&pad.classList&&isTouch)pad.classList.add('on');
-  if(a)a.addEventListener('pointerdown',function(e){e.preventDefault();audioResume();action();});
-  if(r)r.addEventListener('pointerdown',function(e){e.preventDefault();audioResume();doRelease();});
+  if(a){
+    a.addEventListener('pointerdown',function(e){e.preventDefault();audioResume();action();if(gs==='playing'&&!paused)heldInputs.add('touchAction');});
+    for(const type of ['pointerup','pointercancel','pointerleave'])a.addEventListener(type,function(){heldInputs.delete('touchAction');});
+  }
+  if(r){
+    r.addEventListener('pointerdown',function(e){e.preventDefault();audioResume();doRelease();if(gs==='playing'&&!paused)heldInputs.add('touchRelease');});
+    for(const type of ['pointerup','pointercancel','pointerleave'])r.addEventListener(type,function(){heldInputs.delete('touchRelease');});
+  }
   if(f){
-    f.addEventListener('pointerdown',function(e){e.preventDefault();audioResume();figure();});
-    f.addEventListener('pointerup',function(e){e.preventDefault();figureEnd();});
-    f.addEventListener('pointercancel',figureEnd);
-    f.addEventListener('pointerleave',figureEnd);
+    f.addEventListener('pointerdown',function(e){e.preventDefault();audioResume();figure();if(gs==='playing'&&!paused)heldInputs.add('touchTrick');});
+    for(const type of ['pointerup','pointercancel','pointerleave'])f.addEventListener(type,function(e){if(type!=='pointerleave')e.preventDefault();heldInputs.delete('touchTrick');figureEnd();});
   }
 })();
 /* Manche virtuel de regard. Il porte SON PROPRE pointerId, capturé sur son
@@ -4090,6 +4084,7 @@ function stepStick(){
     if(sid>=0)return;
     e.preventDefault();
     sid=e.pointerId;
+    heldInputs.add('stick');
     try{base.setPointerCapture(sid);}catch(err){}
     const r=base.getBoundingClientRect();
     cx=r.left+r.width*0.5;cy=r.top+r.height*0.5;R=r.width*0.40;
@@ -4107,6 +4102,7 @@ function stepStick(){
   function releaseStick(e){
     if(e.pointerId!==sid)return;
     sid=-1;setKnob(0,0);base.classList.remove('active');
+    heldInputs.delete('stick');
     stickX=0;stickY=0;
   }
   base.addEventListener('pointerup',releaseStick);
@@ -4144,18 +4140,25 @@ function stepStick(){
 const STEP=1000/120;
 let acc=0, lastT=0, fpsAcc=0, fpsN=0;
 function step(){
+  if(paused){duckMusic(true);return;}
   frame++;
   if(toastT>0)toastT--;
   if(actT>0)actT--;
   for(let i=0;i<5;i++)if(starPopT[i]>0)starPopT[i]--;
   updateAmbience();
   musicWatchStars();
-  duckMusic(paused||gs==='menu'||gs==='settings');
+  duckMusic(paused||gs==='menu'||gs==='settings'||(gs==='playing'&&!interactionStarted));
   if(gs==='intro'){
     introT++;
     stepPorteurs();
     if(introT>=INTRO_LEN)gs='playing';
-  }else if(gs==='playing'&&!paused){
+  }else if(gs==='playing'){
+    if(!interactionStarted){stepCamera();return;}
+    if(heldInputs.size){idleSteps=0;lastGameInputAt=performance.now();}
+    else{
+      idleSteps++;
+      if(performance.now()-lastGameInputAt>=IDLE_PAUSE_MS){paused=true;pauseReason='idle';duckMusic(true);return;}
+    }
     runSteps++;
     stepPorteurs();
     stepPlayer();
@@ -4245,6 +4248,8 @@ function init(){
 window.__v3={
   CFG:CFG,P:P,CAM:CAM,RIGS:RIGS,PORTS:PORTS,
   get state(){return{gs:gs,paused:paused,score:score,lives:lives,
+    waitingForInput:gs==='playing'&&!interactionStarted,interactionStarted:interactionStarted,idleSteps:idleSteps,pauseReason:pauseReason,
+    idleMs:Math.max(0,performance.now()-lastGameInputAt),
     rig:P.rig,dst:P.dst,pstate:P.state,amp:P.amp,ang:P.ang,angV:P.angV,
     x:P.x,y:P.y,z:P.z,
     // Session 2 : tout ce dont le pilote automatique et les captures
@@ -4281,6 +4286,7 @@ window.__v3={
   // partirait d'un état que le jeu n'autorise pas encore.
   goRig:function(n){
     endIntro();
+    interactionStarted=true;idleSteps=0;lastGameInputAt=performance.now();
     P.rig=clamp(n|0,0,RIGS.length-1);
     if(P.rig>0){gateOpen=1;if(act<2)act=2;}
     if(P.rig>=RIGS.length-2&&act<3)act=3;
@@ -4295,6 +4301,7 @@ window.__v3={
   // Avance la simulation d'un nombre exact de pas : les captures de test
   // sont ainsi reproductibles, au lieu de dépendre du temps réel écoulé.
   sim:function(n){for(let i=0;i<(n|0);i++)step();},
+  idleForTest:function(ms){lastGameInputAt=performance.now()-Math.max(0,ms);},
   // Fige la boucle et dessine EXACTEMENT une image. La capture qui suit ne
   // dépend plus du temps d'horloge, seulement des pas de simulation
   // demandés par la scène.

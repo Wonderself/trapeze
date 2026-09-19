@@ -1,24 +1,24 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#08021a">
-<title>Trapeze Stars — Cinq jeux de cirque à découvrir</title>
-<meta name="description" content="Découvrez cinq jeux de cirque gratuits dans le navigateur : Trapeze Stars Classic, Deluxe et City, Circus Alzahir et l'expérience Three.js Trapeze Stars 3D.">
+<title>Trapeze Stars — Five circus games to explore</title>
+<meta name="description" content="Play five free browser circus games: Trapeze Stars Classic, Deluxe and City, Circus Alzahir, and Trapeze Stars 3D.">
 <link rel="canonical" href="https://wonderself.github.io/trapeze/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Trapeze Stars — Cinq jeux de cirque à découvrir">
-<meta property="og:description" content="Classic, Deluxe et City, plus Circus Alzahir et Trapeze Stars 3D : cinq expériences jouables gratuitement dans le navigateur.">
+<meta property="og:title" content="Trapeze Stars — Five circus games to explore">
+<meta property="og:description" content="Classic, Deluxe, City, Circus Alzahir and Trapeze Stars 3D: five free browser games.">
 <meta property="og:url" content="https://wonderself.github.io/trapeze/">
 <meta property="og:site_name" content="Trapeze Stars">
 <meta property="og:image" content="https://wonderself.github.io/trapeze/assets/og-cover.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Illustration de Trapeze Stars Classic, Deluxe et City">
+<meta property="og:image:alt" content="Trapeze Stars Classic, Deluxe and City artwork">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Trapeze Stars — Cinq jeux de cirque à découvrir">
-<meta name="twitter:description" content="Classic, Deluxe et City, plus Circus Alzahir et Trapeze Stars 3D — gratuits et jouables dans le navigateur.">
+<meta name="twitter:title" content="Trapeze Stars — Five circus games to explore">
+<meta name="twitter:description" content="Play Classic, Deluxe, City, Circus Alzahir and Trapeze Stars 3D in your browser.">
 <meta name="twitter:image" content="https://wonderself.github.io/trapeze/assets/og-cover.png">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎪</text></svg>">
 <style>
@@ -233,225 +233,190 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
 <div class="wrap">
 
 <header>
-  <div class="kicker">🎪 Cinq versions jouables</div>
+  <div class="kicker">🎪 Five playable games</div>
   <h1>TRAPEZE<span class="l2">STARS</span></h1>
   <p class="sub">
-    Cinq façons de jouer le même numéro&nbsp;: trois variations Classic, Deluxe et City,
-    la branche 2D installable Circus Alzahir et une reprise complète avec un vrai moteur 3D.
-    Rien à installer&nbsp;: choisissez une version et entrez en piste, au clavier comme au doigt.
+    Five takes on the same circus adventure: Classic, Deluxe, City,
+    the installable 2D Circus Alzahir, and a full 3D game.
+    No installation needed. Pick a game and play with a keyboard or touch controls.
   </p>
 </header>
 
 <main>
 <section class="selector" id="versions" aria-labelledby="versions-title">
-<h2 class="selector-title" id="versions-title">Choisissez votre version</h2>
-<p class="selector-lead">Les cinq jeux sont accessibles ici. Chaque carte montre ce qui rend sa version unique.</p>
+<h2 class="selector-title" id="versions-title">Choose your game</h2>
+<p class="selector-lead">All five games are playable. Each card highlights a different way to take the stage.</p>
 <div class="cards">
 
   <!-- ── V1 ─────────────────────────────────────────────── -->
-  <a class="card v1" href="trapeze-stars-v1.html" aria-label="Jouer à Classic, version 1 en 2D">
+  <a class="card v1" href="trapeze-stars-v1.html" aria-label="Play Classic, version 1 in 2D">
     <div class="shot">
       <span class="tag a">Version 1 · 2D</span>
       <canvas id="pv1" width="480" height="270" role="img"
-        aria-label="Aperçu animé : un artiste court et saute de plateforme en plateforme, vu de côté."></canvas>
+        aria-label="Animated preview: an artist runs and jumps between platforms in a side view."></canvas>
     </div>
     <div class="body">
-      <h3>Classic<small>PLATEFORMER EN VUE DE CÔTÉ</small></h3>
+      <h3>Classic<small>SIDE-SCROLLING PLATFORMER</small></h3>
       <p class="desc">
-        Le jeu d’origine, entièrement débogué et resserré. On court, on saute,
-        on rebondit sur les trampolines et on écrase les fâcheux d’un saut sur la tête.
+        The original game: run, jump, bounce on trampolines and land on obstacles.
       </p>
       <ul class="feat">
-        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FFC53D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>12 niveaux</b>, 4 mondes, score continu sur toute la partie</span></li>
-        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FFC53D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Saut à hauteur variable</b> et écrasement d’ennemis en chaîne</span></li>
-        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FFC53D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span>Trapèze, cerceaux, trampolines et <b>porteur</b></span></li>
-        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FFC53D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span>Pause, barre de progression, difficulté adaptative</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FFC53D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>12 levels</b> across four worlds</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FFC53D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Variable-height jumps</b> and trampoline bounces</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FFC53D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span>Trapezes, hoops and a flying catcher</span></li>
       </ul>
-      <span class="cta a" aria-hidden="true">▶ Jouer à Classic</span>
+      <span class="cta a" aria-hidden="true">▶ Play Classic</span>
     </div>
   </a>
 
   <!-- ── V2 ─────────────────────────────────────────────── -->
-  <a class="card v2" href="trapeze-stars-v2.html" aria-label="Jouer à Deluxe, version 2 en perspective">
+  <a class="card v2" href="trapeze-stars-v2.html" aria-label="Play Deluxe, version 2 in perspective">
     <div class="shot">
       <span class="tag b">Version 2 · Perspective 3D</span>
       <canvas id="pv2" width="480" height="270" role="img"
-        aria-label="Aperçu animé : vue en perspective vers le fond du chapiteau, des trapèzes et des cerceaux défilent en profondeur."></canvas>
+        aria-label="Animated preview: trapezes and hoops move through a circus tent in perspective."></canvas>
     </div>
     <div class="body">
-      <h3>Deluxe<small>REFONTE EN PERSPECTIVE</small></h3>
+      <h3>Deluxe<small>PERSPECTIVE REIMAGINED</small></h3>
       <p class="desc">
-        Un autre jeu. La caméra passe derrière l’artiste, le chapiteau s’ouvre en profondeur,
-        et le trapèze devient le cœur des mécaniques&nbsp;: on pompe pour prendre de l’ampleur,
-        on enchaîne les figures, on vise les mains du porteur.
+        A new perspective behind the artist. Build momentum, perform aerial tricks
+        and aim for the catcher’s hands.
       </p>
       <ul class="feat">
-        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#4DD2FF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Pompage et grand soleil</b>&nbsp;: le momentum se gagne, il ne se donne pas</span></li>
-        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#4DD2FF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Cagnotte de figures</b> encaissée seulement si la réception passe</span></li>
-        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#4DD2FF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Chaleur du public</b> à trois paliers, jusqu’à l’ovation</span></li>
-        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#4DD2FF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Filet de sécurité</b>&nbsp;: tomber coûte le score, jamais la partie</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#4DD2FF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Build swing momentum</b> for giant loops</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#4DD2FF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Bank trick points</b> by landing safely</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#4DD2FF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span>A <b>safety net</b> keeps the run going after a fall</span></li>
       </ul>
-      <span class="cta b" aria-hidden="true">▶ Jouer à Deluxe</span>
+      <span class="cta b" aria-hidden="true">▶ Play Deluxe</span>
     </div>
   </a>
 
   <!-- ── V3 ─────────────────────────────────────────────── -->
-  <a class="card v3" href="trapeze-city-v3.html" aria-label="Jouer à City, version 3 sur les toits">
+  <a class="card v3" href="trapeze-city-v3.html" aria-label="Play City, version 3 across the rooftops">
     <div class="shot">
       <span class="tag c">Version 3 · Trapeze City</span>
       <canvas id="pv3" width="480" height="270" role="img"
-        aria-label="Aperçu animé : toits d'une ville néon au crépuscule, un acrobate se balance entre deux rigs de trapèze pendant qu'un drone de télévision tourne autour de lui."></canvas>
+        aria-label="Animated preview: a trapeze artist swings above neon rooftops while a TV drone circles nearby."></canvas>
     </div>
     <div class="body">
-      <h3>City<small>LA TRAVERSÉE, SUR LES TOITS D’UNE VILLE</small></h3>
+      <h3>City<small>A ROOFTOP CROSSING</small></h3>
       <p class="desc">
-        Le même trapèze, une troisième peau. La caméra devient libre en 3D, le chapiteau
-        laisse place à une ville générée par graine et éclairée au néon, et le numéro devient
-        une traversée en direct de toit en toit&nbsp;: sept rigs, un seul vol continu.
+        Swing across a neon city with a free-moving camera: seven rigs,
+        three acts and one continuous rooftop performance.
       </p>
       <ul class="feat">
-        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FF2E88" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Sept rigs enchaînés</b>, en trois actes, au-dessus d’une ville en 3D générée par graine</span></li>
-        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FF2E88" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Étoiles de hype</b> jusqu’à ×3, avec drone de télévision quand le public s’enflamme</span></li>
-        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FF2E88" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Radar des toits</b> et HUD façon jeu urbain&nbsp;: mêmes mécaniques de trapèze, présentation neuve</span></li>
-        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FF2E88" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Porteur, filet et vent latéral</b>&nbsp;: la chute coûte la cagnotte, jamais la traversée</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FF2E88" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Seven connected rigs</b> across a generated city</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FF2E88" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Crowd hype</b>, a TV drone and rooftop radar</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FF2E88" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span>A catcher and safety net keep the crossing alive</span></li>
       </ul>
-      <span class="cta c" aria-hidden="true">▶ Jouer à City</span>
+      <span class="cta c" aria-hidden="true">▶ Play City</span>
     </div>
   </a>
 
   <!-- ── V4 ────────────────────────────────────────────────────── -->
-  <a class="card v4" href="2d/" aria-label="Jouer à Circus Alzahir, version 2D installable">
+  <a class="card v4" href="2d/" aria-label="Play Circus Alzahir, installable 2D version">
     <div class="shot">
-      <span class="tag d">Version 4 · 2D installable</span>
+      <span class="tag d">Version 4 · Installable 2D</span>
       <img src="assets/shot-2d.jpg" width="960" height="560" loading="lazy"
-        alt="Écran-titre de Circus Alzahir avec Marc et Claire sous le chapiteau.">
+        alt="Circus Alzahir title screen with Marc and Claire beneath the big top.">
     </div>
     <div class="body">
-      <h3>Circus Alzahir<small>LA BRANCHE 2D INSTALLABLE</small></h3>
+      <h3>Circus Alzahir<small>INSTALLABLE 2D ADVENTURE</small></h3>
       <p class="desc">
-        Une autre évolution du jeu 2D d’origine, avec sa propre mise en scène et une
-        installation possible sur l’écran d’accueil.
+        A cinematic evolution of the original 2D game that can be added to your home screen.
       </p>
       <ul class="feat">
-        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#5FE3A1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Cinématique d’ouverture</b> et annonces de monde</span></li>
-        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#5FE3A1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Musique par monde</b>, médailles et parallaxe enrichie</span></li>
-        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#5FE3A1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>PWA installable</b> avec fonctionnement hors connexion</span></li>
-        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#5FE3A1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span>Écran maintenu allumé pendant la partie</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#5FE3A1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Cinematic opening</b> and world introductions</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#5FE3A1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>World music</b>, medals and layered scenery</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#5FE3A1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Installable PWA</b> with offline play</span></li>
       </ul>
-      <span class="cta d" aria-hidden="true">▶ Jouer à Circus Alzahir</span>
+      <span class="cta d" aria-hidden="true">▶ Play Circus Alzahir</span>
     </div>
   </a>
 
   <!-- ── V5 ────────────────────────────────────────────────────── -->
-  <a class="card v5" href="3d/" aria-label="Jouer à Trapeze Stars 3D avec le moteur Three.js">
+  <a class="card v5" href="3d/" aria-label="Play Trapeze Stars 3D">
     <div class="shot">
       <span class="tag e">Version 5 · Three.js</span>
       <img src="3d/shots/menu.jpg" width="960" height="560" loading="lazy"
-        alt="Piste de Trapeze Stars 3D avec Marc et Claire sous les projecteurs.">
+        alt="Trapeze Stars 3D arena with Marc and Claire under the spotlights.">
     </div>
     <div class="body">
-      <h3>Trapeze Stars 3D<small>LE NUMÉRO EN VRAIE 3D</small></h3>
+      <h3>Trapeze Stars 3D<small>THE ACT IN FULL 3D</small></h3>
       <p class="desc">
-        Une reprise complète en volume avec Three.js, des prises notées au timing et une
-        caméra qui suit l’acrobate dans le chapiteau.
+        A full 3D experience with timing-based catches and a camera that follows the artist.
       </p>
       <ul class="feat">
-        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#C9ADFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Personnages et piste en volume</b> avec rendu WebGL</span></li>
-        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#C9ADFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Quatre mondes</b>, figures, combos et vies</span></li>
-        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#C9ADFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Tableau des scores</b> local et photo finish</span></li>
-        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#C9ADFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span>Clavier, tactile et manette pris en charge</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#C9ADFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>3D artists and arena</b> rendered with WebGL</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#C9ADFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Four worlds</b>, tricks and combos</span></li>
+        <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#C9ADFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span>Local leaderboard, photo finish and gamepad support</span></li>
       </ul>
-      <span class="cta e" aria-hidden="true">▶ Jouer à Trapeze Stars 3D</span>
+      <span class="cta e" aria-hidden="true">▶ Play Trapeze Stars 3D</span>
     </div>
   </a>
 
 </div>
 
 <aside class="lineage-note">
-  <b>Classic et Circus Alzahir</b> sont deux branches du même jeu 2D, développées
-  en parallèle. Elles restent toutes les deux jouables ici&nbsp;: aucune version n’est masquée
-  ni remplacée par l’autre.
+  <b>Classic and Circus Alzahir</b> are two independent branches of the original 2D game.
+  Both remain playable here; neither replaces the other.
 </aside>
 </section>
 
 <section id="compare">
-  <h2>Classic, Deluxe et City en détail</h2>
-  <p class="lead">
-    Ce n’est pas le même jeu avec de meilleurs graphismes à chaque version&nbsp;: les règles
-    elles-mêmes changent. City reprend les mécaniques de Deluxe (pompage, qualités de prise,
-    cagnotte, porteur, filet) et les rejoue dans un décor et une présentation entièrement neufs.
-  </p>
+  <h2>Compare Classic, Deluxe and City</h2>
+  <p class="lead">These are different games, not just graphics upgrades. City brings Deluxe's swing, catch and safety-net mechanics to a rooftop crossing.</p>
   <div class="tablewrap">
     <table>
       <thead><tr><th scope="col">&nbsp;</th><th scope="col">Classic</th><th scope="col">Deluxe</th><th scope="col">City</th></tr></thead>
       <tbody>
-        <tr><td>Point de vue</td><td>Vue de côté, défilement horizontal</td><td>Perspective, progression en profondeur</td><td class="yes">Caméra 3D libre, au-dessus d’une ville</td></tr>
-        <tr><td>Décor</td><td>Chapiteau en 2D</td><td>Chapiteau en perspective, par monde</td><td class="yes">Ville néon générée par graine, 940&nbsp;m de côté</td></tr>
-        <tr><td>Structure</td><td>12 niveaux, 4 mondes</td><td>12 niveaux à étoiles, rejouables</td><td class="yes">Un seul numéro, sept rigs enchaînés en trois actes</td></tr>
-        <tr><td>Saisie du trapèze</td><td>Assistée, à proximité</td><td class="yes">Toujours volontaire, trois qualités de prise</td><td class="yes">Toujours volontaire, fenêtre resserrée à chaque rig</td></tr>
-        <tr><td>Ampleur du balancé</td><td class="no">Subie</td><td class="yes">Se construit au pompage, jusqu’au grand soleil</td><td class="yes">Identique, par l’énergie du pendule</td></tr>
-        <tr><td>Figures</td><td>Salto simple</td><td class="yes">Cagnotte perdue si la réception échoue</td><td class="yes">Cagnotte, avec bonus de sortie propre et d’enchaînement</td></tr>
-        <tr><td>Porteur</td><td>Réception simple</td><td class="yes">Fenêtre annoncée, suspension, relance</td><td class="yes">Identique, plus un vent latéral au dernier vol</td></tr>
-        <tr><td>Public</td><td>Applaudissements décoratifs</td><td class="yes">Jauge à trois paliers, multiplicateur jusqu’à ×3</td><td class="yes">Cinq étoiles de hype, multiplicateur ×3, drone de télévision</td></tr>
-        <tr><td>En cas de chute</td><td>Une vie en moins</td><td class="yes">Le filet rattrape&nbsp;: on perd le score, pas la partie</td><td class="yes">Le filet rattrape, reprise au dernier toit atteint</td></tr>
-        <tr><td>Rendu</td><td>Ratio fixe 800×450, plein écran en paysage sur mobile</td><td class="yes">Plein écran, portrait et paysage, densité d’écran gérée</td><td class="yes">Identique, avec post-traitement (lueur, grain, étalonnage)</td></tr>
-        <tr><td>Écrans 120&nbsp;Hz</td><td class="no">Le jeu accélère</td><td class="yes">Pas de temps fixe, vitesse identique</td><td class="yes">Identique, pas fixe à 1/120&nbsp;s</td></tr>
-        <tr><td>Qualité graphique</td><td>Fixe</td><td class="yes">Trois profils, ajustés automatiquement</td><td class="yes">Trois profils, effets dégressifs par palier</td></tr>
-        <tr><td>Réglages et progression</td><td>Aucun réglage, on repart de zéro</td><td class="yes">Musique, langue, qualité, vitesse ; niveaux à étoiles</td><td class="yes">Musique, langue, qualité, sensibilité caméra, accessibilité</td></tr>
-        <tr><td>Radar / HUD</td><td class="no">—</td><td class="no">—</td><td class="yes">Radar des toits, façon jeu urbain</td></tr>
+        <tr><td>View</td><td>Side-scrolling 2D</td><td>Perspective through the tent</td><td class="yes">Free camera over a 3D city</td></tr>
+        <tr><td>Setting</td><td>2D big top</td><td>Circus worlds in perspective</td><td class="yes">Generated neon rooftops</td></tr>
+        <tr><td>Journey</td><td>12 levels, four worlds</td><td>12 replayable levels</td><td class="yes">Seven connected rigs in three acts</td></tr>
+        <tr><td>Catch</td><td>Assisted near the bar</td><td class="yes">Player-controlled with graded timing</td><td class="yes">Player-controlled at every rig</td></tr>
+        <tr><td>Swing</td><td>Automatic pendulum</td><td class="yes">Pump to build momentum</td><td class="yes">Pump to build momentum</td></tr>
+        <tr><td>Tricks</td><td>Simple somersault</td><td class="yes">Bank points by landing safely</td><td class="yes">Chain tricks and clean exits</td></tr>
+        <tr><td>Safety</td><td>Lose a life on a fall</td><td class="yes">Net catches falls</td><td class="yes">Net returns you to the last roof</td></tr>
+        <tr><td>Screen</td><td>Fixed 800×450 aspect ratio</td><td class="yes">Responsive portrait and landscape</td><td class="yes">Responsive with adjustable effects</td></tr>
+        <tr><td>Controls</td><td>Keyboard and touch</td><td class="yes">Keyboard and touch</td><td class="yes">Keyboard, touch and free-look camera</td></tr>
       </tbody>
     </table>
   </div>
 </section>
 
 <section id="tech">
-  <h2>Sous le capot</h2>
-  <p class="lead">Les cinq jeux sont servis comme un site entièrement statique. Classic, Deluxe,
-    City et <i>Circus Alzahir</i> sont autonomes&nbsp;; le jeu 3D est compilé avec Three.js,
-    puis livré sans requête vers une bibliothèque externe.</p>
+  <h2>Made to play anywhere</h2>
+  <p class="lead">All five games are hosted online as a static site. Open this address on a phone or another computer; no local server or account is needed.</p>
   <div class="specs">
-    <div class="spec"><b>0</b><span>requête tierce au démarrage</span></div>
-    <div class="spec c"><b>5</b><span>jeux dans un seul site</span></div>
-    <div class="spec p"><b>2D + 3D</b><span>Canvas et WebGL</span></div>
-    <div class="spec g"><b>Fluide</b><span>cadence adaptée à l’écran</span></div>
+    <div class="spec"><b>0</b><span>third-party requests at startup</span></div>
+    <div class="spec c"><b>5</b><span>games on one site</span></div>
+    <div class="spec p"><b>2D + 3D</b><span>Canvas and WebGL</span></div>
+    <div class="spec g"><b>Responsive</b><span>layouts for each screen</span></div>
   </div>
 
   <details>
-    <summary>Commandes</summary>
+    <summary>Controls</summary>
     <div class="in">
-      <p><b>Classic et Deluxe, au clavier</b> — <kbd>←</kbd> <kbd>→</kbd> se déplacer,
-        <kbd>Espace</kbd> sauter, saisir ou lâcher,
-        <kbd>Maj</kbd> figure et pompage,
-        <kbd>P</kbd> pause, <kbd>M</kbd> couper la musique.</p>
-      <p style="margin-top:9px"><b>City, au clavier</b> — <kbd>Espace</kbd> pomper ou saisir,
-        <kbd>S</kbd> lâcher, <kbd>F</kbd> figure, la souris pour le regard libre,
-        <kbd>P</kbd> pause.</p>
-      <p style="margin-top:9px"><b>Tactile, Classic et Deluxe</b> — deux palettes sous le pouce
-        gauche pour se déplacer, deux boutons sous le pouce droit pour agir. Le libellé du
-        bouton principal change selon la situation&nbsp;: sauter, saisir, puis lâcher.</p>
-      <p style="margin-top:9px"><b>Tactile, City</b> — un manche virtuel sous le pouce gauche
-        pour le regard, trois boutons sous le pouce droit (pomper/saisir, figure, lâcher),
-        multitouch réel&nbsp;: pomper et regarder fonctionnent en même temps.</p>
+      <p><b>Classic, keyboard</b> — <kbd>←</kbd> <kbd>→</kbd> move, <kbd>Space</kbd> jump or release, <kbd>F</kbd> grab, <kbd>P</kbd> pause.</p>
+      <p style="margin-top:9px"><b>Deluxe, keyboard</b> — <kbd>←</kbd> <kbd>→</kbd> move, <kbd>Space</kbd> jump, grab or release, <kbd>Shift</kbd> pump or trick, <kbd>P</kbd> pause.</p>
+      <p style="margin-top:9px"><b>City, keyboard</b> — <kbd>Space</kbd> pump or grab, <kbd>S</kbd> release, <kbd>F</kbd> trick, drag to look, <kbd>P</kbd> pause.</p>
+      <p style="margin-top:9px"><b>Touch</b> — on-screen controls replace keyboard keys. Each game's start and pause screens explain its controls.</p>
     </div>
   </details>
   <details>
-    <summary>Accessibilité et confort</summary>
+    <summary>Accessibility and comfort</summary>
     <div class="in">
-      Classic, Deluxe et City respectent <code>prefers-reduced-motion</code>, plafonnent l’opacité des
-      flashs, et se mettent en pause tout seuls quand l’onglet passe en arrière-plan ou qu’un
-      appel arrive. Classic et Deluxe donnent aux dangers une forme reconnaissable en plus de
-      leur couleur. City ajoute un écran de réglages dédié&nbsp;: réduction des secousses et des
-      flashs, taille de texte, contraste renforcé, sensibilité de caméra et inversion d’axe —
-      persistés d’une partie à l’autre. Les zones tactiles font au moins 56&nbsp;px et
-      respectent les encoches sur ces trois jeux.
+      Classic, Deluxe and City support reduced motion, limit flashes and pause when the tab
+      goes into the background. City also offers shake, flash, contrast, text-size and camera
+      options. Touch controls respect device safe areas.
     </div>
   </details>
 </section>
 </main>
 
 <footer>
-  <p>Trapeze Stars — Classic, Deluxe &amp; City, plus <a href="2d/">Circus Alzahir</a>
-     et <a href="3d/">la version 3D</a>.</p>
+  <p>Trapeze Stars — Classic, Deluxe, City, <a href="2d/">Circus Alzahir</a>
+     and <a href="3d/">Trapeze Stars 3D</a>.</p>
 </footer>
 
 </div>
@@ -469,16 +434,17 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
     if(!cv)return;
     const cx=cv.getContext('2d');
     const W=cv.width,H=cv.height;
-    let t=0,vis=false,raf=0;
+    let t=0,vis=false,raf=0,done=false;
     function frame(){
       raf=0;
-      if(!vis)return;
+      if(!vis||done)return;
       t++;draw(cx,W,H,t);
-      raf=requestAnimationFrame(frame);
+      if(t<240)raf=requestAnimationFrame(frame);
+      else done=true; // A short preview, not an endless unattended loop.
     }
     if('IntersectionObserver' in window){
       new IntersectionObserver(es=>{
-        vis=es[0].isIntersecting&&!still;
+        vis=es[0].isIntersecting&&!still&&!done;
         if(vis&&!raf)raf=requestAnimationFrame(frame);
       },{threshold:.12}).observe(cv);
     } else {vis=!still;if(vis)raf=requestAnimationFrame(frame);}

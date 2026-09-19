@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { createStage } from './scene.js';
 import { createWorld } from './world.js';
-import { createHero, poseHero } from './player.js';
+import { createHero, poseHero, GRIP_Y } from './player.js';
 import { initAudio, updateAudio, setWorld as setAudioWorld, setMuted, audioState, sfx } from './audio.js';
 import { netConfigured, netSetConfig, fetchWorldTop, submitWorldScore, netNewRun, SCORE_MAX } from './net.js';
 
@@ -20,7 +20,7 @@ const JUNGLE_W = 1, BEACH_W = 2, SPACE_W = 3;
 const NET_Y = -3.6;                       // safety-net height (one save per world)
 const MISS_Y = -7;
 const COMBO_TIME = 6;     // s before combo expires
-const HANG = 1.55;        // hands-to-origin offset of the hero
+const HANG = GRIP_Y;      // keep the animated hands exactly on the bar
 const MEDAL_T = [800, 1800, 3500, 6000];              // per-world score → Bronze/Silver/Gold/Diamond
 const MEDAL_ICON = ['·', '🥉', '🥈', '🥇', '💎'];
 const WORLD_ICON = ['🎪', '🌴', '🏖', '🚀'];
@@ -170,29 +170,37 @@ const ropeMats = [
 ];
 const barMat = new THREE.MeshStandardMaterial({ color: 0xffcf3f, emissive: 0xff8a00, emissiveIntensity: 0.8, roughness: 0.4, metalness: 0.2 });
 const barReadyMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x8affc1, emissiveIntensity: 1.6, roughness: 0.3 });
+const BAR_SUPPORT_X = 0.62;
+const anchorMat = new THREE.MeshStandardMaterial({ color: 0x2a1533 });
 
 for (let i = 0; i < NBARS; i++) {
   const { x, py, w, mv, mvSpd, mvPh } = barDefs[i];
   const g = new THREE.Group();
-  const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, L, 6), ropeMats[w]);
+  const ropes = [-1, 1].map(() => new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, L, 6), ropeMats[w]));
   const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 1.5, 10), barMat);
-  bar.rotation.x = Math.PI / 2;
+  bar.rotation.z = Math.PI / 2;
   bar.castShadow = true;
-  g.add(rope); g.add(bar);
+  ropes.forEach((rope) => g.add(rope)); g.add(bar);
   barGroup.add(g);
-  const anchor = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), new THREE.MeshStandardMaterial({ color: 0x2a1533 }));
-  anchor.position.set(x, py, 0);
-  barGroup.add(anchor);
-  bars.push({ x, bx: x, py, w, mv, mvSpd, mvPh, theta: (i % 2 ? 1 : -1) * SOLO_AMP * rnd(), omega: 0, g, rope, bar, anchor });
+  const anchors = [-1, 1].map((side) => {
+    const anchor = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 8), anchorMat);
+    anchor.position.set(x + side * BAR_SUPPORT_X, py, 0);
+    barGroup.add(anchor);
+    return anchor;
+  });
+  bars.push({ x, bx: x, py, w, mv, mvSpd, mvPh, theta: (i % 2 ? 1 : -1) * SOLO_AMP * rnd(), omega: 0, g, ropes, bar, anchors });
 }
 const bobPos = (b) => new THREE.Vector3(b.x + L * Math.sin(b.theta), b.py - L * Math.cos(b.theta), 0);
 const hangPos = (b) => bobPos(b).add(new THREE.Vector3(0, -HANG, 0));
 function layoutBar(b) {
-  if (b.mv) { b.x = b.bx + Math.sin(G.t * b.mvSpd + b.mvPh) * b.mv; b.anchor.position.x = b.x; }
   const p = bobPos(b);
   b.bar.position.copy(p);
-  b.rope.position.set((b.x + p.x) / 2, (b.py + p.y) / 2, 0);
-  b.rope.rotation.z = -b.theta;
+  b.ropes.forEach((rope, i) => {
+    const side = i === 0 ? -1 : 1;
+    rope.position.set((b.x + p.x) / 2 + side * BAR_SUPPORT_X, (b.py + p.y) / 2, 0);
+    rope.rotation.z = b.theta;
+    b.anchors[i].position.set(b.x + side * BAR_SUPPORT_X, b.py, 0);
+  });
 }
 
 /* ══════════════ COLLECTIBLES: stars + bonus rings ══════════════ */
@@ -272,7 +280,7 @@ function applyLayout(daily) {
       d.py = basePy[i].py; d.mv = basePy[i].mv; d.mvSpd = basePy[i].mvSpd; d.mvPh = basePy[i].mvPh;
     }
     b.py = d.py; b.mv = d.mv; b.mvSpd = d.mvSpd; b.mvPh = d.mvPh;
-    b.anchor.position.y = d.py;
+    b.anchors.forEach((anchor) => { anchor.position.y = d.py; });
   }
   // stars & rings follow the re-rolled heights (X stays fixed so the 4 worlds' décor is untouched)
   let si = 0;
@@ -457,6 +465,7 @@ const G = {
   timeScale: 1, slowmo: 0, fovKick: 0, shake: 0,
   attract: false, daily: false,
 };
+const IDLE_PAUSE_AFTER = 20;
 
 /* ══════════════ MENU PODIUM (3D character select) ══════════════ */
 const PODX = -7, PODTOP = -7.65;
@@ -679,6 +688,8 @@ function enterMenu() {
   menuGroup.visible = true; curtain.visible = true; menuSpot.visible = true;
   ui.attractBar.classList.remove('show');
   ui.hud.style.display = 'none'; tapBtn.classList.remove('on'); trail.visible = false;  // e.g. leaving the demo mid-flight
+  ui.pause.classList.add('hidden'); ui.pauseBtn.classList.add('hidden'); ui.introBtn.classList.remove('hidden');
+  ui.timingCue.style.display = 'none';
   if (!menuShown) {
     menuShown = true; curtainOpen = 0;
     // first menu ever: cinematic intro (auto-skipped on ?lowfx / reduced motion)
@@ -696,12 +707,17 @@ function enterMenu() {
 }
 
 function rebuildHero() { scene.remove(hero); hero = createHero(G.char); hero.visible = G.mode !== 'menu'; scene.add(hero); }
-function placeHeroOnBar(b) { const p = hangPos(b); hero.position.copy(p); hero.rotation.z = -b.theta; }
+function placeHeroOnBar(b) {
+  // The bar stays horizontal between its two parallel ropes. Keep the acrobat
+  // upright too, so both hands remain on the bar throughout the swing.
+  hero.position.copy(hangPos(b));
+  hero.rotation.z = 0;
+}
 function vibrate(ms) { if (navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) {} } }
 
 /* ══════════════ UI ══════════════ */
 const $ = (id) => document.getElementById(id);
-const ui = { menu: $('menu'), over: $('over'), hud: $('hud'), score: $('score'), lives: $('lives'), combo: $('combo'), grade: $('grade'), comboHold: $('comboHold'), comboFill: $('comboFill'), big: $('bigmsg'), bigsub: $('bigsub'), flash: $('flash'), banner: $('banner'), bannerTxt: $('bannerTxt'), worldTag: $('worldTag'), wind: $('windTag'), best: $('best'), newBest: $('newBest'), overStats: $('overStats'), overMedals: $('overMedals'), muteBtn: $('muteBtn'), fxBtn: $('fxBtn'), gpBadge: $('gpBadge'), menuBoard: $('menuBoard'), overBoard: $('overBoard'), entry: $('entry'), entryRank: $('entryRank'), entryScore: $('entryScore'), entryInput: $('entryInput'), photoWrap: $('photoWrap'), photoImg: $('photoImg'), shareBtn: $('shareBtn'), introLogo: $('introLogo'), attractBar: $('attractBar'), dailyBest: $('dailyBest') };
+const ui = { menu: $('menu'), pause: $('pause'), pauseTitle: $('pauseTitle'), pauseBtn: $('pauseBtn'), introBtn: $('introBtn'), timingCue: $('timingCue'), over: $('over'), hud: $('hud'), score: $('score'), lives: $('lives'), combo: $('combo'), grade: $('grade'), comboHold: $('comboHold'), comboFill: $('comboFill'), big: $('bigmsg'), bigsub: $('bigsub'), flash: $('flash'), banner: $('banner'), bannerTxt: $('bannerTxt'), worldTag: $('worldTag'), wind: $('windTag'), best: $('best'), newBest: $('newBest'), overStats: $('overStats'), overMedals: $('overMedals'), muteBtn: $('muteBtn'), fxBtn: $('fxBtn'), gpBadge: $('gpBadge'), menuBoard: $('menuBoard'), overBoard: $('overBoard'), entry: $('entry'), entryRank: $('entryRank'), entryScore: $('entryScore'), entryInput: $('entryInput'), photoWrap: $('photoWrap'), photoImg: $('photoImg'), shareBtn: $('shareBtn'), introLogo: $('introLogo'), attractBar: $('attractBar'), dailyBest: $('dailyBest') };
 let lastScore = -1;
 function refreshHUD() {
   if (G.score !== lastScore) {
@@ -723,6 +739,32 @@ $('dailyBtn').addEventListener('click', () => { initAudio(); sfx.click(); startG
 $('introBtn').addEventListener('click', () => { initAudio(); sfx.click(); playIntro(); });         // replay the cinematic intro
 $('againBtn').addEventListener('click', () => { sfx.click(); enterMenu(); });
 $('replayBtn').addEventListener('click', () => { initAudio(); sfx.click(); startGame(G.daily); });  // instant replay — no menu detour
+function pauseGame(reason = 'manual') {
+  if (G.mode !== 'playing' || G.attract) return;
+  G.mode = 'paused'; G.holding = false; G.armed = false; spaceControlHeld = false;
+  ui.pauseTitle.textContent = reason === 'idle' ? 'TAKE YOUR TIME' : 'PAUSED';
+  ui.pause.classList.remove('hidden'); ui.pauseBtn.classList.add('hidden');
+  ui.pauseBtn.setAttribute('aria-label', 'Pause game');
+  tapBtn.classList.remove('on'); ui.timingCue.style.display = 'none';
+  if (reason !== 'hidden') $('resumeBtn').focus({ preventScroll: true });
+}
+function resumeGame() {
+  if (G.mode !== 'paused') return;
+  G.mode = 'playing'; G.holding = false; G.armed = false;
+  ui.pause.classList.add('hidden'); ui.pauseBtn.classList.remove('hidden');
+  tapBtn.classList.add('on'); lastInputT = G.t;
+  app.focus({ preventScroll: true });
+}
+ui.pauseBtn.addEventListener('click', () => pauseGame());
+$('resumeBtn').addEventListener('click', () => { sfx.click(); resumeGame(); });
+$('pauseMenuBtn').addEventListener('click', () => { sfx.click(); enterMenu(); });
+addEventListener('keydown', (e) => {
+  if (e.code !== 'Escape' || e.repeat || (G.mode !== 'playing' && G.mode !== 'paused')) return;
+  e.preventDefault();
+  if (G.mode === 'playing') pauseGame(); else resumeGame();
+});
+addEventListener('blur', () => pauseGame('hidden'));
+document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame('hidden'); });
 ui.muteBtn.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
 ui.muteBtn.addEventListener('click', (e) => {
   e.stopPropagation(); initAudio();
@@ -781,11 +823,16 @@ function startGame(daily) {
   for (const s of stars) { s.got = false; s.m.visible = true; }
   for (const r of rings) { r.got = false; r.m.visible = true; }
   rebuildHero();
+  layoutBar(bars[0]);
+  placeHeroOnBar(bars[0]);
   hero.visible = true;
   menuGroup.visible = false; curtain.visible = false; menuSpot.visible = false;
   ui.menu.classList.add('hidden'); ui.over.classList.add('hidden');
+  ui.pause.classList.add('hidden'); ui.pauseBtn.classList.remove('hidden'); ui.introBtn.classList.add('hidden');
   ui.hud.style.display = 'flex';
   tapBtn.classList.add('on');
+  lastInputT = G.t;
+  app.focus({ preventScroll: true });
   refreshHUD();
 }
 function awardMedals() {
@@ -799,6 +846,7 @@ let _newHigh = false;
 function endGame() {
   G.mode = 'over';
   ui.hud.style.display = 'none';
+  ui.pause.classList.add('hidden'); ui.pauseBtn.classList.add('hidden'); ui.timingCue.style.display = 'none';
   ui.comboHold.style.opacity = '0';
   ui.wind.style.opacity = '0';
   tapBtn.classList.remove('on');
@@ -840,19 +888,32 @@ function showOver() {
 function handleDown() {
   initAudio();
   if (G.mode !== 'playing') return;
+  lastInputT = G.t;
   if (G.state === 'swing') { G.holding = true; G.armed = true; }
   else if (G.state === 'fly' && !G.trick) { G.trick = true; sfx.flip(); }
 }
 function handleUp() {
   if (G.mode !== 'playing') { G.holding = false; return; }
+  lastInputT = G.t;
   G.holding = false;
   if (G.state === 'swing' && G.armed) { G.armed = false; releaseBar(); }
 }
 // Space also needs to type a literal space in the name-entry field — don't hijack it as a
 // flight control while that field is up (or more generally while any text input has focus).
 const typingTarget = () => { const t = document.activeElement; return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA'); };
-addEventListener('keydown', (e) => { if (e.code === 'Space' && !e.repeat && !typingTarget()) { e.preventDefault(); handleDown(); } });
-addEventListener('keyup', (e) => { if (e.code === 'Space' && !typingTarget()) { e.preventDefault(); handleUp(); } });
+let spaceControlHeld = false;
+const gameSpace = (e) => G.mode === 'playing' && !typingTarget() &&
+  !(e.target instanceof Element && e.target.closest('button, a, input, textarea, select, [role="button"]'));
+addEventListener('keydown', (e) => {
+  if (e.code === 'Space' && !e.repeat && gameSpace(e)) {
+    e.preventDefault(); spaceControlHeld = true; handleDown();
+  }
+});
+addEventListener('keyup', (e) => {
+  if (e.code === 'Space' && spaceControlHeld) {
+    e.preventDefault(); spaceControlHeld = false; handleUp();
+  }
+});
 app.addEventListener('pointerdown', (e) => { e.preventDefault(); handleDown(); });
 addEventListener('pointerup', handleUp);
 addEventListener('pointercancel', handleUp);
@@ -883,6 +944,7 @@ function gpA(pressed) {                   // A pressed/released, routed by scree
   if (pressed) {
     lastInputT = G.t;
     if (G.mode === 'playing') handleDown();
+    else if (G.mode === 'paused') resumeGame();
     else if (!ui.entry.classList.contains('hidden')) {
       // a gamepad can't type a name — A confirms only once something was typed
       // (keyboard or mobile virtual keyboard); otherwise just focus the field.
@@ -907,6 +969,7 @@ function pollGamepad() {
   const a = !!(pad.buttons[0] && pad.buttons[0].pressed);   // face button A
   if (a !== gpPrevA) { gpA(a); gpPrevA = a; }
   const edge = (i) => { const now = !!(pad.buttons[i] && pad.buttons[i].pressed); const was = gpPrev[i]; gpPrev[i] = now; return now && !was; };
+  if (edge(9)) { if (G.mode === 'playing') pauseGame(); else if (G.mode === 'paused') resumeGame(); }
   if (edge(12)) gpNav('up'); if (edge(13)) gpNav('down');
   if (edge(14)) gpNav('left'); if (edge(15)) gpNav('right');
   const ax = pad.axes[0] || 0, ay = pad.axes[1] || 0;      // left stick as a debounced d-pad
@@ -920,8 +983,7 @@ function pollGamepad() {
 addEventListener('gamepadconnected', () => { gpActive = true; updateGpBadge(); });
 addEventListener('gamepaddisconnected', () => pollGamepad());
 
-/* ══════════════ ATTRACT / DEMO MODE (3D-7) — the game plays itself after 20 s of menu idle ══════════════ */
-const ATTRACT_AFTER = 20;           // s of menu inactivity before the demo starts
+/* ══════════════ OPT-IN ATTRACT / DEMO MODE (3D-7) ══════════════ */
 let lastInputT = 0;
 const bot = { flipped: false };
 function startAttract() {
@@ -948,7 +1010,7 @@ function updateBot() {   // same strategy as the smoke-test bot: pump, release n
     }
   } else if (G.state === 'fly' && G.world === BEACH_W && !bot.flipped) { handleDown(); bot.flipped = true; }
 }
-// any real input: skip the intro, or hand the game back from demo mode (capture phase = runs first)
+// Any real input skips the intro or hands an explicitly started demo back to the menu.
 function anyRealInput() {
   lastInputT = G.t;
   if (intro.active) finishIntro();
@@ -958,10 +1020,15 @@ addEventListener('keydown', anyRealInput, true);
 addEventListener('pointerdown', anyRealInput, true);
 
 /* ══════════════ RELEASE: graded by timing ══════════════ */
+const goodWindow = () => Math.max(0.24, 0.42 * Math.pow(0.95, G.diffN));
 function releaseBar() {
   const b = bars[G.active];
   const nextI = G.active + 1;
-  if (b.omega <= 0.15 || nextI >= NBARS) { // backward / dead swing -> tumble
+  const amp = G.pumpAmp;
+  // A little forgiveness at the forward apex avoids punishing a mobile finger
+  // lifted one frame late; a genuinely backward release still tumbles.
+  const apexGrace = b.omega > -0.25 && b.omega <= 0.35 && b.theta > 0.62 * amp;
+  if ((b.omega <= 0.15 && !apexGrace) || nextI >= NBARS) { // backward / dead swing -> tumble
     const v = L * b.omega;
     G.vel.set(Math.cos(b.theta) * v * 0.5 + 1.0, Math.sin(b.theta) * v * 0.5, 0);
     G.state = 'fumble'; G.spin = 0; G.grade = 'fumble';
@@ -969,16 +1036,15 @@ function releaseBar() {
     showGrade('WHOOPS!', '#ff7d7d'); vibrate(20); sfx.fumble();
     return;
   }
-  const amp = G.pumpAmp;
   const ideal = 0.45 * amp;
-  const diff = Math.abs(b.theta - ideal) / amp;
+  const diff = apexGrace ? 0.2 : Math.abs(b.theta - ideal) / amp;
   // endless mode: each world entered past the first tour shrinks the timing windows −5% (floored)
   const shrink = Math.pow(0.95, G.diffN);
-  const PW = Math.max(0.065, 0.12 * shrink), GW = Math.max(0.20, 0.35 * shrink);
+  const PW = Math.max(0.065, 0.12 * shrink), GW = goodWindow();
   let flyDur, arcH, reach;
   if (diff < PW) { G.grade = 'perfect'; flyDur = 0.6; arcH = 2.8; reach = 5.0; showGrade('PERFECT!', '#ffcf3f'); }
-  else if (diff < GW) { G.grade = 'good'; flyDur = 0.75; arcH = 2.4; reach = 4.2; showGrade('GOOD!', '#d8ffef'); }
-  else { G.grade = 'ok'; flyDur = 0.95; arcH = 1.5; reach = 3.0; showGrade('OK', '#9a8fc5'); }
+  else if (diff < GW) { G.grade = 'good'; flyDur = 0.75; arcH = 2.4; reach = 4.45; showGrade('GOOD!', '#d8ffef'); }
+  else { G.grade = 'ok'; flyDur = 0.95; arcH = 1.5; reach = 3.4; showGrade('OK', '#9a8fc5'); }
   reach *= 0.85 + (amp - AMP_MIN) / (AMP_MAX - AMP_MIN) * 0.3;  // pumping extends reach
   if (b.w === SPACE_W) { flyDur *= 1.25; reach *= 1.12; }        // Space: low gravity, floatier arcs
   G.windOff = 0;
@@ -1176,6 +1242,22 @@ function physics(dt) {
   }
 }
 
+function updateControlCue() {
+  if (G.mode !== 'playing') return;
+  if (G.state !== 'swing') {
+    ui.timingCue.style.display = 'none';
+    tapBtn.textContent = G.state === 'fly' ? 'FLIP' : 'HOLD';
+    return;
+  }
+  tapBtn.textContent = G.holding ? 'RELEASE' : 'HOLD';
+  ui.timingCue.style.display = 'block';
+  const b = bars[G.active];
+  const diff = Math.abs(b.theta - 0.45 * G.pumpAmp) / G.pumpAmp;
+  const ready = G.holding && b.omega > 0.15 && diff < goodWindow();
+  ui.timingCue.classList.toggle('ready', ready);
+  ui.timingCue.textContent = ready ? 'RELEASE NOW' : G.holding ? 'KEEP HOLDING' : 'HOLD TO PUMP';
+}
+
 /* ══════════════ CAMERA ══════════════ */
 const camTarget = new THREE.Vector3();
 function updateCamera(dt) {
@@ -1256,7 +1338,7 @@ window.__game = {
   up: handleUp,
   action: () => { handleDown(); handleUp(); },
   state: () => ({
-    mode: G.mode, state: G.state, active: G.active, score: G.score, lives: G.lives,
+    mode: G.mode, state: G.state, active: G.active, score: G.score, lives: G.lives, t: +G.t.toFixed(2),
     combo: G.combo, grade: G.grade, flips: G.lastFlips, flipBonus: G.lastFlipBonus,
     theta: bars[G.active] ? bars[G.active].theta : 0, omega: bars[G.active] ? bars[G.active].omega : 0,
     amp: G.pumpAmp, timeScale: G.timeScale, hero: hero.position.toArray(),
@@ -1302,6 +1384,30 @@ window.__game = {
   attract: () => ({ active: G.attract, idle: +(G.t - lastInputT).toFixed(1) }),
   startAttract: () => startAttract(),
   toMenu: () => enterMenu(),
+  pause: () => pauseGame(),
+  resume: () => resumeGame(),
+  idleForTest: (seconds) => { lastInputT = G.t - Math.max(0, Number(seconds) || 0); },
+  rig: () => {
+    scene.updateMatrixWorld(true);
+    const b = bars[G.active], barP = b.bar.getWorldPosition(new THREE.Vector3());
+    const hands = hero.userData.hands.map((hand) => hand.getWorldPosition(new THREE.Vector3()));
+    const gripGap = Math.max(...hands.map((hand) => Math.abs(hand.y - barP.y)));
+    const handSpan = Math.max(...hands.map((hand) => Math.abs(hand.x - barP.x)));
+    let wireGap = 0;
+    b.ropes.forEach((rope, i) => {
+      const side = i === 0 ? -1 : 1;
+      const top = rope.localToWorld(new THREE.Vector3(0, L / 2, 0));
+      const bottom = rope.localToWorld(new THREE.Vector3(0, -L / 2, 0));
+      const anchor = b.anchors[i].getWorldPosition(new THREE.Vector3());
+      const barEnd = barP.clone().add(new THREE.Vector3(side * BAR_SUPPORT_X, 0, 0));
+      wireGap = Math.max(wireGap, top.distanceTo(anchor), bottom.distanceTo(barEnd));
+    });
+    return { ropes: b.ropes.length, anchors: b.anchors.length,
+      barHorizontal: Math.abs(b.bar.rotation.z - Math.PI / 2) < 0.001,
+      handGap: +(HANG - GRIP_Y).toFixed(3), gripGap: +gripGap.toFixed(3), handSpan: +handSpan.toFixed(3),
+      wireGap: +wireGap.toFixed(3), ropeAngle: +b.ropes[0].rotation.z.toFixed(3), theta: +b.theta.toFixed(3),
+      mastZ: world.group.getObjectByName('circusMast')?.position.z };
+  },
   // daily challenge (3D-7): seed + the first bars of the current rail (determinism check)
   daily: () => ({
     active: G.daily, seed: dailySeed(), best: (loadDaily() || { s: 0 }).s,
@@ -1317,6 +1423,7 @@ window.__game = {
     G.netBounce = false; G.windOff = 0; G.world = bars[i].w;
     trail.visible = false;
     const b = bars[i]; b.theta = -0.6; b.omega = 1.2;
+    layoutBar(b);
     placeHeroOnBar(b);
     camera.position.set(hero.position.x - 7.5, Math.max(hero.position.y + 4, 3), 12);
     camTarget.set(hero.position.x + 2.5, hero.position.y - 0.5, 0);
@@ -1339,8 +1446,19 @@ let last = performance.now();
 function frame(now) {
   let dt = (now - last) / 1000; last = now;
   dt = Math.min(dt, 0.05);
-  G.t += dt;
   pollGamepad();
+  if (G.mode === 'paused') {
+    updateAudio('paused');
+    requestAnimationFrame(frame);
+    return;
+  }
+  G.t += dt;
+  if (G.mode === 'playing' && !G.attract && !G.holding && G.t - lastInputT > IDLE_PAUSE_AFTER) {
+    pauseGame('idle');
+    updateAudio('paused');
+    requestAnimationFrame(frame);
+    return;
+  }
 
   // slow-mo bookkeeping (real-time)
   if (G.slowmo > 0) { G.slowmo -= dt; G.timeScale = 0.35; }
@@ -1349,7 +1467,9 @@ function frame(now) {
 
   world.update(G.t);
   world.applyMood(stage, G.mode === 'playing' ? hero.position.x : PODX);
-  for (const b of bars) layoutBar(b);
+  // Moving targets must be current before flight/catch physics, but visible
+  // ropes and bars are laid out after the pendulum step to avoid a frame of lag.
+  for (const b of bars) if (b.mv) b.x = b.bx + Math.sin(G.t * b.mvSpd + b.mvPh) * b.mv;
 
   // safety nets: visible in play only; flash + dip when they catch someone
   netGroup.visible = G.mode === 'playing';
@@ -1369,13 +1489,13 @@ function frame(now) {
     else if (G.salute > 0) { ps = 'salute'; G.salute -= dt; }
     poseHero(hero, G.t, ps, G.spin);
     updateCamera(dt);
+    updateControlCue();
   } else {
     for (let i = 0; i < NBARS; i++) stepBar(bars[i], dt, false);
     if (G.mode === 'menu') updateMenu(dt);
     if (intro.active) updateIntro(dt); else menuCamera();
-    // attract mode: after 20 s of menu inactivity, the game demos itself (real browsers only)
-    if (G.mode === 'menu' && !intro.active && !navigator.webdriver && G.t - lastInputT > ATTRACT_AFTER) startAttract();
   }
+  for (const b of bars) layoutBar(b);
   updateConfetti(dt);
   updateFireworks(dt);
   updateWind(dt);

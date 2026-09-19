@@ -127,13 +127,16 @@ export function createWorld(scene, segs) {
     new THREE.CylinderGeometry(0.3, 0.36, apexY + 12, 10),
     new THREE.MeshStandardMaterial({ color: 0xe8d9b8, roughness: 0.7, metalness: 0.2 })
   );
-  mast.position.set(cx, (apexY + 12) / 2 - 8.5, 0);
+  mast.name = 'circusMast';
+  // Keep the decorative pole behind the acrobat's z=0 flight lane so it
+  // never obscures the grip/catch moment in the side-follow camera.
+  mast.position.set(cx, (apexY + 12) / 2 - 8.5, -8);
   group.add(mast);
   const pennant = new THREE.Mesh(
     new THREE.ConeGeometry(0.5, 1.6, 3),
     new THREE.MeshStandardMaterial({ color: 0xff5c7a, emissive: 0xff2d55, emissiveIntensity: 0.7, side: THREE.DoubleSide })
   );
-  pennant.position.set(cx + 0.8, apexY + 3.2, 0); pennant.rotation.z = -Math.PI / 2;
+  pennant.position.set(cx + 0.8, apexY + 3.2, -8); pennant.rotation.z = -Math.PI / 2;
   group.add(pennant);
 
   // lit archway marking the exit toward the Jungle

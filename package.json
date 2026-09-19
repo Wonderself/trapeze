@@ -6,7 +6,8 @@
     "build:artifact": "npm run build:3d && node tools/prepare_site.mjs --output _site",
     "build": "npm run build:3d && node tools/prepare_site.mjs --sync-3d --output _site",
     "test:site": "node tools/site_smoke.mjs _site",
+    "test:controls": "node tools/demo_v1_v2.mjs _site && node tools/city_controls_smoke.mjs _site && node tools/2d_controls_smoke.mjs _site",
     "test:sw": "node tools/sw_redeploy_test.mjs _site",
-    "verify:deploy": "npm run build && npm run test:site && npm run test:sw"
+    "verify:deploy": "npm run build && npm run test:site && npm run test:controls && npm run test:sw"
   }
 }

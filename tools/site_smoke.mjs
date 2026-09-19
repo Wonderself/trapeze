@@ -113,7 +113,7 @@ try {
           .filter(href => href.startsWith(location.origin)),
       }));
       if (!layout.title) pageFailures.push('missing document title');
-      if (!layout.lang) pageFailures.push('missing document language');
+      if (layout.lang !== 'en') pageFailures.push(`expected English document language, got ${layout.lang || '(missing)'}`);
       if (/user-scalable\s*=\s*no|maximum-scale\s*=\s*1(?:\.0)?(?:\s|,|$)/i.test(layout.viewport)) pageFailures.push(`browser zoom disabled: ${layout.viewport}`);
       if (layout.duplicateIds.length) pageFailures.push(`duplicate ids: ${[...new Set(layout.duplicateIds)].join(', ')}`);
       if (layout.imagesWithoutAlt) pageFailures.push(`${layout.imagesWithoutAlt} image(s) without alt text`);
@@ -135,7 +135,7 @@ try {
             visualOrder: Math.max(...cards.map(card => card.getBoundingClientRect().bottom)) <= compare.getBoundingClientRect().top + 1,
           };
         });
-        if (selector.heading !== 'Choisissez votre version') pageFailures.push(`version selector heading mismatch: ${selector.heading}`);
+        if (selector.heading !== 'Choose your game') pageFailures.push(`version selector heading mismatch: ${selector.heading}`);
         if (JSON.stringify(selector.targets) !== JSON.stringify(expectedVersionTargets)) pageFailures.push(`version selector targets mismatch: ${JSON.stringify(selector.targets)}`);
         if (selector.labels.some(label => !label.trim())) pageFailures.push(`version selector has unnamed cards: ${JSON.stringify(selector.labels)}`);
         if (selector.oldClaimPresent) pageFailures.push('obsolete three-version claim is still visible');
@@ -165,17 +165,17 @@ try {
             overlappingButtons: visibleButtons.filter(button => intersects(rect, button.getBoundingClientRect())).map(button => button.id || button.textContent.trim()),
           };
         });
-        if (!returnLink) pageFailures.push('missing Toutes les versions link');
+        if (!returnLink) pageFailures.push('missing All versions link');
         else {
           const [left, top, right, bottom] = returnLink.rect;
           const requiredTarget = touch ? 44 : 32;
-          if (!returnLink.visible) pageFailures.push(`Toutes les versions link is hidden: ${JSON.stringify(returnLink)}`);
-          if (!returnLink.hitTarget) pageFailures.push(`Toutes les versions link is covered: ${JSON.stringify(returnLink)}`);
-          if (!returnLink.text.includes('Toutes les versions') || !returnLink.label.includes('Toutes les versions')) pageFailures.push(`Toutes les versions link has an unclear name: ${JSON.stringify(returnLink)}`);
-          if (returnLink.pathname !== '/') pageFailures.push(`Toutes les versions link targets ${returnLink.pathname}, expected /`);
-          if (right - left < requiredTarget || bottom - top < requiredTarget) pageFailures.push(`Toutes les versions target below ${requiredTarget}px: ${returnLink.rect.join(',')}`);
-          if (left < -1 || top < -1 || right > width + 1 || bottom > height + 1) pageFailures.push(`Toutes les versions link clipped: ${returnLink.rect.join(',')}`);
-          if (returnLink.overlappingButtons.length) pageFailures.push(`Toutes les versions overlaps controls: ${returnLink.overlappingButtons.join(', ')}`);
+          if (!returnLink.visible) pageFailures.push(`All versions link is hidden: ${JSON.stringify(returnLink)}`);
+          if (!returnLink.hitTarget) pageFailures.push(`All versions link is covered: ${JSON.stringify(returnLink)}`);
+          if (!returnLink.text.includes('All versions') || !returnLink.label.includes('All versions')) pageFailures.push(`All versions link has an unclear name: ${JSON.stringify(returnLink)}`);
+          if (returnLink.pathname !== '/') pageFailures.push(`All versions link targets ${returnLink.pathname}, expected /`);
+          if (right - left < requiredTarget || bottom - top < requiredTarget) pageFailures.push(`All versions target below ${requiredTarget}px: ${returnLink.rect.join(',')}`);
+          if (left < -1 || top < -1 || right > width + 1 || bottom > height + 1) pageFailures.push(`All versions link clipped: ${returnLink.rect.join(',')}`);
+          if (returnLink.overlappingButtons.length) pageFailures.push(`All versions overlaps controls: ${returnLink.overlappingButtons.join(', ')}`);
         }
       }
 
@@ -264,7 +264,8 @@ try {
   if (metadata.imageSize[0] !== 1200 || metadata.imageSize[1] !== 630) failures.push(`OG image is ${metadata.imageSize.join('x')}, expected 1200x630`);
 
   const missing = await page.goto(`${server.origin}/definitely-missing`, { waitUntil: 'load' });
-  if (!missing || missing.status() !== 404 || !(await page.textContent('body')).includes('Numéro introuvable')) {
+  if (!missing || missing.status() !== 404 || !(await page.textContent('body')).includes('Act not found')
+    || (await page.getAttribute('html', 'lang')) !== 'en') {
     failures.push('custom 404 page is not served with status 404');
   }
 

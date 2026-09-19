@@ -22,6 +22,8 @@ function mkEl(id){
     getBoundingClientRect:()=>({left:0,top:0,width:800,height:450}),
     offsetWidth:800,offsetHeight:450,clientWidth:800,clientHeight:450,
     focus(){},click(){},appendChild(){},
+    setAttribute(name,value){this[name]=String(value);},
+    getAttribute(name){return this[name]??null;},
     requestFullscreen:()=>Promise.resolve()};
   el.getContext=()=>ctxProto;
   return el;

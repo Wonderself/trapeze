@@ -24,7 +24,7 @@ Le dépôt contient **cinq jeux**, choisis depuis une page d'accueil unique (`in
 
 ## 🌐 Site en ligne et déploiement
 
-Le site canonique est **<https://wonderself.github.io/trapeze/>**. Une
+Le site canonique et partageable depuis un autre appareil est **<https://wonderself.github.io/trapeze/>**. Une
 publication n'a lieu qu'après le passage du workflow de vérification sur
 `main`.
 
@@ -53,8 +53,9 @@ parallèle (`2d/` Circus Alzahir, `3d/` la version Three.js).
 | Entrée | Action |
 |---|---|
 | **Maintenir** `Espace` (ou le doigt) | S'accrocher et **pomper** le balancer |
-| **Relâcher** au sommet | S'envoler — le timing est noté **PERFECT / GOOD / OK** |
+| **Relâcher** près du repère « RELEASE NOW » | S'envoler — le timing est noté **PERFECT / GOOD / OK** |
 | **Tap en vol** | Vrille bonus (+50 × combo par tour complet) |
+| `Échap` ou bouton pause | Mettre en pause et revoir les commandes |
 
 ### 2D (clavier)
 | Touche | Action |
@@ -62,7 +63,7 @@ parallèle (`2d/` Circus Alzahir, `3d/` la version Three.js).
 | `←` `→` | Se déplacer |
 | `Espace` / `↑` / `W` | Sauter — en l'air : double saut (salto) — sur un trapèze : lâcher |
 | `F` / `Z` / `Maj` | Saisir une barre de trapèze proche |
-| `Échap` | Retour au menu |
+| `Échap` | Pause / reprise ; le retour au menu a un bouton dédié |
 
 Sur mobile (2D) : boutons tactiles + bouton **⚡**, tap = sauter, swipe bas = saisir, vibrations haptiques.
 
@@ -102,6 +103,7 @@ cd game3d && npm install        # une fois
 npm run dev                     # dev local
 cd .. && npm run build          # build 3D + /3d + /_site
 npm run test:site               # sept pages en desktop/mobile
+npm run test:controls           # contrôles des quatre jeux Canvas, desktop et tactile
 npm run test:sw                 # mise à jour PWA + mode hors ligne
 node game3d/test/smoke3d.mjs    # flux Three.js complet + captures
 ```

@@ -1,5 +1,14 @@
 # 📊 AUDIT — Trapeze Stars (trapeze)
-Dernière mise à jour : 2026-09-14 — Direction active : **Trapeze Stars 3D** (`game3d/`, Three.js + Vite).
+Dernière mise à jour : 2026-09-19 — Direction active : **démo publique des cinq versions**, avec Trapeze Stars 3D (`game3d/`, Three.js + Vite) en vedette.
+
+## Release de maniabilité du 2026-09-19
+
+- Les **cinq versions restent visibles** dans le sélecteur. L'interface publique, y compris les aides au démarrage et en pause, est en anglais. Les indications et boutons s'adaptent au clavier/souris ou au tactile.
+- L'absence d'action ne lance plus de partie automatique ni de boucle de démonstration. Les parties engagées passent en pause après une vraie inactivité ; le contrôle maintenu n'est pas pris pour de l'inactivité. Le mode démo 3D reste seulement un hook de test explicite.
+- Maniabilité et lisibilité retravaillées sur les cinq jeux ; cordes jumelées, mains/barre et mât 3D corrigés. Les anciens choix de langue FR enregistrés pour City/Deluxe ne rendent plus l'UI française.
+- **VERIFIED_LOCAL** : `npm run verify:deploy` vert (28 combinaisons page/viewport, parcours ciblés des quatre jeux Canvas, PWA en ligne/hors ligne), smoke 3D complet vert, contrôle des six traversées City et douze niveaux Deluxe. La suite Canvas historique et le déploiement distant sont encore en cours au moment de la rédaction ; ne pas en déduire `VERIFIED_TARGET`.
+- La CI vérifie maintenant l'URL GitHub Pages **depuis un runner extérieur**, avec comparaison du contenu exact des sept pages, du bundle 3D, des deux service workers et de la 404. Le miroir Coolify existant doit être redéployé manuellement, sans recréer la ressource ni enregistrer ses changements de configuration en attente.
+- **NOT_RUN sur appareils physiques** : iPhone/iPad/Android réels non disponibles. Les simulations tactiles Chromium ne remplacent pas cette preuve.
 
 <!-- ═══ NEXT (lu par CLAUDE.md pour l'auto-avancement) ═══
 AUCUNE SESSION ⬜ RESTANTE — les 8 sessions 3D (3D-1 à 3D-8) sont ✅ Fait.
