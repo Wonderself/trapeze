@@ -39,11 +39,24 @@ avec le
 [run GitHub Actions 34783583874](https://github.com/Wonderself/trapeze/actions/runs/34783583874)
 vert et les sept routes publiques de nouveau vérifiées.
 
-La release du **2026-09-19** conserve les cinq choix visibles, rend l'interface
-publique entièrement anglaise et ajoute des guides de commande distincts selon
-l'appareil, y compris sur l'écran de pause. Les contrôles locaux sont verts ;
-son statut cible doit être établi par le nouveau job de vérification externe
-GitHub Pages et par un redéploiement manuel de la ressource Coolify existante.
+La release `7efd482f264a1a1c898fc6bea17606df20879ec9` du **2026-09-19**
+conserve les cinq choix visibles, rend l'interface publique entièrement
+anglaise et ajoute des guides de commande distincts selon l'appareil, y compris
+sur l'écran de pause. Le
+[run GitHub Actions 35459104595](https://github.com/Wonderself/trapeze/actions/runs/35459104595)
+est vert : le job de déploiement a comparé le contenu exact des sept pages,
+de trois assets et de la 404 depuis un runner extérieur. Le miroir Coolify
+historique a ensuite été redéployé sur le même SHA et contrôlé de même, sans
+modification de sa configuration.
+
+La passe UI/UX suivante conserve la même ressource et les cinq versions. Les
+liens du sélecteur et les liens retour utilisent `?release=20260919-ux2` afin
+qu'un navigateur ayant conservé une ancienne page du miroir demande bien la
+nouvelle version. L'image Open Graph active est `assets/og-cover-five.png` ;
+l'ancien `assets/og-cover.png` reste disponible pour ne rien casser. Avant
+publication, `npm run verify:deploy`, la suite Canvas et le smoke WebGL 3D
+complet sont verts en local. La preuve publique de cette passe doit encore
+être établie sur le commit publié, puis sur le miroir Coolify existant.
 
 ## Configuration GitHub à conserver
 
@@ -130,7 +143,8 @@ npx --prefix tools playwright-core install --with-deps chromium
 - `npm run test:site` : sept routes dans quatre viewports (320×568, 390×844,
   844×390 et 1280×720), soit 28 contrôles ; zéro erreur JS, débordement,
   contrôle tactile coupé, lien interne cassé, ressource interne en échec ou
-  dépendance réseau tierce ; métadonnées, image 1200×630, sitemap et vraie 404 ;
+  dépendance réseau tierce ; métadonnées, dimensions réelles de l'image de
+  partage, sitemap et vraie 404 ;
 - `npm run test:controls` : parcours clavier/tactile ciblés de Classic,
   Deluxe, City et Circus Alzahir ; guides de démarrage/pause, attente sans
   progression avant la première action, pause d'inactivité et trois tailles
@@ -240,9 +254,9 @@ branche et la production ne divergent pas.
 
 Statut : **`PASS_PRODUCTION_MIRROR`**. La ressource historique a été remise en
 ligne sans recréation ni changement de dépôt, de branche, de type de build ou
-de port. Le déploiement `ccpqtdpd7ftrfs4fiib57peu` a importé le commit
-`a5bd5bb765c4d8faaa06b78142ae2b6fb9fe7df6`, construit le site statique avec
-`nginx:alpine`, puis terminé avec succès en 15 secondes. La ressource est
+de port. Le déploiement `ihtq9ln70a4mlsnf0r1emkz0` a importé le commit
+`7efd482f264a1a1c898fc6bea17606df20879ec9`, construit le site statique avec
+`nginx:alpine`, puis terminé avec succès en 21 secondes. La ressource est
 `Running (no healthcheck)`.
 
 La preuve publique du **2026-09-14** comprend : certificat Let's Encrypt

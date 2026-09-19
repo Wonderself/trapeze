@@ -13,6 +13,7 @@
   body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
   a{color:var(--blue);text-decoration:none}
   a:hover{text-decoration:underline}
+  a:focus-visible{outline:3px solid var(--gold);outline-offset:4px}
   .wrap{max-width:1020px;margin:0 auto;padding:0 24px}
 
   /* hero */
@@ -28,6 +29,7 @@
     background:linear-gradient(180deg,#ffe08a,#ffb028);box-shadow:0 10px 34px rgba(255,170,30,.4);transition:transform .12s}
   .cta:hover{transform:translateY(-2px);text-decoration:none}
   .sub-cta{display:block;margin-top:14px;font-size:13px;color:var(--dim)}
+  a.sub-cta{min-height:44px;display:flex;align-items:center;justify-content:center;margin-top:8px}
 
   /* sections */
   section{padding:64px 0}
@@ -65,16 +67,17 @@
   <div class="wrap">
     <div class="kicker">Browser game · Case study</div>
     <h1>TRAPEZE<br>STARS 3D</h1>
-    <p class="tagline">A full 3D arcade game that runs at 60 fps on a phone, loads in seconds, and ships <b>zero external assets</b> — every texture, character and note of music is generated in code.</p>
-    <a class="cta" href="./index.html">▶ Play the demo</a>
+    <p class="tagline">A full 3D arcade game designed for phones and computers, with procedurally made scenery, characters and music. Play directly in your browser — no account required.</p>
+    <a class="cta" href="./index.html?release=20260919-ux2">▶ Play the demo</a>
     <span class="sub-cta">No install, no account — works on desktop, mobile &amp; gamepad. Step away and it pauses for you.</span>
+    <a class="sub-cta" href="../?release=20260919-ux2">← All five games</a>
   </div>
 </header>
 
 <section>
   <div class="wrap">
     <h2>One skill: <span>timing</span></h2>
-    <p class="lead">Hold to pump your swing, let go at the peak, flip mid-air, catch the next bar. Releases are graded PERFECT / GOOD / OK — easy to learn, endlessly satisfying to master. Failure is never punished: a safety net, soft respawns and generous windows keep young players flying.</p>
+    <p class="lead">Hold to pump your swing, release when the cue glows, flip mid-air, catch the next bar. Releases are graded PERFECT / GOOD / OK. A safety net saves the first miss in each world, and generous catch windows help young players learn.</p>
     <div class="shots">
       <figure><img src="./shots/menu.jpg" alt="3D character podium menu with velvet curtain" loading="lazy" /><figcaption><b>3D podium menu</b> — pick your star under the spotlight, behind a velvet curtain.</figcaption></figure>
       <figure><img src="./shots/fly.jpg" alt="Hero flying between trapeze bars with a rainbow trail" loading="lazy" /><figcaption><b>Flight &amp; flips</b> — slow-mo perfect catches, rainbow trails, confetti bursts.</figcaption></figure>
@@ -91,16 +94,16 @@
       <div class="card"><div class="ico">🎬</div><h3>CINEMATIC INTRO</h3><p>Fly-through opening with spotlights firing in sequence and an animated logo. Skippable on first input.</p></div>
       <div class="card"><div class="ico">🕹</div><h3>PAUSE &amp; RESUME</h3><p>Clear controls on every screen; the game waits for you instead of playing itself when left idle.</p></div>
       <div class="card"><div class="ico">📅</div><h3>DAILY CHALLENGE</h3><p>A date-seeded rail, identical for every player in the world that day, with its own daily best.</p></div>
-      <div class="card"><div class="ico">🏆</div><h3>ARCADE SCORING</h3><p>Combos, medals per world, endless mode with rising difficulty, top-10 board with 3-initial entry.</p></div>
-      <div class="card"><div class="ico">🎵</div><h3>GENERATIVE AUDIO</h3><p>One synthesized soundtrack per world plus 14 sound effects — pure WebAudio, zero audio files.</p></div>
+      <div class="card"><div class="ico">🏆</div><h3>ARCADE SCORING</h3><p>Combos, medals per world, endless mode with rising difficulty, and a local top-10 board where you can enter your name.</p></div>
+      <div class="card"><div class="ico">🎵</div><h3>GENERATIVE AUDIO</h3><p>One synthesized soundtrack per world plus responsive sound effects — pure WebAudio, no audio files.</p></div>
       <div class="card"><div class="ico">♿</div><h3>ACCESSIBLE</h3><p>Respects reduced-motion, offers a reduce-flashes toggle, keyboard focus and HUD contrast passes.</p></div>
       <div class="card"><div class="ico">📸</div><h3>PHOTO FINISH</h3><p>Your best catch is captured automatically and shareable via the native share sheet.</p></div>
       <div class="card"><div class="ico">🎆</div><h3>GRAND FINALE</h3><p>Fireworks and a full ovation when you complete the tour or take the #1 spot.</p></div>
     </div>
     <div class="techline">
       <span class="chip">Three.js</span><span class="chip">Generative WebAudio</span><span class="chip">PWA — installable &amp; offline</span>
-      <span class="chip">Gamepad API</span><span class="chip">Web Share API</span><span class="chip">0 external assets</span>
-      <span class="chip">60 fps mobile budget</span><span class="chip">&lt; 120 draw calls</span>
+      <span class="chip">Gamepad API</span><span class="chip">Web Share API</span><span class="chip">Procedural art &amp; audio</span>
+      <span class="chip">Mobile performance budget</span><span class="chip">No required third-party services</span>
     </div>
   </div>
 </section>
@@ -108,8 +111,8 @@
 <section class="story">
   <div class="wrap">
     <h2>Built <span>session by session</span> with Claude</h2>
-    <p class="lead">The whole game — design, code, art direction, music, tests — was produced through a series of focused AI sessions, each one planned, executed, verified headlessly (WebGL smoke tests, zero-error gate) and shipped the same day. The repository drives itself: open it, and the next session knows what to do.</p>
-    <blockquote>Seven sessions from an empty folder to what you're looking at: playability, beauty, four worlds, audio &amp; retention, gamepad &amp; leaderboards, accessibility &amp; sharing, and this showcase.</blockquote>
+    <p class="lead">The game grew through focused AI-assisted sessions covering design, code, art direction, music and tests. The plan and WebGL checks live alongside the source, so each improvement can be verified before release.</p>
+    <blockquote>From the first swing to four connected worlds: playability, visual identity, music, gamepad support, local scores, accessibility and sharing were built step by step.</blockquote>
     <div class="who">A demonstration of AI-assisted product development — plan in the repo, tests as the gate, one session at a time.</div>
   </div>
 </section>

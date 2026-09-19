@@ -29,6 +29,7 @@ try {
   assert.equal(await page.locator('html').getAttribute('lang'), 'en');
   assert.match(await page.locator('meta[name=description]').getAttribute('content'), /rooftop trapeze/);
   assert.equal(await page.locator('[data-versions-link]').innerText(), '← All versions');
+  assert.match(await page.locator('[data-versions-link]').getAttribute('href'), /release=20260919-ux2/);
   assert.equal(await page.evaluate(() => window.__v3.SV.lang), 'en');
   assert.equal(await page.evaluate(() => window.__v3.settingsRows().some(row => /language|langue/i.test(row.label))), false);
   if (screenshots) await page.screenshot({ path: path.join(screenshots, 'desktop-menu.png') });
@@ -45,6 +46,8 @@ try {
   assert.equal(idle.before.gs, 'playing');
   assert.equal(idle.after.waitingForInput, true);
   assert.equal(idle.after.paused, false);
+  await page.evaluate(() => window.__v3.still());
+  assert.equal(await page.locator('[data-versions-link]').isVisible(), false, 'return link must not cover a live rig');
   for (const key of ['x', 'y', 'z', 'amp', 'time', 'score', 'falls', 'hype']) {
     assert.equal(idle.after[key], idle.before[key], `no-input changed ${key}`);
   }
@@ -53,6 +56,7 @@ try {
   await page.evaluate(() => window.__v3.still());
   assert.equal(await page.evaluate(() => window.__v3.state.paused), true);
   assert.equal(await page.locator('#btnPause').getAttribute('aria-label'), 'Resume');
+  assert.equal(await page.locator('[data-versions-link]').isVisible(), true);
   if (screenshots) await page.screenshot({ path: path.join(screenshots, 'desktop-paused.png') });
   await page.keyboard.press('p');
   assert.equal(await page.evaluate(() => window.__v3.state.paused), false);
@@ -91,6 +95,9 @@ try {
     assert.equal(layout.pad, false, 'touch controls must not cover the menu');
     await p.evaluate(() => { window.__v3.start(); window.__v3.sim(500); window.__v3.still(); });
     if (viewport.width > viewport.height) {
+      assert.equal(await p.locator('#tAct').innerText(), 'PUMP');
+      assert.equal(await p.locator('#tFig').evaluate(el => el.classList.contains('is-dim')), true);
+      assert.equal(await p.locator('#tRel').evaluate(el => el.classList.contains('is-dim')), false);
       const controls = await p.evaluate(() => {
         const names = ['#stick', '#tAct', '#tRel', '#tFig'];
         return names.map(name => {
@@ -105,13 +112,20 @@ try {
       if (screenshots) await p.screenshot({ path: path.join(screenshots, 'mobile-landscape-ready.png') });
       await p.locator('#tAct').tap();
       assert.equal(await p.evaluate(() => window.__v3.state.interactionStarted), true);
+      await p.evaluate(() => { window.__v3.release(); window.__v3.still(); });
+      assert.equal(await p.locator('#tAct').innerText(), 'CATCH');
+      assert.equal(await p.locator('#tRel').evaluate(el => el.classList.contains('is-dim')), true);
+      assert.equal(await p.locator('#tFig').evaluate(el => el.classList.contains('is-dim')), false);
       await p.locator('#btnPause').tap();
       await p.evaluate(() => window.__v3.still());
       assert.equal(await p.evaluate(() => window.__v3.state.paused), true);
       assert.equal(await p.locator('#pad').isVisible(), false);
       if (screenshots) await p.screenshot({ path: path.join(screenshots, 'mobile-landscape-paused.png') });
     } else {
-      assert.equal(await p.locator('#rotate').innerText(), 'Rotate your phone to landscape.');
+      const rotate = p.locator('#rotate');
+      assert.equal(await rotate.isVisible(), true);
+      assert.equal((await rotate.locator('.turn-title').textContent()).trim(), 'Trapeze City');
+      assert.equal((await rotate.locator('p').textContent()).trim(), 'Rotate your phone to landscape to play.');
       if (screenshots) await p.screenshot({ path: path.join(screenshots, 'mobile-portrait.png') });
     }
     await mobile.context.close();

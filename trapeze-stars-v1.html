@@ -12,7 +12,7 @@
 *{margin:0;padding:0;box-sizing:border-box}
 html{height:100%}
 body{background:#04000e;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;font-family:Avenir,Verdana,sans-serif;user-select:none;-webkit-user-select:none;overscroll-behavior:none;}
-#wrap{position:relative;width:min(800px,100dvw);flex-shrink:0}
+#wrap{position:relative;width:min(800px,100dvw,177.7778dvh);flex-shrink:0}
 canvas{display:block;width:100%;aspect-ratio:800/450;border-radius:10px;box-shadow:0 0 80px rgba(180,60,255,0.4),0 0 25px rgba(255,100,0,0.15);touch-action:none;filter:contrast(1.09) saturate(1.28) brightness(1.02) hue-rotate(-6deg);}
 #hint{color:#6644aa;font-size:10px;text-align:center;margin-top:4px;padding:0 6px 2px;line-height:1.5;direction:rtl;}
 #btnFs{position:absolute;top:8px;right:8px;width:32px;height:32px;border:none;border-radius:7px;background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.75);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:20;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transition:background .12s,color .12s;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
@@ -26,7 +26,7 @@ canvas{display:block;width:100%;aspect-ratio:800/450;border-radius:10px;box-shad
 #btnFs:focus-visible,#btnQuit:focus-visible,#btnPause:focus-visible,.versions-link:focus-visible,.cb:focus-visible{outline:3px solid #FFD700;outline-offset:2px}
 @media(hover:none),(pointer:coarse){.versions-link{min-height:44px;top:2px}}
 #ctrl{position:absolute;inset:0;pointer-events:none;display:none}
-@media(hover:none),(pointer:coarse){#ctrl{display:flex;align-items:flex-end;justify-content:space-between;padding:0 3% 3%}}
+@media(hover:none),(pointer:coarse){#ctrl.on{display:flex;align-items:flex-end;justify-content:space-between;padding:0 3% 3%}}
 #move{display:flex;gap:10px;align-items:flex-end;pointer-events:auto;}
 #acts{display:flex;gap:10px;align-items:flex-end;pointer-events:auto;}
 .cb{border:none;outline:none;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none;font-family:Avenir,Verdana,sans-serif;transition:background .06s,transform .06s;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);width:clamp(68px,17vw,82px);height:clamp(68px,17vw,82px);font-size:clamp(26px,7vw,34px);background:rgba(10,2,40,0.72);border:2px solid rgba(255,255,255,0.28);color:#fff;box-shadow:0 3px 18px rgba(0,0,0,0.65);}
@@ -48,7 +48,7 @@ canvas{display:block;width:100%;aspect-ratio:800/450;border-radius:10px;box-shad
 <div id="rotate"><div class="g">📱</div><p>Rotate your device to landscape to play.</p></div>
 <div id="wrap">
   <canvas id="c"></canvas>
-  <a class="versions-link" data-versions-link href="./" aria-label="All versions of Trapeze Stars">← All versions</a>
+  <a class="versions-link" data-versions-link href="./?release=20260919-ux2" aria-label="All versions of Trapeze Stars">← All versions</a>
   <button id="btnFs" title="Fullscreen" aria-label="Fullscreen">⛶</button>
   <button id="btnQuit" aria-label="Back to menu">← Menu</button>
   <button id="btnPause" aria-label="Pause">❚❚</button>
@@ -858,7 +858,7 @@ function drawPlayer(){
   }
   _resetShadow(CX);
   // Trail
-  for(let i=0;i<P.trail.length;i++){const t2=P.trail[i];const alpha=(i/P.trail.length)*0.48;const size=8*(i/P.trail.length)+1;CX.globalAlpha=alpha;CX.fillStyle=legsaultFlight>0?`hsl(${(frameN*12+i*18)%360},100%,60%)`:P.state==='djump'?'#7ecbff':P.state==='pirouette'?`hsl(${(frameN*8+i*24)%360},100%,65%)`:'#FFD700';CX.beginPath();CX.arc(t2.x,t2.y,size,0,Math.PI*2);CX.fill();}
+  for(let i=0;i<P.trail.length;i++){const t2=P.trail[i];const alpha=(i/P.trail.length)*0.48;const size=8*(i/P.trail.length)+1;CX.globalAlpha=alpha;CX.fillStyle=legsaultFlight>0?`hsl(${(frameN*12+i*18)%360},100%,60%)`:P.state==='djump'?'#7ecbff':P.state==='pirouette'?`hsl(${(frameN*8+i*24)%360},100%,65%)`:'#FFD700';CX.beginPath();CX.arc(t2.x-scrollX,t2.y,size,0,Math.PI*2);CX.fill();}
   CX.globalAlpha=1;
   // Spin orbit
   if(P.state==='pirouette'){const spinColor=P.char==='marc'?['#4499ff','#88ccff','#2266dd']:['#ff66aa','#ffaacc','#dd2288'];for(let i=0;i<6;i++){const angle=(i/6)*Math.PI*2+frameN*0.24;const orR=38+Math.sin(frameN*0.12+i)*7;const ox2=px+Math.cos(angle)*orR*1.35;const oy2=py-20+Math.sin(angle)*orR*0.5;CX.globalAlpha=0.55+0.45*Math.sin(frameN*0.18+i*1.1);CX.fillStyle=spinColor[i%3];CX.beginPath();CX.arc(ox2,oy2,3.5+Math.sin(frameN*0.14+i)*1.5,0,Math.PI*2);CX.fill();}CX.globalAlpha=1;}
@@ -1741,7 +1741,8 @@ CV.addEventListener('touchstart',e=>{
   if(paused){togglePause();return;}
   if(gs==='menu'){
     // Tap right side = claire, left = marc
-    const rx=t.clientX/CV.offsetWidth*W;
+    const rect=CV.getBoundingClientRect();
+    const rx=(t.clientX-rect.left)/Math.max(1,rect.width)*W;
     if(rx>W/2)menuSel=1;else menuSel=0;
   } else if(gs==='playing'&&!isMobile){
     handleSpace();jumpHeld=true;
@@ -1789,11 +1790,13 @@ const btnQuit=document.getElementById('btnQuit');
 if(btnQuit)btnQuit.addEventListener('click',()=>{gs='menu';stopMusic();initMenu();});
 const btnPause=document.getElementById('btnPause');
 if(btnPause)btnPause.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();togglePause();});
+const ctrlEl=document.getElementById('ctrl');
 function syncQuitBtn(){
   const show=(gs!=='menu');
   if(btnQuit)btnQuit.style.display=show?'flex':'none';
   if(btnPause){btnPause.style.display=(gs==='playing')?'flex':'none';
     btnPause.textContent=paused?'▶':'❚❚';}
+  ctrlEl.classList.toggle('on',gs==='playing'&&!paused);
 }
 
 /* ─── INIT & LAUNCH ─── */

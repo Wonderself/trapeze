@@ -126,9 +126,13 @@ try {
         const selector = await page.evaluate(() => {
           const cards = [...document.querySelectorAll('#versions .card[href]')];
           const compare = document.getElementById('compare');
+          const jump = document.querySelector('header .jump');
+          const jumpRect = jump?.getBoundingClientRect();
           return {
             heading: document.getElementById('versions-title')?.textContent.trim(),
+            jump: jump ? { href: jump.getAttribute('href'), text: jump.textContent.trim(), top: jumpRect.top, bottom: jumpRect.bottom, height: jumpRect.height } : null,
             targets: cards.map(card => new URL(card.href).pathname),
+            releaseTags: cards.map(card => new URL(card.href).searchParams.get('release')),
             labels: cards.map(card => card.getAttribute('aria-label') || ''),
             oldClaimPresent: document.body.textContent.includes('Trois versions jouables'),
             allBeforeCompare: cards.every(card => Boolean(card.compareDocumentPosition(compare) & Node.DOCUMENT_POSITION_FOLLOWING)),
@@ -136,7 +140,12 @@ try {
           };
         });
         if (selector.heading !== 'Choose your game') pageFailures.push(`version selector heading mismatch: ${selector.heading}`);
+        if (!selector.jump || selector.jump.href !== '#versions' || !selector.jump.text.includes('five games')
+          || selector.jump.top < 0 || selector.jump.bottom > height || selector.jump.height < 44) {
+          pageFailures.push(`first-viewport game shortcut unavailable: ${JSON.stringify(selector.jump)}`);
+        }
         if (JSON.stringify(selector.targets) !== JSON.stringify(expectedVersionTargets)) pageFailures.push(`version selector targets mismatch: ${JSON.stringify(selector.targets)}`);
+        if (selector.releaseTags.some(tag => tag !== '20260919-ux2')) pageFailures.push(`version selector may serve stale cached pages: ${JSON.stringify(selector.releaseTags)}`);
         if (selector.labels.some(label => !label.trim())) pageFailures.push(`version selector has unnamed cards: ${JSON.stringify(selector.labels)}`);
         if (selector.oldClaimPresent) pageFailures.push('obsolete three-version claim is still visible');
         if (!selector.allBeforeCompare || !selector.visualOrder) pageFailures.push(`not all five versions appear before comparison: ${JSON.stringify(selector)}`);
@@ -159,6 +168,7 @@ try {
             text: link.textContent.trim(),
             label: link.getAttribute('aria-label') || '',
             pathname: new URL(link.href).pathname,
+            releaseTag: new URL(link.href).searchParams.get('release'),
             rect: [rect.left, rect.top, rect.right, rect.bottom],
             visible: getComputedStyle(link).display !== 'none' && rect.width > 0 && rect.height > 0,
             hitTarget: document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)?.closest('[data-versions-link]') === link,
@@ -173,6 +183,7 @@ try {
           if (!returnLink.hitTarget) pageFailures.push(`All versions link is covered: ${JSON.stringify(returnLink)}`);
           if (!returnLink.text.includes('All versions') || !returnLink.label.includes('All versions')) pageFailures.push(`All versions link has an unclear name: ${JSON.stringify(returnLink)}`);
           if (returnLink.pathname !== '/') pageFailures.push(`All versions link targets ${returnLink.pathname}, expected /`);
+          if (returnLink.releaseTag !== '20260919-ux2') pageFailures.push(`All versions link may serve stale cached selector: ${returnLink.releaseTag}`);
           if (right - left < requiredTarget || bottom - top < requiredTarget) pageFailures.push(`All versions target below ${requiredTarget}px: ${returnLink.rect.join(',')}`);
           if (left < -1 || top < -1 || right > width + 1 || bottom > height + 1) pageFailures.push(`All versions link clipped: ${returnLink.rect.join(',')}`);
           if (returnLink.overlappingButtons.length) pageFailures.push(`All versions overlaps controls: ${returnLink.overlappingButtons.join(', ')}`);
@@ -247,21 +258,24 @@ try {
   await page.goto(`${server.origin}/`, { waitUntil: 'load' });
   const metadata = await page.evaluate(async () => {
     const image = new Image();
-    image.src = 'assets/og-cover.png';
+    image.src = 'assets/og-cover-five.png';
     await image.decode();
     return {
       canonical: document.querySelector('link[rel="canonical"]')?.href,
       ogUrl: document.querySelector('meta[property="og:url"]')?.content,
       ogImage: document.querySelector('meta[property="og:image"]')?.content,
+      ogWidth: document.querySelector('meta[property="og:image:width"]')?.content,
+      ogHeight: document.querySelector('meta[property="og:image:height"]')?.content,
       twitterImage: document.querySelector('meta[name="twitter:image"]')?.content,
       imageSize: [image.naturalWidth, image.naturalHeight],
     };
   });
   const expectedHome = 'https://wonderself.github.io/trapeze/';
-  const expectedImage = `${expectedHome}assets/og-cover.png`;
+  const expectedImage = `${expectedHome}assets/og-cover-five.png`;
   if (metadata.canonical !== expectedHome || metadata.ogUrl !== expectedHome) failures.push(`canonical metadata mismatch: ${JSON.stringify(metadata)}`);
   if (metadata.ogImage !== expectedImage || metadata.twitterImage !== expectedImage) failures.push(`share image metadata mismatch: ${JSON.stringify(metadata)}`);
-  if (metadata.imageSize[0] !== 1200 || metadata.imageSize[1] !== 630) failures.push(`OG image is ${metadata.imageSize.join('x')}, expected 1200x630`);
+  if (metadata.ogWidth !== '1731' || metadata.ogHeight !== '909') failures.push(`share image dimensions metadata mismatch: ${JSON.stringify(metadata)}`);
+  if (metadata.imageSize[0] !== 1731 || metadata.imageSize[1] !== 909) failures.push(`OG image is ${metadata.imageSize.join('x')}, expected 1731x909`);
 
   const missing = await page.goto(`${server.origin}/definitely-missing`, { waitUntil: 'load' });
   if (!missing || missing.status() !== 404 || !(await page.textContent('body')).includes('Act not found')

@@ -20,6 +20,7 @@ const entryHtml = await readFile(path.join(root, '3d/index.html'), 'utf8');
 const entryScript = entryHtml.match(/src="\.\/assets\/([^"\s]+\.js)"/)?.[1];
 if (!entryScript) throw new Error('3D entry bundle is missing from 3d/index.html');
 const assets = new Map([
+  ['assets/og-cover-five.png', 'assets/og-cover-five.png'],
   [`3d/assets/${entryScript}`, `3d/assets/${entryScript}`],
   ['3d/sw.js', '3d/sw.js'],
   ['2d/sw.js', '2d/sw.js'],

@@ -12,14 +12,14 @@
 <meta property="og:description" content="Classic, Deluxe, City, Circus Alzahir and Trapeze Stars 3D: five free browser games.">
 <meta property="og:url" content="https://wonderself.github.io/trapeze/">
 <meta property="og:site_name" content="Trapeze Stars">
-<meta property="og:image" content="https://wonderself.github.io/trapeze/assets/og-cover.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Trapeze Stars Classic, Deluxe and City artwork">
+<meta property="og:image" content="https://wonderself.github.io/trapeze/assets/og-cover-five.png">
+<meta property="og:image:width" content="1731">
+<meta property="og:image:height" content="909">
+<meta property="og:image:alt" content="Trapeze Stars artwork showing five playable games">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Trapeze Stars — Five circus games to explore">
 <meta name="twitter:description" content="Play Classic, Deluxe, City, Circus Alzahir and Trapeze Stars 3D in your browser.">
-<meta name="twitter:image" content="https://wonderself.github.io/trapeze/assets/og-cover.png">
+<meta name="twitter:image" content="https://wonderself.github.io/trapeze/assets/og-cover-five.png">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎪</text></svg>">
 <style>
 :root{
@@ -62,7 +62,7 @@ a{color:inherit}
 .g2{width:38vmax;height:38vmax;bottom:-16vmax;right:-12vmax;background:#0d3f6b}
 
 /* ── En-tête ─────────────────────────────────────────────── */
-header{padding:clamp(40px,10vh,88px) 0 clamp(24px,5vh,40px);text-align:center}
+header{padding:clamp(24px,5vh,54px) 0 clamp(20px,4vh,30px);text-align:center}
 .kicker{
   display:inline-flex;align-items:center;gap:8px;
   font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;
@@ -79,6 +79,21 @@ h1 .l2{display:block;
   -webkit-background-clip:text;background-clip:text;color:transparent;
 }
 .sub{color:var(--ink2);font-size:clamp(15px,4vw,19px);max-width:56ch;margin:16px auto 0}
+.jump{
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;
+  margin-top:22px;padding:8px 18px;border:1px solid rgba(255,197,61,.48);
+  border-radius:999px;background:rgba(255,197,61,.12);color:#FFE18A;
+  font-weight:800;text-decoration:none;transition:background .16s ease,transform .16s ease;
+}
+.jump:hover{background:rgba(255,197,61,.2);transform:translateY(-2px)}
+@media (max-height:500px) and (min-width:600px){
+  header{padding:10px 0 8px}
+  .kicker{margin-bottom:6px;padding:3px 11px}
+  h1{font-size:42px;line-height:1}
+  h1 .l2{display:inline;margin-left:.16em}
+  .sub{font-size:14px;line-height:1.35;max-width:74ch;margin-top:7px}
+  .jump{margin-top:9px}
+}
 
 /* ── Cartes de version ───────────────────────────────────── */
 .selector{padding:0 0 clamp(32px,8vh,64px)}
@@ -140,6 +155,12 @@ h1 .l2{display:block;
   border-bottom:1px solid var(--line);
 }
 .shot canvas,.shot img{width:100%;height:100%;object-fit:cover}
+.shot::after{
+  content:'▶ PLAY';position:absolute;right:12px;bottom:12px;z-index:2;
+  padding:5px 12px;border-radius:999px;background:rgba(8,2,26,.84);
+  border:1px solid rgba(255,255,255,.35);color:#fff;font-size:12px;
+  font-weight:900;letter-spacing:.08em;pointer-events:none;
+}
 .tag{
   position:absolute;top:12px;left:12px;z-index:2;
   font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
@@ -240,16 +261,19 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
     the installable 2D Circus Alzahir, and a full 3D game.
     No installation needed. Pick a game and play with a keyboard or touch controls.
   </p>
+  <a class="jump" href="#versions">Explore all five games ↓</a>
 </header>
 
 <main>
 <section class="selector" id="versions" aria-labelledby="versions-title">
 <h2 class="selector-title" id="versions-title">Choose your game</h2>
 <p class="selector-lead">All five games are playable. Each card highlights a different way to take the stage.</p>
+<!-- Keep the release query in sync with game-to-selector links when public HTML changes.
+     The mirror may otherwise reuse an older cached document after a deployment. -->
 <div class="cards">
 
   <!-- ── V1 ─────────────────────────────────────────────── -->
-  <a class="card v1" href="trapeze-stars-v1.html" aria-label="Play Classic, version 1 in 2D">
+  <a class="card v1" href="trapeze-stars-v1.html?release=20260919-ux2" aria-label="Play Classic, version 1 in 2D">
     <div class="shot">
       <span class="tag a">Version 1 · 2D</span>
       <canvas id="pv1" width="480" height="270" role="img"
@@ -270,7 +294,7 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
   </a>
 
   <!-- ── V2 ─────────────────────────────────────────────── -->
-  <a class="card v2" href="trapeze-stars-v2.html" aria-label="Play Deluxe, version 2 in perspective">
+  <a class="card v2" href="trapeze-stars-v2.html?release=20260919-ux2" aria-label="Play Deluxe, version 2 in perspective">
     <div class="shot">
       <span class="tag b">Version 2 · Perspective 3D</span>
       <canvas id="pv2" width="480" height="270" role="img"
@@ -292,7 +316,7 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
   </a>
 
   <!-- ── V3 ─────────────────────────────────────────────── -->
-  <a class="card v3" href="trapeze-city-v3.html" aria-label="Play City, version 3 across the rooftops">
+  <a class="card v3" href="trapeze-city-v3.html?release=20260919-ux2" aria-label="Play City, version 3 across the rooftops">
     <div class="shot">
       <span class="tag c">Version 3 · Trapeze City</span>
       <canvas id="pv3" width="480" height="270" role="img"
@@ -314,7 +338,7 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
   </a>
 
   <!-- ── V4 ────────────────────────────────────────────────────── -->
-  <a class="card v4" href="2d/" aria-label="Play Circus Alzahir, installable 2D version">
+  <a class="card v4" href="2d/?release=20260919-ux2" aria-label="Play Circus Alzahir, installable 2D version">
     <div class="shot">
       <span class="tag d">Version 4 · Installable 2D</span>
       <img src="assets/shot-2d.jpg" width="960" height="560" loading="lazy"
@@ -335,7 +359,7 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
   </a>
 
   <!-- ── V5 ────────────────────────────────────────────────────── -->
-  <a class="card v5" href="3d/" aria-label="Play Trapeze Stars 3D">
+  <a class="card v5" href="3d/?release=20260919-ux2" aria-label="Play Trapeze Stars 3D">
     <div class="shot">
       <span class="tag e">Version 5 · Three.js</span>
       <img src="3d/shots/menu.jpg" width="960" height="560" loading="lazy"
@@ -400,6 +424,8 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
       <p><b>Classic, keyboard</b> — <kbd>←</kbd> <kbd>→</kbd> move, <kbd>Space</kbd> jump or release, <kbd>F</kbd> grab, <kbd>P</kbd> pause.</p>
       <p style="margin-top:9px"><b>Deluxe, keyboard</b> — <kbd>←</kbd> <kbd>→</kbd> move, <kbd>Space</kbd> jump, grab or release, <kbd>Shift</kbd> pump or trick, <kbd>P</kbd> pause.</p>
       <p style="margin-top:9px"><b>City, keyboard</b> — <kbd>Space</kbd> pump or grab, <kbd>S</kbd> release, <kbd>F</kbd> trick, drag to look, <kbd>P</kbd> pause.</p>
+      <p style="margin-top:9px"><b>Circus Alzahir, keyboard</b> — <kbd>←</kbd> <kbd>→</kbd> move, <kbd>Space</kbd> jump or release, <kbd>F</kbd> grab or flip, <kbd>Esc</kbd> pause.</p>
+      <p style="margin-top:9px"><b>Stars 3D, keyboard</b> — hold <kbd>Space</kbd> to pump, release when the cue glows, press again in flight to flip; <kbd>Esc</kbd> pauses.</p>
       <p style="margin-top:9px"><b>Touch</b> — on-screen controls replace keyboard keys. Each game's start and pause screens explain its controls.</p>
     </div>
   </details>
@@ -415,8 +441,8 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
 </main>
 
 <footer>
-  <p>Trapeze Stars — Classic, Deluxe, City, <a href="2d/">Circus Alzahir</a>
-     and <a href="3d/">Trapeze Stars 3D</a>.</p>
+  <p>Trapeze Stars — Classic, Deluxe, City, <a href="2d/?release=20260919-ux2">Circus Alzahir</a>
+     and <a href="3d/?release=20260919-ux2">Trapeze Stars 3D</a>.</p>
 </footer>
 
 </div>

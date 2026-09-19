@@ -156,6 +156,49 @@ try {
   results.u_menuSpace = await page.evaluate(() => window.__game.state().mode);
   await page.evaluate(() => window.__game.toMenu());
 
+  // A stray finger must not release the active grip; mixed mouse/Space input
+  // keeps holding until the LAST control is released.
+  results.u_gripOwnership = await page.evaluate(() => {
+    window.__game.start('marc');
+    const app = document.getElementById('app');
+    const touch = (target, type, id) => target.dispatchEvent(new PointerEvent(type,
+      { pointerId: id, pointerType: 'touch', button: 0, bubbles: true, cancelable: true }));
+    touch(app, 'pointerdown', 71);
+    touch(app, 'pointerdown', 72);
+    touch(window, 'pointerup', 72);
+    const afterOtherFinger = window.__game.state();
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true, cancelable: true }));
+    touch(window, 'pointerup', 71);
+    const afterPointer = window.__game.state();
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space', bubbles: true, cancelable: true }));
+    const afterSpace = window.__game.state();
+    window.__game.toMenu();
+    return {
+      otherFingerHeld: afterOtherFinger.holding && afterOtherFinger.state === 'swing',
+      spaceStillHeld: afterPointer.holding && afterPointer.state === 'swing',
+      releaseOnLastInput: !afterSpace.holding && afterSpace.state !== 'swing',
+    };
+  });
+
+  // The highlighted cue must correspond to an actual catchable flight, not
+  // merely the right angle with too little pumped reach.
+  results.u_cueReach = await page.evaluate(() => new Promise((res) => {
+    window.__game.start('marc'); window.__game.down();
+    const deadline = performance.now() + 12000;
+    const check = () => {
+      const cue = document.getElementById('timingCue');
+      if (cue.classList.contains('ready')) {
+        const txt = cue.textContent;
+        window.__game.up();
+        const s = window.__game.state();
+        window.__game.toMenu();
+        return res({ text: txt, grade: s.grade, state: s.state, flyMode: s.flyMode });
+      }
+      if (performance.now() > deadline) { window.__game.toMenu(); return res({ timeout: true }); }
+      requestAnimationFrame(check);
+    }; check();
+  }));
+
   // Real pause controls freeze the game; idle play pauses instead of looping.
   await page.evaluate(() => window.__game.start('marc'));
   await page.click('#pauseBtn');
@@ -504,6 +547,11 @@ try {
              && !results.o_attract.activeAfter && results.o_attract.modeAfter === 'menu' && !results.o_attract.barAfter)) code = 24;  // attract mode starts, any key exits
   else if (!(results.u_idleMenu && results.u_idleMenu.mode === 'menu' && !results.u_idleMenu.attract)) code = 31;
   else if (results.u_menuSpace !== 'playing') code = 32;
+  else if (!(results.u_gripOwnership && results.u_gripOwnership.otherFingerHeld
+             && results.u_gripOwnership.spaceStillHeld && results.u_gripOwnership.releaseOnLastInput)) code = 39;
+  else if (!(results.u_cueReach && results.u_cueReach.text === 'RELEASE NOW'
+             && ['perfect', 'good'].includes(results.u_cueReach.grade)
+             && results.u_cueReach.state === 'fly' && results.u_cueReach.flyMode === 'catch')) code = 40;
   else if (!(results.u_pause && results.u_pause.mode === 'paused' && results.u_pause.visible && results.u_pause.frozen && results.u_pause.help)) code = 33;
   else if (!(results.u_pause320 && results.u_pause320.top >= 0 && results.u_pause320.helpRight <= results.u_pause320.viewportW && results.u_pause320.resumeBottom <= results.u_pause320.viewportH && results.u_pause320.menuBottom <= results.u_pause320.viewportH)) code = 37;
   else if (!(results.u_resume && results.u_resume.mode === 'playing' && results.u_resume.hidden)) code = 34;

@@ -29,6 +29,7 @@ canvas{display:block;width:100%;aspect-ratio:800/450;border-radius:10px;box-shad
 #ctrl{position:absolute;inset:0;pointer-events:none;display:none}
 #controlsHelp{padding:8px 12px;min-height:34px;color:#fff;background:rgba(14,5,42,.9);border:1px solid rgba(255,215,0,.35);border-radius:8px;text-align:center;font:700 12px/1.4 'Trebuchet MS',Avenir,Arial,sans-serif}
 #controlsHelp .help-touch{display:none}
+#orientationTip{display:none;color:rgba(220,205,255,.82);text-align:center;font:700 11px/1.4 'Trebuchet MS',Avenir,Arial,sans-serif;padding-top:7px}
 @media(hover:none),(pointer:coarse){
   #wrap{width:min(800px,100dvw,calc((100dvh - 140px) * 16 / 9))}
   #ctrl{position:relative;inset:auto;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 2% 0;min-height:76px}
@@ -36,6 +37,7 @@ canvas{display:block;width:100%;aspect-ratio:800/450;border-radius:10px;box-shad
   #controlsHelp .help-desktop{display:none}
   #controlsHelp .help-touch{display:inline}
 }
+@media (hover:none) and (orientation:portrait),(pointer:coarse) and (orientation:portrait){#orientationTip{display:block}}
 #move{display:flex;gap:10px;align-items:flex-end;pointer-events:auto;}
 #acts{display:flex;gap:10px;align-items:flex-end;pointer-events:auto;}
 .cb{border:none;outline:none;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none;font-family:'Trebuchet MS',Avenir,Arial,sans-serif;transition:background .06s,transform .06s;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);width:clamp(68px,17vw,82px);height:clamp(68px,17vw,82px);font-size:clamp(26px,7vw,34px);background:rgba(10,2,40,0.72);border:2px solid rgba(255,255,255,0.28);color:#fff;box-shadow:0 3px 18px rgba(0,0,0,0.65);}
@@ -45,6 +47,18 @@ canvas{display:block;width:100%;aspect-ratio:800/450;border-radius:10px;box-shad
 #bGrab{background:rgba(10,120,50,0.35);border-color:rgba(60,220,110,0.5);font-size:clamp(14px,4vw,18px);}
 #bJ{background:radial-gradient(circle at 38% 32%,rgba(255,235,80,0.65),rgba(255,120,0,0.5));border-color:rgba(255,210,0,0.9);color:#FFD700;box-shadow:0 0 28px rgba(255,200,0,0.6),0 3px 14px rgba(0,0,0,0.6);width:clamp(76px,20vw,90px);height:clamp(76px,20vw,90px);font-size:clamp(30px,8vw,38px);}
 @media(hover:none),(pointer:coarse){.cb{width:clamp(52px,16vw,70px);height:clamp(52px,16vw,70px);font-size:clamp(21px,6vw,30px)}#bJ{width:clamp(58px,18vw,76px);height:clamp(58px,18vw,76px);font-size:clamp(23px,7vw,34px)}#move,#acts{gap:6px}}
+.action-name{display:block;font-size:11px;line-height:1.1;letter-spacing:.04em;font-weight:800}
+#bJ .action-icon{line-height:1}
+@media (hover:none) and (orientation:landscape) and (min-width:800px) and (max-height:500px),
+       (pointer:coarse) and (orientation:landscape) and (min-width:800px) and (max-height:500px){
+  /* Put the pad in the otherwise unused side rails so the stage can grow. */
+  #wrap{width:100dvw}
+  canvas{width:min(800px,calc((100dvh - 54px) * 16 / 9),calc(100dvw - 320px));margin-inline:auto}
+  #ctrl{position:absolute;inset:0;min-height:0;padding:0;display:block}
+  #move,#acts{position:absolute;top:calc(50% - 17px);transform:translateY(-50%)}
+  #move{left:max(6px,env(safe-area-inset-left,0px))}
+  #acts{right:max(6px,env(safe-area-inset-right,0px))}
+}
 @keyframes gpulse{from{transform:scale(1)}to{transform:scale(1.1)}}
 .legready #bJ{animation:gpulse .45s ease-in-out infinite alternate;}
 @media(prefers-reduced-motion:reduce){.legready #bJ{animation:none}}
@@ -55,7 +69,7 @@ canvas{display:block;width:100%;aspect-ratio:800/450;border-radius:10px;box-shad
 <body>
 <div id="wrap">
   <canvas id="c"></canvas>
-  <a class="versions-link" data-versions-link href="../" aria-label="All versions of Trapeze Stars">← All versions</a>
+  <a class="versions-link" data-versions-link href="../?release=20260919-ux2" aria-label="All versions of Trapeze Stars">← All versions</a>
   <button id="btnFs" title="Fullscreen" aria-label="Fullscreen">⛶</button>
   <button id="btnPause" aria-label="Pause game" title="Pause game">⏸</button>
   <button id="btnQuit" aria-label="Menu">← Menu</button>
@@ -65,11 +79,12 @@ canvas{display:block;width:100%;aspect-ratio:800/450;border-radius:10px;box-shad
       <button class="cb" id="bR" aria-label="Right">▶</button>
     </div>
     <div id="acts">
-      <button class="cb" id="bGrab" aria-label="Grab bar" style="font-size:clamp(12px,3.5vw,16px)">🔄<br>GRAB</button>
-      <button class="cb" id="bJ" aria-label="Jump / Release">⚡</button>
+      <button class="cb" id="bGrab" aria-label="Grab bar" style="font-size:clamp(12px,3.5vw,16px)">🔄<span class="action-name">GRAB</span></button>
+      <button class="cb" id="bJ" aria-label="Jump / Release"><span class="action-icon">⚡</span><span class="action-name">JUMP</span></button>
     </div>
   </div>
   <div id="controlsHelp" role="note"><span class="help-desktop">Move: ← → or A / D · Jump / release: Space · Grab / flip: F · Pause: Esc</span><span class="help-touch">Move: ◀ ▶ · Jump / release: ⚡ or tap stage · Grab / flip: GRAB · Pause: ⏸</span></div>
+  <div id="orientationTip" role="note">Rotate your phone for a bigger stage.</div>
 </div>
 <button id="installBtn" aria-label="Add to Home Screen">＋ Add to Home Screen</button>
 <script>
@@ -1895,14 +1910,29 @@ mbtn('bGrab',()=>{if(gs==='playing'){markGameInput();grabBuf=1;grabBufTimer=6;}}
 const btnQuit=document.getElementById('btnQuit');
 if(btnQuit)btnQuit.addEventListener('click',()=>{paused=false;gs='menu';stopMusic();initMenu();});
 const btnPause=document.getElementById('btnPause'),controlsHelp=document.getElementById('controlsHelp');
+const versionsLink=document.querySelector('[data-versions-link]');
+const jumpLabel=document.querySelector('#bJ .action-name'),grabLabel=document.querySelector('#bGrab .action-name');
+const jumpButton=document.getElementById('bJ'),grabButton=document.getElementById('bGrab');
+let lastSwinging=null;
 btnPause.addEventListener('click',()=>{if(paused)resumeFromPause();else pauseGame();});
 function syncGameButtons(){
   if(btnQuit)btnQuit.style.display=gs==='menu'?'none':'flex';
+  // A menu path is always available, while live play keeps the narrow stage unobstructed.
+  const versionsDisplay=gs==='playing'&&!paused?'none':'flex';
+  if(versionsLink&&versionsLink.style.display!==versionsDisplay)versionsLink.style.display=versionsDisplay;
   btnPause.style.display=['playing','levelcomplete','ceremony','finale'].includes(gs)?'flex':'none';
   btnPause.textContent=paused?'▶':'⏸';
   btnPause.setAttribute('aria-label',paused?'Resume game':'Pause game');
   btnPause.title=paused?'Resume game':'Pause game';
   controlsHelp.style.display=(gs==='menu'||paused)?'block':'none';
+  const swinging=gs==='playing'&&P.state==='swing';
+  if(swinging!==lastSwinging){
+    if(jumpLabel)jumpLabel.textContent=swinging?'RELEASE':'JUMP';
+    if(grabLabel)grabLabel.textContent=swinging?'FLIP':'GRAB';
+    if(jumpButton&&jumpButton.setAttribute)jumpButton.setAttribute('aria-label',swinging?'Release bar':'Jump / release');
+    if(grabButton&&grabButton.setAttribute)grabButton.setAttribute('aria-label',swinging?'Release and flip':'Grab bar');
+    lastSwinging=swinging;
+  }
 }
 
 /* ─── INIT & LAUNCH ─── */
@@ -1917,7 +1947,7 @@ requestAnimationFrame(loop);
 if('serviceWorker' in navigator){
   // Bump this public version whenever the self-contained 2D app changes.
   // The cache name is scoped by this query string inside sw.js.
-  const PWA_VERSION='20260919-1';
+  const PWA_VERSION='20260919-ux2';
   window.addEventListener('load',()=>{navigator.serviceWorker.register(`sw.js?v=${PWA_VERSION}`).catch(()=>{});});
 }
 let deferredPrompt=null;

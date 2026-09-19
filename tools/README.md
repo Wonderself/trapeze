@@ -104,7 +104,8 @@ node tools/s9_refresh_v3.js # même vérification pour Trapeze City
 node tools/shot_v3.js [dossier] [fichier]   # captures de contrôle + enchaînement au clavier
 node tools/shots_diff_v3.js <avant.html> <apres.html>  # régression visuelle : compare deux versions
 node tools/s9_multitouch_v3.js  # preuve de multitouch REEL : pomper et orienter en meme temps
-python3 tools/make_og_cover.py  # régénère assets/og-cover.png (zlib + struct, zéro dépendance)
+node tools/classic_layout_smoke.mjs _site  # portrait/paysage tactile, choix du personnage, menu/pause et traînée
+python3 tools/make_og_cover.py  # régénère uniquement l'ancienne image à trois versions
 ```
 
 `s9_storage.js` couvre désormais les quatre jeux en Canvas dans la même
@@ -279,8 +280,10 @@ multitouch réel de Trapeze City est déjà couvert par
 
 ## Générateur d'image
 
-`tools/make_og_cover.py` régénère `assets/og-cover.png`, l'image Open Graph
-de la page d'accueil. Aucune dépendance, pas même Pillow : un rasteriseur
+`tools/make_og_cover.py` régénère `assets/og-cover.png`, l'ancienne image à
+trois versions ; ne pas l'utiliser pour remplacer l'image active
+`assets/og-cover-five.png`, qui présente les cinq versions. L'ancien outil
+n'a aucune dépendance, pas même Pillow : un rasteriseur
 minimal en Python pur, `zlib` pour la compression et `struct` pour les
 chunks PNG. Le format du fichier est vérifié à la main (parcours des chunks,
 CRC, décompression du flux `IDAT`) et par un vrai décodeur — Chromium,

@@ -45,22 +45,25 @@ body.touch #pad.on{display:block;}
 .tbtn{
   position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);
   width:88px;height:88px;border-radius:50%;
-  border:2px solid rgba(255,255,255,0.24);background:rgba(12,4,32,0.45);
+  border:2px solid rgba(255,255,255,0.42);background:rgba(12,4,32,0.76);
   color:#fff;font:800 13px/1.2 Avenir,sans-serif;
   display:flex;align-items:center;justify-content:center;text-align:center;
   pointer-events:auto;-webkit-tap-highlight-color:transparent;touch-action:manipulation;
   -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  box-shadow:0 4px 18px rgba(0,0,0,.58);
 }
 .tbtn:active{transform:scale(0.92);background:rgba(255,46,136,0.30);}
+.tbtn.is-dim{opacity:.56}
+.tbtn:focus-visible{outline:3px solid #fff;outline-offset:3px}
 /* Boutons regroupés à droite : pomper/saisir (grand, au centre du groupe),
    figure (à sa gauche), lâcher (au-dessus) — l'orientation reste au manche
    virtuel de gauche, qui a tout l'espace pour lui. */
-#tAct{right:calc(env(safe-area-inset-right,0px) + 20px);}
-#tFig{right:calc(env(safe-area-inset-right,0px) + 118px);width:72px;height:72px;bottom:calc(env(safe-area-inset-bottom,0px) + 30px);}
+#tAct{right:calc(env(safe-area-inset-right,0px) + 20px);border-color:#25E5FF;color:#C8FAFF;}
+#tFig{right:calc(env(safe-area-inset-right,0px) + 118px);width:72px;height:72px;bottom:calc(env(safe-area-inset-bottom,0px) + 30px);border-color:#FF79B3;}
 #tRel{
   right:calc(env(safe-area-inset-right,0px) + 44px);
   bottom:calc(env(safe-area-inset-bottom,0px) + 132px);
-  width:64px;height:64px;font-size:11px;
+  width:64px;height:64px;font-size:11px;border-color:#FFD98A;
 }
 
 /* Manche virtuel : oriente le regard libre (le corps de l'acrobate n'a pas
@@ -85,16 +88,20 @@ body.touch #pad.on{display:block;}
 
 #rotate{
   position:absolute;inset:0;z-index:60;display:none;
-  align-items:center;justify-content:center;text-align:center;
-  background:#0a0418;font:700 17px/1.5 Avenir,sans-serif;padding:28px;
+  flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;
+  background:radial-gradient(circle at 50% 45%,#31124f 0%,#160927 48%,#0a0418 100%);
+  font:700 17px/1.5 Avenir,sans-serif;padding:28px;
 }
 #rotate.on{display:flex;}
+#rotate .turn-icon{font-size:58px;line-height:1;filter:drop-shadow(0 0 22px rgba(37,229,255,.38));}
+#rotate .turn-title{color:#25e5ff;font-size:12px;letter-spacing:.2em;text-transform:uppercase;}
+#rotate p{max-width:250px;color:#f2eaff;}
 </style>
 </head>
 <body>
 <div id="stage">
   <canvas id="c"></canvas>
-  <a class="versions-link" data-versions-link href="./" aria-label="All versions of Trapeze Stars">← All versions</a>
+  <a class="versions-link" data-versions-link href="./?release=20260919-ux2" aria-label="All versions of Trapeze Stars">← All versions</a>
   <div id="pad">
     <div id="stick" role="group" aria-label="Look around"><div id="stickKnob" aria-hidden="true"></div></div>
     <button class="tbtn" id="tRel" aria-label="Release the bar">RELEASE</button>
@@ -103,7 +110,7 @@ body.touch #pad.on{display:block;}
   </div>
   <button class="sysbtn" id="btnFull" title="Fullscreen" aria-label="Fullscreen">⛶</button>
   <button class="sysbtn" id="btnPause" title="Pause" aria-label="Pause">❚❚</button>
-  <div id="rotate">Rotate your phone to landscape.</div>
+  <div id="rotate"><span class="turn-icon" aria-hidden="true">📱</span><span class="turn-title">Trapeze City</span><p>Rotate your phone to landscape to play.</p></div>
 </div>
 <script>
 'use strict';
@@ -3602,11 +3609,29 @@ function drawPauseScreen(){
   }
 }
 
+let lastTouchMode='';
+const versionsEl=document.querySelector('[data-versions-link]');
 function drawHUD(){
   const u=uiScale;
   const padEl=document.getElementById('pad'),pauseEl=document.getElementById('btnPause');
   if(padEl)padEl.classList.toggle('on',isTouch&&gs==='playing'&&!paused);
   if(pauseEl){pauseEl.style.display=gs==='playing'?'flex':'none';pauseEl.textContent=paused?'▶':'❚❚';pauseEl.title=paused?'Resume':'Pause';if(pauseEl.setAttribute)pauseEl.setAttribute('aria-label',paused?'Resume':'Pause');}
+  // Show the action that will actually happen now; the other touch actions
+  // remain reachable but recede visually until their phase of the flight.
+  const touchMode=gs==='playing'?(P.state==='hang'?'pump':P.state==='fly'?'catch':'other'):'other';
+  if(touchMode!==lastTouchMode){
+    const actionBtn=document.getElementById('tAct'),releaseBtn=document.getElementById('tRel'),trickBtn=document.getElementById('tFig');
+    if(actionBtn){
+      if(touchMode==='pump'){actionBtn.textContent='PUMP';actionBtn.setAttribute('aria-label','Pump the swing');}
+      else if(touchMode==='catch'){actionBtn.textContent='CATCH';actionBtn.setAttribute('aria-label','Catch the bar');}
+      else{actionBtn.innerHTML='PUMP<br>CATCH';actionBtn.setAttribute('aria-label','Pump or catch the bar');}
+    }
+    if(releaseBtn)releaseBtn.classList.toggle('is-dim',touchMode==='catch');
+    if(trickBtn)trickBtn.classList.toggle('is-dim',touchMode==='pump');
+    lastTouchMode=touchMode;
+  }
+  const versionsDisplay=gs==='playing'&&!paused?'none':'flex';
+  if(versionsEl&&versionsEl.style.display!==versionsDisplay)versionsEl.style.display=versionsDisplay;
   if(gs==='menu'){drawMenuScreen();return;}
   if(gs==='settings'){drawSettingsScreen();return;}
   if(gs==='levelcomplete'){drawResults();return;}

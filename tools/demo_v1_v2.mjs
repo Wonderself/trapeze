@@ -107,15 +107,22 @@ try {
       }));
       assert(!/[À-ÿ\u0590-\u05ff]/.test(menu.rotate || ''), `${game.route}: non-English rotation hint`);
       assert(/MOVE/.test(menu.text) && /PAUSE/.test(menu.text), `${game.route} ${viewport.width}: missing touch start controls`);
-      assert(menu.pad !== 'none' || game.route.includes('v2'), `${game.route} ${viewport.width}: touch controls hidden`);
+      assert(menu.pad === 'none', `${game.route} ${viewport.width}: touch controls obscure the menu`);
       await page.evaluate(game.start);
       await page.waitForTimeout(200);
-      const padAfterStart = await page.evaluate(() => getComputedStyle(document.querySelector('#ctrl, #pad')).display);
-      assert(padAfterStart !== 'none', `${game.route} ${viewport.width}: touch pad hidden during gameplay`);
-      await page.evaluate('togglePause()');
+      const startState = await page.evaluate(() => ({
+        pad: getComputedStyle(document.querySelector('#ctrl, #pad')).display,
+        rotate: document.querySelector('#rotate')?.classList.contains('on'),
+        paused: typeof paused !== 'undefined' ? paused : gs === 'pause',
+      }));
+      assert(startState.pad === 'none' ? startState.rotate && startState.paused : !startState.paused,
+        `${game.route} ${viewport.width}: touch pad does not match playable state: ${JSON.stringify(startState)}`);
+      if (!startState.paused) await page.evaluate('togglePause()');
       await page.waitForTimeout(150);
       const pauseText = await page.evaluate(() => window.__renderedText.join(' | '));
       assert(/PAUSED/.test(pauseText) && /MOVE/.test(pauseText), `${game.route} ${viewport.width}: missing touch pause controls`);
+      const padWhilePaused = await page.evaluate(() => getComputedStyle(document.querySelector('#ctrl, #pad')).display);
+      if (game.route.includes('v1')) assert(padWhilePaused === 'none', `${game.route} ${viewport.width}: touch controls obscure pause instructions`);
       await context.close();
     }
   }

@@ -22,6 +22,7 @@ try {
   const page = desktop.page;
   assert.match(await page.locator('#controlsHelp').innerText(), /Space.*Pause: Esc/);
   assert.equal(await page.locator('[data-versions-link]').innerText(), '← All versions');
+  assert.match(await page.locator('[data-versions-link]').getAttribute('href'), /release=20260919-ux2/);
   if (screenshots) await page.screenshot({ path: path.join(screenshots, 'desktop-menu.png') });
 
   const idle = await page.evaluate(() => {
@@ -37,11 +38,13 @@ try {
   const box = await canvas.boundingBox();
   await canvas.click({ position: { x: box.width * 0.5, y: box.height * (392 / 450) } });
   assert.equal(await page.evaluate(() => gs), 'playing', 'desktop canvas PLAY must start the game');
+  assert.equal(await page.locator('[data-versions-link]').isVisible(), false, 'return link must not obscure the live stage');
 
   await page.locator('#btnPause').click();
   assert.equal(await page.evaluate(() => paused), true);
   assert.equal(await page.locator('#btnPause').getAttribute('aria-label'), 'Resume game');
   assert.equal(await page.locator('#controlsHelp').isVisible(), true);
+  assert.equal(await page.locator('[data-versions-link]').isVisible(), true);
   if (screenshots) await page.screenshot({ path: path.join(screenshots, 'desktop-paused.png') });
   await page.keyboard.press('Tab');
   assert.equal(await page.evaluate(() => paused), true, 'keyboard focus navigation must not resume the game');
@@ -67,13 +70,26 @@ try {
       const canvas = document.querySelector('#c').getBoundingClientRect();
       const controls = document.querySelector('#ctrl').getBoundingClientRect();
       const help = document.querySelector('#controlsHelp').getBoundingClientRect();
-      return { canvasBottom: canvas.bottom, controlTop: controls.top, controlsBottom: controls.bottom, helpBottom: help.bottom, height: innerHeight };
+      const left = document.querySelector('#move').getBoundingClientRect();
+      const right = document.querySelector('#acts').getBoundingClientRect();
+      return { canvasLeft: canvas.left, canvasRight: canvas.right, canvasWidth: canvas.width, canvasBottom: canvas.bottom, controlTop: controls.top, controlsBottom: controls.bottom, leftRight: left.right, rightLeft: right.left, helpBottom: help.bottom, height: innerHeight };
     });
-    assert.ok(bounds.controlTop >= bounds.canvasBottom - 1, `mobile controls cover the stage at ${viewport.width}x${viewport.height}`);
+    if (viewport.width >= 800 && viewport.width > viewport.height) {
+      assert.ok(bounds.canvasWidth >= 500, `landscape stage too small at ${viewport.width}x${viewport.height}`);
+      assert.ok(bounds.leftRight <= bounds.canvasLeft + 1 && bounds.rightLeft >= bounds.canvasRight - 1, 'landscape touch controls must stay beside the stage');
+    } else {
+      assert.ok(bounds.controlTop >= bounds.canvasBottom - 1, `mobile controls cover the stage at ${viewport.width}x${viewport.height}`);
+    }
     assert.ok(bounds.helpBottom <= bounds.height + 1, `mobile controls/help overflow at ${viewport.width}x${viewport.height}`);
+    assert.equal(await mobile.page.locator('#orientationTip').isVisible(), viewport.height > viewport.width);
     await mobile.page.evaluate(() => skipIntro());
     await mobile.page.locator('#bJ').tap();
     assert.equal(await mobile.page.evaluate(() => gs), 'playing', `touch PLAY failed at ${viewport.width}x${viewport.height}`);
+    assert.equal(await mobile.page.locator('#bJ .action-name').innerText(), 'JUMP');
+    await mobile.page.evaluate(() => { P.state = 'swing'; syncGameButtons(); });
+    assert.equal(await mobile.page.locator('#bJ .action-name').innerText(), 'RELEASE');
+    assert.equal(await mobile.page.locator('#bGrab .action-name').innerText(), 'FLIP');
+    await mobile.page.evaluate(() => { P.state = 'idle'; P.bar = null; syncGameButtons(); });
     if (screenshots) await mobile.page.screenshot({ path: path.join(screenshots, `mobile-${viewport.width}x${viewport.height}-playing.png`) });
     await mobile.page.locator('#btnPause').tap();
     assert.equal(await mobile.page.evaluate(() => paused), true);

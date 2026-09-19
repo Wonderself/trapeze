@@ -466,6 +466,11 @@ const G = {
   attract: false, daily: false,
 };
 const IDLE_PAUSE_AFTER = 20;
+// A second finger or an unrelated button must never release the grip held by
+// the first finger, Space, or a gamepad. Keep ownership until its own release.
+const heldInputs = new Set();
+let activePointerId = null;
+function clearHeldInputs() { heldInputs.clear(); activePointerId = null; G.holding = false; G.armed = false; }
 
 /* ══════════════ MENU PODIUM (3D character select) ══════════════ */
 const PODX = -7, PODTOP = -7.65;
@@ -684,6 +689,7 @@ function refreshDaily() {
 }
 function enterMenu() {
   G.mode = 'menu';
+  clearHeldInputs();
   hero.visible = false;
   menuGroup.visible = true; curtain.visible = true; menuSpot.visible = true;
   ui.attractBar.classList.remove('show');
@@ -741,7 +747,7 @@ $('againBtn').addEventListener('click', () => { sfx.click(); enterMenu(); });
 $('replayBtn').addEventListener('click', () => { initAudio(); sfx.click(); startGame(G.daily); });  // instant replay — no menu detour
 function pauseGame(reason = 'manual') {
   if (G.mode !== 'playing' || G.attract) return;
-  G.mode = 'paused'; G.holding = false; G.armed = false; spaceControlHeld = false;
+  G.mode = 'paused'; clearHeldInputs(); spaceControlHeld = false;
   ui.pauseTitle.textContent = reason === 'idle' ? 'TAKE YOUR TIME' : 'PAUSED';
   ui.pause.classList.remove('hidden'); ui.pauseBtn.classList.add('hidden');
   ui.pauseBtn.setAttribute('aria-label', 'Pause game');
@@ -750,7 +756,7 @@ function pauseGame(reason = 'manual') {
 }
 function resumeGame() {
   if (G.mode !== 'paused') return;
-  G.mode = 'playing'; G.holding = false; G.armed = false;
+  G.mode = 'playing'; clearHeldInputs();
   ui.pause.classList.add('hidden'); ui.pauseBtn.classList.remove('hidden');
   tapBtn.classList.add('on'); lastInputT = G.t;
   app.focus({ preventScroll: true });
@@ -805,7 +811,7 @@ function startGame(daily) {
   applyLayout(G.daily);                          // daily: shared date-seeded rail — otherwise the base one
   G.mode = 'playing'; G.state = 'swing'; G.active = 0;
   G.score = 0; lastScore = -1; G.combo = 0; G.comboT = 0; G.lives = 3;
-  G.spin = 0; G.pumpAmp = 1.0; G.holding = false; G.armed = false;
+  G.spin = 0; G.pumpAmp = 1.0; clearHeldInputs();
   G.grade = ''; G.lastFlips = 0; G.lastFlipBonus = 0; G.trick = false; G.flipRot = 0; G.salute = 0;
   G.timeScale = 1; G.slowmo = 0; G.fovKick = 0; G.shake = 0;
   G.world = 0; G.wind = 0; G.windOff = 0; G.netBounce = false; G.netSaves = 0;
@@ -845,6 +851,7 @@ function awardMedals() {
 let _newHigh = false;
 function endGame() {
   G.mode = 'over';
+  clearHeldInputs();
   ui.hud.style.display = 'none';
   ui.pause.classList.add('hidden'); ui.pauseBtn.classList.add('hidden'); ui.timingCue.style.display = 'none';
   ui.comboHold.style.opacity = '0';
@@ -885,18 +892,18 @@ function showOver() {
 }
 
 /* ══════════════ INPUT — hold to grip & pump, let go to fly, tap mid-air to flip ══════════════ */
-function handleDown() {
+function handleDown(source = 'script') {
   initAudio();
   if (G.mode !== 'playing') return;
   lastInputT = G.t;
-  if (G.state === 'swing') { G.holding = true; G.armed = true; }
+  if (G.state === 'swing') { heldInputs.add(source); G.holding = true; G.armed = true; }
   else if (G.state === 'fly' && !G.trick) { G.trick = true; sfx.flip(); }
 }
-function handleUp() {
-  if (G.mode !== 'playing') { G.holding = false; return; }
+function handleUp(source = 'script') {
+  if (!heldInputs.delete(source) || G.mode !== 'playing') return;
   lastInputT = G.t;
-  G.holding = false;
-  if (G.state === 'swing' && G.armed) { G.armed = false; releaseBar(); }
+  G.holding = heldInputs.size > 0;
+  if (G.state === 'swing' && G.armed && !G.holding) { G.armed = false; releaseBar(); }
 }
 // Space also needs to type a literal space in the name-entry field — don't hijack it as a
 // flight control while that field is up (or more generally while any text input has focus).
@@ -906,24 +913,35 @@ const gameSpace = (e) => G.mode === 'playing' && !typingTarget() &&
   !(e.target instanceof Element && e.target.closest('button, a, input, textarea, select, [role="button"]'));
 addEventListener('keydown', (e) => {
   if (e.code === 'Space' && !e.repeat && gameSpace(e)) {
-    e.preventDefault(); spaceControlHeld = true; handleDown();
+    e.preventDefault(); spaceControlHeld = true; handleDown('space');
   }
 });
 addEventListener('keyup', (e) => {
   if (e.code === 'Space' && spaceControlHeld) {
-    e.preventDefault(); spaceControlHeld = false; handleUp();
+    e.preventDefault(); spaceControlHeld = false; handleUp('space');
   }
 });
-app.addEventListener('pointerdown', (e) => { e.preventDefault(); handleDown(); });
-addEventListener('pointerup', handleUp);
-addEventListener('pointercancel', handleUp);
-tapBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); handleDown(); });
-tapBtn.addEventListener('pointerup', (e) => { e.stopPropagation(); handleUp(); });
+function pointerDown(e) {
+  if ((e.pointerType === 'mouse' && e.button !== 0) || activePointerId !== null) return;
+  e.preventDefault();
+  activePointerId = e.pointerId;
+  try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) {}
+  handleDown('pointer');
+}
+function pointerUp(e) {
+  if (e.pointerId !== activePointerId) return;
+  activePointerId = null;
+  handleUp('pointer');
+}
+app.addEventListener('pointerdown', pointerDown);
+tapBtn.addEventListener('pointerdown', (e) => { e.stopPropagation(); pointerDown(e); });
+addEventListener('pointerup', pointerUp);
+addEventListener('pointercancel', pointerUp);
 tapBtn.addEventListener('keydown', (e) => {
-  if ((e.code === 'Enter' || e.code === 'Space') && !e.repeat) { e.preventDefault(); e.stopPropagation(); handleDown(); }
+  if ((e.code === 'Enter' || e.code === 'Space') && !e.repeat) { e.preventDefault(); e.stopPropagation(); handleDown('tap-keyboard'); }
 });
 tapBtn.addEventListener('keyup', (e) => {
-  if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); e.stopPropagation(); handleUp(); }
+  if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); e.stopPropagation(); handleUp('tap-keyboard'); }
 });
 
 /* ══════════════ GAMEPAD — button A = grip/release (same as Space), d-pad/stick to navigate ══════════════ */
@@ -943,7 +961,7 @@ function gpA(pressed) {                   // A pressed/released, routed by scree
   if (pressed && (intro.active || G.attract)) { anyRealInput(); return; }   // gamepad also skips intro / exits demo
   if (pressed) {
     lastInputT = G.t;
-    if (G.mode === 'playing') handleDown();
+    if (G.mode === 'playing') handleDown('gamepad');
     else if (G.mode === 'paused') resumeGame();
     else if (!ui.entry.classList.contains('hidden')) {
       // a gamepad can't type a name — A confirms only once something was typed
@@ -957,7 +975,7 @@ function gpA(pressed) {                   // A pressed/released, routed by scree
     }
     else if (G.mode === 'menu') { initAudio(); sfx.click(); startGame(false); }
     else if (G.mode === 'over') { initAudio(); sfx.click(); startGame(G.daily); }   // instant replay
-  } else if (G.mode === 'playing') handleUp();
+  } else if (G.mode === 'playing') handleUp('gamepad');
 }
 let gpAxPrimed = true;
 function pollGamepad() {
@@ -1021,14 +1039,19 @@ addEventListener('pointerdown', anyRealInput, true);
 
 /* ══════════════ RELEASE: graded by timing ══════════════ */
 const goodWindow = () => Math.max(0.24, 0.42 * Math.pow(0.95, G.diffN));
+const perfectWindow = () => Math.max(0.065, 0.12 * Math.pow(0.95, G.diffN));
+const apexGrace = (b, amp) => b.omega > -0.25 && b.omega <= 0.35 && b.theta > 0.62 * amp;
+const releaseDiff = (b, amp) => apexGrace(b, amp) ? 0.2 : Math.abs(b.theta - 0.45 * amp) / amp;
+// One small reach cushion makes a borderline finger lift land instead of
+// fizzling out a few pixels before the next bar, without skipping a bar.
+const reachFor = (base, amp, world) => base * (0.85 + (amp - AMP_MIN) / (AMP_MAX - AMP_MIN) * 0.3) * (world === SPACE_W ? 1.12 : 1) + 0.35;
 function releaseBar() {
   const b = bars[G.active];
   const nextI = G.active + 1;
   const amp = G.pumpAmp;
   // A little forgiveness at the forward apex avoids punishing a mobile finger
   // lifted one frame late; a genuinely backward release still tumbles.
-  const apexGrace = b.omega > -0.25 && b.omega <= 0.35 && b.theta > 0.62 * amp;
-  if ((b.omega <= 0.15 && !apexGrace) || nextI >= NBARS) { // backward / dead swing -> tumble
+  if ((b.omega <= 0.15 && !apexGrace(b, amp)) || nextI >= NBARS) { // backward / dead swing -> tumble
     const v = L * b.omega;
     G.vel.set(Math.cos(b.theta) * v * 0.5 + 1.0, Math.sin(b.theta) * v * 0.5, 0);
     G.state = 'fumble'; G.spin = 0; G.grade = 'fumble';
@@ -1036,17 +1059,15 @@ function releaseBar() {
     showGrade('WHOOPS!', '#ff7d7d'); vibrate(20); sfx.fumble();
     return;
   }
-  const ideal = 0.45 * amp;
-  const diff = apexGrace ? 0.2 : Math.abs(b.theta - ideal) / amp;
+  const diff = releaseDiff(b, amp);
   // endless mode: each world entered past the first tour shrinks the timing windows −5% (floored)
-  const shrink = Math.pow(0.95, G.diffN);
-  const PW = Math.max(0.065, 0.12 * shrink), GW = goodWindow();
+  const PW = perfectWindow(), GW = goodWindow();
   let flyDur, arcH, reach;
   if (diff < PW) { G.grade = 'perfect'; flyDur = 0.6; arcH = 2.8; reach = 5.0; showGrade('PERFECT!', '#ffcf3f'); }
   else if (diff < GW) { G.grade = 'good'; flyDur = 0.75; arcH = 2.4; reach = 4.45; showGrade('GOOD!', '#d8ffef'); }
   else { G.grade = 'ok'; flyDur = 0.95; arcH = 1.5; reach = 3.4; showGrade('OK', '#9a8fc5'); }
-  reach *= 0.85 + (amp - AMP_MIN) / (AMP_MAX - AMP_MIN) * 0.3;  // pumping extends reach
-  if (b.w === SPACE_W) { flyDur *= 1.25; reach *= 1.12; }        // Space: low gravity, floatier arcs
+  reach = reachFor(reach, amp, b.w);  // pumping extends reach; a borderline catch gets a little grace
+  if (b.w === SPACE_W) flyDur *= 1.25; // Space: low gravity, floatier arcs
   G.windOff = 0;
 
   const nb = bars[nextI];
@@ -1252,10 +1273,15 @@ function updateControlCue() {
   tapBtn.textContent = G.holding ? 'RELEASE' : 'HOLD';
   ui.timingCue.style.display = 'block';
   const b = bars[G.active];
-  const diff = Math.abs(b.theta - 0.45 * G.pumpAmp) / G.pumpAmp;
-  const ready = G.holding && b.omega > 0.15 && diff < goodWindow();
+  const diff = releaseDiff(b, G.pumpAmp);
+  const inWindow = (b.omega > 0.15 || apexGrace(b, G.pumpAmp)) && diff < goodWindow();
+  const base = diff < perfectWindow() ? 5.0 : 4.45;
+  const next = bars[G.active + 1];
+  const dist = next ? next.x + L * Math.sin(-0.5) - hero.position.x : Infinity;
+  const reachable = next && dist <= reachFor(base, G.pumpAmp, b.w);
+  const ready = G.holding && inWindow && reachable;
   ui.timingCue.classList.toggle('ready', ready);
-  ui.timingCue.textContent = ready ? 'RELEASE NOW' : G.holding ? 'KEEP HOLDING' : 'HOLD TO PUMP';
+  ui.timingCue.textContent = ready ? 'RELEASE NOW' : G.holding ? (inWindow && !reachable ? 'BUILD MOMENTUM' : 'KEEP HOLDING') : 'HOLD TO PUMP';
 }
 
 /* ══════════════ CAMERA ══════════════ */
@@ -1339,7 +1365,8 @@ window.__game = {
   action: () => { handleDown(); handleUp(); },
   state: () => ({
     mode: G.mode, state: G.state, active: G.active, score: G.score, lives: G.lives, t: +G.t.toFixed(2),
-    combo: G.combo, grade: G.grade, flips: G.lastFlips, flipBonus: G.lastFlipBonus,
+    combo: G.combo, grade: G.grade, holding: G.holding, flyMode: G.flyMode,
+    flips: G.lastFlips, flipBonus: G.lastFlipBonus,
     theta: bars[G.active] ? bars[G.active].theta : 0, omega: bars[G.active] ? bars[G.active].omega : 0,
     amp: G.pumpAmp, timeScale: G.timeScale, hero: hero.position.toArray(),
     world: G.world, worldName: WORLD_NAMES[G.world], netSaves: G.netSaves,
