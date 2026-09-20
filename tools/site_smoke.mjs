@@ -29,6 +29,13 @@ const expectedVersionTargets = [
   '/2d/',
   '/3d/',
 ];
+const expectedModelSpotlights = [
+  'DeepSeek V4.1 Flash',
+  'Grok 4.6',
+  'GPT-5.6 Sol · Ultra mode',
+  'Claude Opus 5',
+  'GPT-6 Astra',
+];
 const screenshotNames = new Map([
   ['/', 'home'],
   ['/2d/', 'circus-2d'],
@@ -149,6 +156,61 @@ try {
         if (selector.labels.some(label => !label.trim())) pageFailures.push(`version selector has unnamed cards: ${JSON.stringify(selector.labels)}`);
         if (selector.oldClaimPresent) pageFailures.push('obsolete three-version claim is still visible');
         if (!selector.allBeforeCompare || !selector.visualOrder) pageFailures.push(`not all five versions appear before comparison: ${JSON.stringify(selector)}`);
+
+        const modelSpotlights = await page.evaluate(async () => {
+          const cards = [...document.querySelectorAll('#versions .card[href]')];
+          const disclosure = document.getElementById('model-disclosure');
+          const disclosureStyle = disclosure ? getComputedStyle(disclosure) : null;
+          const spotlightCards = [];
+          const previousScrollBehavior = document.documentElement.style.scrollBehavior;
+          document.documentElement.style.scrollBehavior = 'auto';
+          for (const card of cards) {
+            const badges = [...card.querySelectorAll('.model-spotlight')];
+            const badge = badges[0];
+            const logo = badge?.querySelector('img.model-logo, svg.model-logo');
+            const image = logo?.tagName.toLowerCase() === 'img' ? logo : null;
+            if (image) await image.decode().catch(() => {});
+            badge?.scrollIntoView({ block: 'center' });
+            const cardRect = card.getBoundingClientRect();
+            const badgeRect = badge?.getBoundingClientRect();
+            const logoRect = logo?.getBoundingClientRect();
+            const ctaRect = card.querySelector('.cta')?.getBoundingClientRect();
+            const center = badgeRect ? { x: badgeRect.left + badgeRect.width / 2, y: badgeRect.top + badgeRect.height / 2 } : null;
+            spotlightCards.push({
+              count: badges.length,
+              name: badge?.querySelector('.model-name')?.textContent.trim() || '',
+              visible: Boolean(badgeRect && badgeRect.width && badgeRect.height && getComputedStyle(badge).visibility !== 'hidden'),
+              logoVisible: Boolean(logoRect && logoRect.width >= 14 && logoRect.height >= 14),
+              logoLocal: Boolean(logo && (!image || image.src.startsWith(location.origin) || image.src.startsWith('data:'))),
+              logoLoaded: Boolean(logo && (!image || image.naturalWidth > 0)),
+              contained: Boolean(badgeRect && badgeRect.left >= cardRect.left - 1 && badgeRect.right <= cardRect.right + 1),
+              unclippedText: Boolean(badge && badge.scrollWidth <= badge.clientWidth + 1),
+              clearOfPlay: Boolean(badgeRect && ctaRect && (badgeRect.bottom <= ctaRect.top || badgeRect.top >= ctaRect.bottom)),
+              hitTarget: Boolean(center && center.x >= 0 && center.x < innerWidth && center.y >= 0 && center.y < innerHeight
+                && document.elementFromPoint(center.x, center.y)?.closest('.card') === card),
+            });
+          }
+          window.scrollTo(0, 0);
+          document.documentElement.style.scrollBehavior = previousScrollBehavior;
+          return {
+            cards: spotlightCards,
+            disclosure: disclosure?.textContent.trim() || '',
+            disclosureVisible: Boolean(disclosure && disclosureStyle.display !== 'none' && disclosureStyle.visibility !== 'hidden'),
+            disclosureBeforeCards: Boolean(disclosure && cards[0]
+              && (disclosure.compareDocumentPosition(cards[0]) & Node.DOCUMENT_POSITION_FOLLOWING)),
+          };
+        });
+        if (JSON.stringify(modelSpotlights.cards.map(card => card.name)) !== JSON.stringify(expectedModelSpotlights)) {
+          pageFailures.push(`model spotlights mismatch: ${JSON.stringify(modelSpotlights.cards.map(card => card.name))}`);
+        }
+        for (const [index, card] of modelSpotlights.cards.entries()) {
+          const failed = Object.entries(card).filter(([key, value]) => key !== 'name' && value !== (key === 'count' ? 1 : true));
+          if (failed.length) pageFailures.push(`model spotlight ${index + 1} layout/logo/click failed: ${JSON.stringify(card)}`);
+        }
+        if (!modelSpotlights.disclosureVisible || !modelSpotlights.disclosureBeforeCards || !/demo/i.test(modelSpotlights.disclosure)
+          || !/multiple/i.test(modelSpotlights.disclosure) || !/model/i.test(modelSpotlights.disclosure)) {
+          pageFailures.push(`model spotlight disclosure missing or unclear: ${JSON.stringify(modelSpotlights.disclosure)}`);
+        }
       }
 
       const routePath = new URL(route, server.origin).pathname;

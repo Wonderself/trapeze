@@ -105,7 +105,7 @@ h1 .l2{display:block;
 .cards{display:grid;gap:clamp(18px,4vw,26px);grid-template-columns:1fr}
 /* Une colonne en portrait, deux sur tablette et 3 + 2 cartes centrées sur
    grand écran : aucune version n'est reléguée dans une autre section. */
-@media(min-width:820px){.cards{grid-template-columns:1fr 1fr;align-items:start}}
+@media(min-width:820px){.cards{grid-template-columns:1fr 1fr;align-items:stretch}}
 @media(min-width:1080px){
   .cards{grid-template-columns:repeat(6,minmax(0,1fr))}
   .card{grid-column:span 2}
@@ -179,6 +179,24 @@ ul.feat{list-style:none;display:flex;flex-direction:column;gap:8px;font-size:14.
 ul.feat li{display:flex;gap:10px;align-items:flex-start;color:var(--ink2)}
 ul.feat li b{color:var(--ink);font-weight:700}
 .chk{flex:0 0 auto;width:17px;height:17px;margin-top:3px}
+.model-spotlight{
+  display:flex;align-items:center;gap:12px;min-width:0;
+  padding:11px 12px;border:1px solid rgba(255,255,255,.14);
+  border-radius:13px;background:rgba(255,255,255,.045);
+}
+.model-logo{width:42px;height:42px;flex:0 0 42px;display:block}
+.model-copy{display:block;min-width:0;line-height:1.35}
+.model-eyebrow{
+  display:block;color:var(--ink2);font-size:11px;font-weight:900;
+  letter-spacing:.12em;text-transform:uppercase;
+}
+.model-name{display:block;color:var(--ink);font-size:15px;font-weight:900;overflow-wrap:anywhere}
+.model-id{display:block;color:var(--ink2);font-size:11px;overflow-wrap:anywhere}
+.card.v1 .model-spotlight{border-color:rgba(255,197,61,.26)}
+.card.v2 .model-spotlight{border-color:rgba(77,210,255,.29)}
+.card.v3 .model-spotlight{border-color:rgba(255,107,157,.29)}
+.card.v4 .model-spotlight{border-color:rgba(95,227,161,.29)}
+.card.v5 .model-spotlight{border-color:rgba(183,138,255,.34)}
 .cta{
   margin-top:auto;display:flex;align-items:center;justify-content:center;gap:9px;
   min-height:56px;padding:0 22px;border-radius:14px;
@@ -198,6 +216,7 @@ ul.feat li b{color:var(--ink);font-weight:700}
   margin:22px 0 0;padding:18px 20px;border:1px solid var(--line);border-radius:14px;
   background:rgba(255,255,255,.022);color:var(--ink2);font-size:14.5px;line-height:1.6;
 }
+.model-disclosure{margin:0 auto 20px;max-width:72ch;text-align:center;color:var(--ink2);font-size:13px;line-height:1.5}
 
 /* ── Comparatif ──────────────────────────────────────────── */
 section{padding:clamp(30px,8vh,58px) 0}
@@ -268,12 +287,17 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
 <section class="selector" id="versions" aria-labelledby="versions-title">
 <h2 class="selector-title" id="versions-title">Choose your game</h2>
 <p class="selector-lead">All five games are playable. Each card highlights a different way to take the stage.</p>
+<p class="model-disclosure" id="model-disclosure">
+  Demo model pairings only: every game used multiple AI tools. These are not sole-author credits
+  or endorsements; the emblems are original, not official provider logos. Ultra is a Codex mode,
+  not a separate model.
+</p>
 <!-- Keep the release query in sync with game-to-selector links when public HTML changes.
      The mirror may otherwise reuse an older cached document after a deployment. -->
 <div class="cards">
 
   <!-- ── V1 ─────────────────────────────────────────────── -->
-  <a class="card v1" href="trapeze-stars-v1.html?release=20260919-ux2" aria-label="Play Classic, version 1 in 2D">
+  <a class="card v1" href="trapeze-stars-v1.html?release=20260919-ux2" aria-label="Play Classic, version 1 in 2D; demo pairing: DeepSeek V4.1 Flash">
     <div class="shot">
       <span class="tag a">Version 1 · 2D</span>
       <canvas id="pv1" width="480" height="270" role="img"
@@ -289,12 +313,16 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
         <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FFC53D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Variable-height jumps</b> and trampoline bounces</span></li>
         <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FFC53D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span>Trapezes, hoops and a flying catcher</span></li>
       </ul>
+      <span class="model-spotlight">
+        <svg class="model-logo" viewBox="0 0 48 48" aria-hidden="true"><rect x="1" y="1" width="46" height="46" rx="12" fill="#123452" stroke="#68BBF8"/><circle cx="24" cy="24" r="15" fill="none" stroke="#68BBF8" stroke-width="1.5" opacity=".6"/><text x="24" y="31" text-anchor="middle" fill="#D6F1FF" font-size="23" font-weight="900" font-family="system-ui,sans-serif">D</text></svg>
+        <span class="model-copy"><span class="model-eyebrow">Demo model pairing</span><span class="model-name">DeepSeek V4.1 Flash</span><code class="model-id">deepseek-flash</code></span>
+      </span>
       <span class="cta a" aria-hidden="true">▶ Play Classic</span>
     </div>
   </a>
 
   <!-- ── V2 ─────────────────────────────────────────────── -->
-  <a class="card v2" href="trapeze-stars-v2.html?release=20260919-ux2" aria-label="Play Deluxe, version 2 in perspective">
+  <a class="card v2" href="trapeze-stars-v2.html?release=20260919-ux2" aria-label="Play Deluxe, version 2 in perspective; demo pairing: Grok 4.6">
     <div class="shot">
       <span class="tag b">Version 2 · Perspective 3D</span>
       <canvas id="pv2" width="480" height="270" role="img"
@@ -311,12 +339,16 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
         <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#4DD2FF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Bank trick points</b> by landing safely</span></li>
         <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#4DD2FF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span>A <b>safety net</b> keeps the run going after a fall</span></li>
       </ul>
+      <span class="model-spotlight">
+        <svg class="model-logo" viewBox="0 0 48 48" aria-hidden="true"><rect x="1" y="1" width="46" height="46" rx="12" fill="#172338" stroke="#80DFFF"/><path d="M9 32 24 8l15 24" fill="none" stroke="#80DFFF" stroke-width="1.5" opacity=".6"/><text x="24" y="31" text-anchor="middle" fill="#E2F9FF" font-size="23" font-weight="900" font-family="system-ui,sans-serif">G</text></svg>
+        <span class="model-copy"><span class="model-eyebrow">Demo model pairing</span><span class="model-name">Grok 4.6</span><code class="model-id">grok-4.6</code></span>
+      </span>
       <span class="cta b" aria-hidden="true">▶ Play Deluxe</span>
     </div>
   </a>
 
   <!-- ── V3 ─────────────────────────────────────────────── -->
-  <a class="card v3" href="trapeze-city-v3.html?release=20260919-ux2" aria-label="Play City, version 3 across the rooftops">
+  <a class="card v3" href="trapeze-city-v3.html?release=20260919-ux2" aria-label="Play City, version 3 across the rooftops; demo pairing: GPT-5.6 Sol in Codex Ultra mode">
     <div class="shot">
       <span class="tag c">Version 3 · Trapeze City</span>
       <canvas id="pv3" width="480" height="270" role="img"
@@ -333,12 +365,16 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
         <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FF2E88" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Crowd hype</b>, a TV drone and rooftop radar</span></li>
         <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#FF2E88" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span>A catcher and safety net keep the crossing alive</span></li>
       </ul>
+      <span class="model-spotlight">
+        <svg class="model-logo" viewBox="0 0 48 48" aria-hidden="true"><rect x="1" y="1" width="46" height="46" rx="12" fill="#391A32" stroke="#FF91BF"/><circle cx="24" cy="24" r="15" fill="none" stroke="#FF91BF" stroke-width="1.5" opacity=".6"/><text x="24" y="31" text-anchor="middle" fill="#FFE4EF" font-size="22" font-weight="900" font-family="system-ui,sans-serif">S</text></svg>
+        <span class="model-copy"><span class="model-eyebrow">Demo model pairing</span><span class="model-name">GPT-5.6 Sol · Ultra mode</span><code class="model-id">gpt-5.6-sol</code></span>
+      </span>
       <span class="cta c" aria-hidden="true">▶ Play City</span>
     </div>
   </a>
 
   <!-- ── V4 ────────────────────────────────────────────────────── -->
-  <a class="card v4" href="2d/?release=20260919-ux2" aria-label="Play Circus Alzahir, installable 2D version">
+  <a class="card v4" href="2d/?release=20260919-ux2" aria-label="Play Circus Alzahir, installable 2D version; demo pairing: Claude Opus 5">
     <div class="shot">
       <span class="tag d">Version 4 · Installable 2D</span>
       <img src="assets/shot-2d.jpg" width="960" height="560" loading="lazy"
@@ -354,12 +390,16 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
         <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#5FE3A1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>World music</b>, medals and layered scenery</span></li>
         <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#5FE3A1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Installable PWA</b> with offline play</span></li>
       </ul>
+      <span class="model-spotlight">
+        <svg class="model-logo" viewBox="0 0 48 48" aria-hidden="true"><rect x="1" y="1" width="46" height="46" rx="12" fill="#18382F" stroke="#8EF0BD"/><circle cx="24" cy="24" r="15" fill="none" stroke="#8EF0BD" stroke-width="1.5" opacity=".6"/><text x="24" y="31" text-anchor="middle" fill="#E1FFEF" font-size="22" font-weight="900" font-family="system-ui,sans-serif">C</text></svg>
+        <span class="model-copy"><span class="model-eyebrow">Demo model pairing</span><span class="model-name">Claude Opus 5</span><code class="model-id">claude-opus-5</code></span>
+      </span>
       <span class="cta d" aria-hidden="true">▶ Play Circus Alzahir</span>
     </div>
   </a>
 
   <!-- ── V5 ────────────────────────────────────────────────────── -->
-  <a class="card v5" href="3d/?release=20260919-ux2" aria-label="Play Trapeze Stars 3D">
+  <a class="card v5" href="3d/?release=20260919-ux2" aria-label="Play Trapeze Stars 3D; demo pairing: GPT-6 Astra">
     <div class="shot">
       <span class="tag e">Version 5 · Three.js</span>
       <img src="3d/shots/menu.jpg" width="960" height="560" loading="lazy"
@@ -375,6 +415,10 @@ footer a{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
         <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#C9ADFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span><b>Four worlds</b>, tricks and combos</span></li>
         <li><svg class="chk" viewBox="0 0 20 20" fill="none" stroke="#C9ADFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg><span>Local leaderboard, photo finish and gamepad support</span></li>
       </ul>
+      <span class="model-spotlight">
+        <svg class="model-logo" viewBox="0 0 48 48" aria-hidden="true"><rect x="1" y="1" width="46" height="46" rx="12" fill="#2D2148" stroke="#D0AFFF"/><path d="M24 7v34M7 24h34M12 12l24 24m0-24L12 36" fill="none" stroke="#D0AFFF" stroke-width="1.3" opacity=".55"/><text x="24" y="31" text-anchor="middle" fill="#F1E4FF" font-size="22" font-weight="900" font-family="system-ui,sans-serif">A</text></svg>
+        <span class="model-copy"><span class="model-eyebrow">Demo model pairing</span><span class="model-name">GPT-6 Astra</span><code class="model-id">gpt-6-astra</code></span>
+      </span>
       <span class="cta e" aria-hidden="true">▶ Play Trapeze Stars 3D</span>
     </div>
   </a>

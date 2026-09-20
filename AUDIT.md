@@ -1,5 +1,11 @@
 # 📊 AUDIT — Trapeze Stars (trapeze)
-Dernière mise à jour : 2026-09-19 — Direction active : **démo publique des cinq versions**, avec Trapeze Stars 3D (`game3d/`, Three.js + Vite) en vedette.
+Dernière mise à jour : 2026-09-20 — Direction active : **démo publique des cinq versions**, avec Trapeze Stars 3D (`game3d/`, Three.js + Vite) en vedette.
+
+## Sélecteur de démo du 2026-09-20
+
+- Les cinq cartes présentent chacune un modèle précis en anglais, comme **association éditoriale pour la démo**, et non comme auteur exclusif du jeu : DeepSeek V4.1 Flash, Grok 4.6, GPT-5.6 Sol en mode Ultra de Codex, Claude Opus 5 et GPT-6 Astra. Chaque jeu a en réalité bénéficié de plusieurs outils IA ; cette distinction est visible avant les cartes et ne suggère aucun partenariat. Ultra est un mode Codex, pas un autre modèle.
+- Les emblèmes vectoriels sont originaux et locaux, pas des logos officiels des fournisseurs. Les chartes de marque, en particulier celle de DeepSeek, n'autorisent pas à présenter librement leurs marques graphiques. Le sélecteur conserve cinq cartes entièrement cliquables, sans requête tierce au démarrage.
+- La recette locale couvre les cinq associations, leur lisibilité et les cibles cliquables aux quatre formats du smoke site, en plus du build, des contrôles des jeux et des caches PWA. La publication cible et le miroir sont des preuves séparées.
 
 ## Release de maniabilité du 2026-09-19
 
