@@ -30,6 +30,8 @@ jobs:
           cache-dependency-path: |
             game3d/package-lock.json
             tools/package-lock.json
+      - name: Check saved 3D records and menu resilience
+        run: npm run test:storage
       - name: Install dependencies
         run: |
           npm ci --prefix game3d

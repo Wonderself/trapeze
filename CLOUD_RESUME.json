@@ -1,6 +1,6 @@
 {
   "project": "Trapeze",
-  "role": "current_release_reverified",
+  "role": "source_candidate_verified_github_ci_not_deployed",
   "next": [
     "No remaining numbered session in existing roadmap. Preserve five games; physical-device coverage remains separate."
   ],
@@ -33,5 +33,23 @@
     "No game/UI/runtime regression; physical-device coverage reported separately."
   ],
   "delivery_notes": "DELIVERY-2026-10-16.md",
-  "cloud_environment_id": null
+  "cloud_environment_id": null,
+  "github_validation": {
+    "run_id": 38860877485,
+    "url": "https://github.com/Wonderself/trapeze/actions/runs/38860877485",
+    "sha": "0bc963c97dd009ebe040878d033d863e9fecd22c",
+    "branch": "resume/cloud-20261016",
+    "conclusion": "SUCCESS",
+    "checks": [
+      "build",
+      "Canvas",
+      "pages/responsive/service-worker",
+      "full Three.js flow"
+    ],
+    "pages_configuration": "SKIPPED",
+    "artifact_upload": "SKIPPED",
+    "deploy": "SKIPPED",
+    "storage3d": "NOT_INCLUDED_IN_THIS_RUN; 10 local checks PASS separately",
+    "cloud_development_qualification": false
+  }
 }
