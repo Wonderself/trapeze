@@ -1,3 +1,5 @@
+> **16/10/2026 — fin de partie sur petit écran corrigée dans les sources.** Avec photo et dix scores, Share/Menu dépassaient 568 px (environ 649–703 px), sans défilement. Le seul écran `#over` devient défilant, garde ses enfants non comprimés et réserve le bas pour les commandes fixes. Rendu DOM/CSS synthétique mesuré à 320×568, 390×844, 768×1024 et 1440×900 : Replay/Share/Menu atteignables après défilement, centre non recouvert. Aucun WebGL ou parcours de jeu rejoué ; les 28 vues historiques ne sont pas répétées. Aucun build : `/3d` et publication conservent l’ancien code.
+
 # 📊 AUDIT — Trapeze Stars (trapeze)
 
 ## Vérification de livraison — 16 octobre 2026

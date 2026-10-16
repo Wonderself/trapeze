@@ -77,6 +77,11 @@
   #best .medals{display:block;margin-top:3px;font-size:clamp(11px,3vw,14px);letter-spacing:2px;color:#cbb2ff}
   #newBest{margin-top:8px;font-size:clamp(15px,4.5vw,22px);font-weight:700;color:#8affc1;letter-spacing:2px;text-shadow:0 0 18px rgba(120,255,190,.8);animation:bestPulse .7s ease-in-out infinite alternate}
   @keyframes bestPulse{from{transform:scale(1)}to{transform:scale(1.08)}}
+  /* A full photo/podium must keep end-screen actions reachable on short screens. */
+  #over{overflow-y:auto;justify-content:flex-start;touch-action:pan-y;overscroll-behavior:contain;padding-bottom:calc(80px + env(safe-area-inset-bottom,0px));scroll-padding-top:24px;scroll-padding-bottom:80px}
+  #over>*{flex-shrink:0}
+  #over>:first-child{margin-top:auto}
+  #over>:last-child{margin-bottom:auto}
   #overStats{display:grid;grid-template-columns:repeat(2,minmax(120px,150px));gap:8px 14px;margin-top:18px}
   #overStats div{padding:8px 6px;border-radius:12px;background:rgba(14,5,32,.5);border:1px solid rgba(255,255,255,.12);font-size:13px;color:#e8dcff}
   #overStats b{display:block;font-size:19px;color:#fff}
