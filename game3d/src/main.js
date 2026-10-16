@@ -27,12 +27,15 @@ const WORLD_ICON = ['🎪', '🌴', '🏖', '🚀'];
 const medalTier = (s) => { let t = 0; for (let i = 0; i < 4; i++) if (s >= MEDAL_T[i]) t = i + 1; return t; };
 
 /* ── persistence (localStorage ts3d_*) ── */
+const savedCount = (value) => Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
+const savedMedal = (value) => Number.isInteger(value) && value >= 0 && value <= 4 ? value : 0;
 function loadRec() {
   try {
+    const medals = JSON.parse(localStorage.getItem('ts3d_medals') || '[0,0,0,0]');
     return {
-      high: +localStorage.getItem('ts3d_high') || 0,
-      combo: +localStorage.getItem('ts3d_combo') || 0,
-      medals: JSON.parse(localStorage.getItem('ts3d_medals') || '[0,0,0,0]'),
+      high: savedCount(+localStorage.getItem('ts3d_high')),
+      combo: savedCount(+localStorage.getItem('ts3d_combo')),
+      medals: Array.from({ length: 4 }, (_, w) => savedMedal(Array.isArray(medals) ? medals[w] : 0)),
       mute: localStorage.getItem('ts3d_mute') === '1',
       reduceFx: localStorage.getItem('ts3d_reducefx') === '1',
     };
@@ -53,7 +56,11 @@ setMuted(REC.mute);
 /* ── daily challenge (3D-7): one shared rail per UTC day, best-of-day persisted ── */
 const dailySeed = () => { const d = new Date(); return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); };
 function loadDaily() {
-  try { const o = JSON.parse(localStorage.getItem('ts3d_daily') || 'null'); return o && o.d === dailySeed() ? o : null; }
+  try {
+    const o = JSON.parse(localStorage.getItem('ts3d_daily') || 'null');
+    return o && o.d === dailySeed() && Number.isFinite(o.s) && o.s >= 0
+      ? { d: o.d, s: savedCount(o.s) } : null;
+  }
   catch (e) { return null; }
 }
 function saveDaily(score) {
@@ -77,7 +84,13 @@ const reduceFlashes = () => REC.reduceFx;
 
 /* ── local top-10 leaderboard (localStorage ts3d_board) ── */
 function loadBoard() {
-  try { const a = JSON.parse(localStorage.getItem('ts3d_board') || '[]'); return Array.isArray(a) ? a : []; }
+  try {
+    const a = JSON.parse(localStorage.getItem('ts3d_board') || '[]');
+    return Array.isArray(a) ? a
+      .filter((e) => e && typeof e.i === 'string' && Number.isFinite(e.s) && e.s >= 0)
+      .slice(0, 10)
+      .map((e) => ({ i: e.i, s: savedCount(e.s), m: savedMedal(e.m), l: savedCount(e.l) })) : [];
+  }
   catch (e) { return []; }
 }
 let BOARD = loadBoard();
