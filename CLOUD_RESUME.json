@@ -1,0 +1,19 @@
+{
+  "project": "Trapeze",
+  "role": "current_release",
+  "next": [
+    "Verify current CI and exact public content on Pages and Coolify mirror.",
+    "Replay Canvas/PWA/3D checks in cloud; preserve all five games."
+  ],
+  "done": [
+    "Seven public routes and shared assets match reviewed SHA on both hosts.",
+    "No game/UI/runtime regression; physical-device coverage reported separately."
+  ],
+  "blockers": [],
+  "branch": "resume/cloud-20261016",
+  "source_head": "cea4db4bb92e6d25968d64f94571ed5a49702968",
+  "prepared_at_utc": "2026-10-16T00:02:42.738209+00:00",
+  "cloud_control_task": "NOT_RUN",
+  "secret_handling": "No local env/database/cookies/credentials imported. Historical token/private-address references sanitized in affected snapshot trees; original local backups preserved. Existing remote Git history was not rewritten.",
+  "no_deployment_claim": true
+}
