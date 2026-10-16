@@ -17,6 +17,8 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    outputs:
+      public_manifest: ${{ steps.public_manifest.outputs.manifest }}
     timeout-minutes: 25
     permissions:
       contents: read
@@ -39,6 +41,11 @@ jobs:
           npx --prefix tools playwright-core install --with-deps chromium
       - name: Build deployable site
         run: npm run build:artifact
+      - name: Capture exact public artifact hashes
+        id: public_manifest
+        run: echo "manifest=$(node tools/public_manifest.mjs _site)" >> "$GITHUB_OUTPUT"
+      - name: Check publication verification contract
+        run: node --test tools/public_manifest.test.mjs
       - name: Check Canvas games
         run: |
           for file in trapeze-stars-v1.html trapeze-stars-v2.html trapeze-city-v3.html 2d/index.html; do
@@ -84,4 +91,6 @@ jobs:
         uses: actions/deploy-pages@v5
       - uses: actions/checkout@v7
       - name: Verify public site from GitHub runner
+        env:
+          EXPECTED_SITE_MANIFEST: ${{ needs.verify.outputs.public_manifest }}
         run: node tools/public_smoke.mjs https://wonderself.github.io/trapeze/
