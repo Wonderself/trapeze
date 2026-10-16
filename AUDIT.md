@@ -1,4 +1,9 @@
 # 📊 AUDIT — Trapeze Stars (trapeze)
+
+## Vérification de livraison — 16 octobre 2026
+
+La version applicative `cea4db4bb92e6d25968d64f94571ed5a49702968` est vérifiée à nouveau sur GitHub Pages et le miroir Coolify existant. `npm run verify:deploy` passe : 28 vues responsive, commandes Classic/Deluxe/City/2D et caches PWA en ligne/hors ligne. `node game3d/test/smoke3d.mjs` termine avec EXIT CODE 0 ; les deux refus réseau du fournisseur simulé sont le scénario attendu de repli local, pas une erreur applicative réelle. `tools/public_smoke.mjs` passe sur chaque hébergement : 7 pages, 4 assets, 404 et contenu exact. Aucun redéploiement inutile ni modification fonctionnelle ; contrôle sur appareils physiques distinct et non exécuté.
+
 Dernière mise à jour : 2026-09-20 — Direction active : **démo publique des cinq versions**, avec Trapeze Stars 3D (`game3d/`, Three.js + Vite) en vedette.
 
 ## Sélecteur de démo du 2026-09-20
