@@ -4,10 +4,6 @@
   "next": [
     "No remaining numbered session in existing roadmap. Preserve five games; physical-device coverage remains separate."
   ],
-  "done": [
-    "Seven public routes and shared assets match reviewed SHA on both hosts.",
-    "No game/UI/runtime regression; physical-device coverage reported separately."
-  ],
   "blockers": [],
   "branch": "resume/cloud-20261016",
   "source_head": "cea4db4bb92e6d25968d64f94571ed5a49702968",
@@ -31,5 +27,11 @@
       ]
     },
     "physical_devices": "NOT_RUN"
-  }
+  },
+  "completion_criteria": [
+    "Seven public routes and shared assets match reviewed SHA on both hosts.",
+    "No game/UI/runtime regression; physical-device coverage reported separately."
+  ],
+  "delivery_notes": "DELIVERY-2026-10-16.md",
+  "cloud_environment_id": null
 }
