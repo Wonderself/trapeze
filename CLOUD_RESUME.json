@@ -1,18 +1,76 @@
 {
   "project": "Trapeze",
-  "role": "release_candidate_verified_local_pending_deployment",
+  "role": "canonical_release_published_verified_mirror_update_blocked_auth",
   "next": [
-    "Publish validated 2026-10-31 snapshot on main; verify exact GitHub Pages bytes.",
-    "Redeploy existing Coolify application ns4sg8w44wow0wkowg0co4kk with authenticated administration; verify exact mirror bytes."
+    "Authenticate to existing Coolify administration, redeploy application ns4sg8w44wow0wkowg0co4kk on source 70fb24f7cd7f2886e44d9e41778da7ebc135bb1d, then verify exact mirror bytes.",
+    "Physical-device QA and unsynchronized Mac files remain outside this session coverage."
   ],
-  "blockers": [],
-  "branch": "resume/cloud-20261016",
-  "source_head": "cea4db4bb92e6d25968d64f94571ed5a49702968",
-  "prepared_at_utc": "2026-10-16T00:02:42.738209+00:00",
-  "cloud_control_task": "NOT_RUN",
+  "blockers": [
+    "Authenticated Coolify administration is not configured in this session."
+  ],
+  "branch": "main",
+  "source_head": "70fb24f7cd7f2886e44d9e41778da7ebc135bb1d",
+  "prepared_at_utc": "2026-10-31T14:36:00Z",
+  "cloud_control_task": "BUILD_AND_WEB_QA_PASS",
   "secret_handling": "No local env/database/cookies/credentials imported. Historical token/private-address references sanitized in affected snapshot trees; original local backups preserved. Existing remote Git history was not rewritten.",
-  "no_deployment_claim": true,
+  "no_deployment_claim": false,
   "checks_this_session": {
+    "storage_menu": "PASS_10_CASES",
+    "verify_deploy": "PASS",
+    "responsive_views": 28,
+    "controls": "PASS",
+    "pwa_online_offline": "PASS",
+    "threejs_smoke_exit": 0,
+    "threejs_endless_score": 51150,
+    "threejs_best_combo": 47,
+    "targeted_3d_build_checks": "PASS_MALFORMED_SAVES_AND_SYNTHETIC_FULL_END_SCREEN",
+    "physical_devices": "NOT_RUN",
+    "canonical_release": "PASS_EXACT_7_ROUTES_4_ASSETS_CUSTOM_404",
+    "mirror": "PREVIOUS_SNAPSHOT_EXACT_7_ROUTES_4_ASSETS_404"
+  },
+  "completion_criteria": [
+    "Seven public routes and shared assets match reviewed SHA on both hosts.",
+    "No game/UI/runtime regression; physical-device coverage reported separately."
+  ],
+  "delivery_notes": "docs/DEPLOIEMENT.md",
+  "cloud_environment_id": "ccarenv_b64_Y2NhcmVudl8zNDdhNWJhMTBmYzQ4MTkxYWYyZDVjNjlkNmRhYTEzMA",
+  "github_validation": {
+    "run_id": 41210281933,
+    "url": "https://github.com/Wonderself/trapeze/actions/runs/41210281933",
+    "sha": "70fb24f7cd7f2886e44d9e41778da7ebc135bb1d",
+    "branch": "main",
+    "conclusion": "SUCCESS",
+    "verify": "SUCCESS",
+    "deploy": "SUCCESS",
+    "storage3d": "PASS",
+    "public_verification": "PASS_FROM_GITHUB_RUNNER_AND_INDEPENDENT_PROXY_CHECK"
+  },
+  "resume_2026_10_31": {
+    "workspace_head": "34a4aec0dd8dae4e6027100c64d7ee9d211e4b31",
+    "github_main_same_head": true,
+    "physical_mac_comparison": "NOT_ACCESSIBLE",
+    "next": "Build, validate and publish existing storage/menu and end-screen fixes; preserve five games.",
+    "build": "PASS",
+    "browser_checks": "PASS_VERIFY_DEPLOY_28_VIEWS_CONTROLS_PWA",
+    "deployment": "GITHUB_PAGES_PASS_COOLIFY_PENDING_AUTH",
+    "last_main_workflow_observed": {
+      "run_id": 35504732367,
+      "sha": "cea4db4bb92e6d25968d64f94571ed5a49702968",
+      "conclusion": "success"
+    },
+    "offline_checks": "storage 10 PASS; public manifest contract PASS; four Canvas loading/state flows PASS; Deluxe 12 levels PASS; City six traversals, fuzz and reachability PASS",
+    "threejs_smoke": "PASS_EXIT_0_FOUR_WORLDS_ENDLESS_PHOTO_RECORDS",
+    "targeted_built_3d_regressions": "PASS malformed storage startup and synthetic full end-screen layout in four viewports",
+    "coolify": {
+      "public_https": "HTTP_200",
+      "admin_url": "http://188.245.182.200:8000/login",
+      "admin_access": "AUTHENTICATION_REQUIRED_NOT_CONFIGURED",
+      "deployment": "NOT_RUN",
+      "api_status": 401,
+      "previous_snapshot_exact_content": "PASS_7_ROUTES_4_ASSETS_CUSTOM_404"
+    }
+  },
+  "historical_checks_2026_10_16": {
     "verify_deploy": "PASS",
     "responsive_views": 28,
     "controls": "PASS",
@@ -29,13 +87,8 @@
     },
     "physical_devices": "NOT_RUN"
   },
-  "completion_criteria": [
-    "Seven public routes and shared assets match reviewed SHA on both hosts.",
-    "No game/UI/runtime regression; physical-device coverage reported separately."
-  ],
-  "delivery_notes": "DELIVERY-2026-10-16.md",
-  "cloud_environment_id": null,
-  "github_validation": {
+  "workspace_branch": "work",
+  "historical_github_validation_2026_10_16": {
     "run_id": 38860877485,
     "url": "https://github.com/Wonderself/trapeze/actions/runs/38860877485",
     "sha": "0bc963c97dd009ebe040878d033d863e9fecd22c",
@@ -52,28 +105,5 @@
     "deploy": "SKIPPED",
     "storage3d": "NOT_INCLUDED_IN_THIS_RUN; 10 local checks PASS separately",
     "cloud_development_qualification": false
-  },
-  "resume_2026_10_31": {
-    "workspace_head": "34a4aec0dd8dae4e6027100c64d7ee9d211e4b31",
-    "github_main_same_head": true,
-    "physical_mac_comparison": "NOT_ACCESSIBLE",
-    "next": "Build, validate and publish existing storage/menu and end-screen fixes; preserve five games.",
-    "build": "PASS",
-    "browser_checks": "PASS_VERIFY_DEPLOY_28_VIEWS_CONTROLS_PWA",
-    "deployment": "PENDING",
-    "last_main_workflow_observed": {
-      "run_id": 35504732367,
-      "sha": "cea4db4bb92e6d25968d64f94571ed5a49702968",
-      "conclusion": "success"
-    },
-    "offline_checks": "storage 10 PASS; public manifest contract PASS; four Canvas loading/state flows PASS; Deluxe 12 levels PASS; City six traversals, fuzz and reachability PASS",
-    "threejs_smoke": "PASS_EXIT_0_FOUR_WORLDS_ENDLESS_PHOTO_RECORDS",
-    "targeted_built_3d_regressions": "PASS malformed storage startup and synthetic full end-screen layout in four viewports",
-    "coolify": {
-      "public_https": "HTTP_200",
-      "admin_url": "http://188.245.182.200:8000/login",
-      "admin_access": "AUTHENTICATION_REQUIRED_NOT_CONFIGURED",
-      "deployment": "NOT_RUN"
-    }
   }
 }

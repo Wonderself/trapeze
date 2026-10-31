@@ -17,8 +17,16 @@ Le miroir HTTPS et l’administration Coolify répondent de nouveau HTTP 200.
 Administration retrouvée : `http://188.245.182.200:8000/login` ; application
 Trapeze inchangée : `ns4sg8w44wow0wkowg0co4kk`. Aucun accès administratif
 Coolify n’est configuré dans cette session : cette disponibilité ne vaut pas
-preuve de redéploiement. La publication GitHub et la comparaison des contenus
-doivent être relevées après le push de la release.
+preuve de redéploiement. GitHub Pages est publié au SHA
+`70fb24f7cd7f2886e44d9e41778da7ebc135bb1d`, [run 41210281933](https://github.com/Wonderself/trapeze/actions/runs/41210281933)
+SUCCESS : verify et deploy, y compris les tests sur dépendances verrouillées et
+la vérification publique depuis le runner. Une comparaison externe indépendante
+passe également sur sept routes, quatre assets et la 404, octet pour octet avec
+le build local. Le miroir a été comparé avec succès à l’ancien snapshot
+`34a4aec` pendant cette reprise ; sa mise à jour vers `70fb24f` reste à faire.
+L’API de la ressource existante répond `401` sans authentification ; aucun
+redéploiement Coolify n’est revendiqué. Les commits documentaires ultérieurs ne
+modifient pas l’artefact applicatif qualifié ci-dessus.
 
 Les appareils physiques et les fichiers non synchronisés du Mac restent hors
 de la couverture de cette validation.
