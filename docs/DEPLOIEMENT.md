@@ -1,6 +1,27 @@
 # Déploiement — GitHub Pages et miroir Coolify
 
-Dernière mise à jour : **2026-09-19**.
+Dernière mise à jour : **2026-10-31**.
+
+## Reprise du 31 octobre 2026
+
+Le snapshot versionné `3d/` est reconstruit avec les correctifs des sauvegardes
+malformées et de défilement de l’écran de fin. Validation locale :
+`npm run verify:deploy` PASS (28 vues, commandes, caches PWA), parcours
+Three.js complet EXIT 0 et contrôle ciblé du build sur stockage malformé et
+commandes de fin accessibles dans quatre viewports. Le parcours complet atteint
+le tour infini avec 51 150 points et combo 47. Chromium système utilisé avec
+le Playwright disponible dans l’environnement ; la CI réinstalle la version
+verrouillée du dépôt.
+
+Le miroir HTTPS et l’administration Coolify répondent de nouveau HTTP 200.
+Administration retrouvée : `http://188.245.182.200:8000/login` ; application
+Trapeze inchangée : `ns4sg8w44wow0wkowg0co4kk`. Aucun accès administratif
+Coolify n’est configuré dans cette session : cette disponibilité ne vaut pas
+preuve de redéploiement. La publication GitHub et la comparaison des contenus
+doivent être relevées après le push de la release.
+
+Les appareils physiques et les fichiers non synchronisés du Mac restent hors
+de la couverture de cette validation.
 
 ## État et cible
 
