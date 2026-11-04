@@ -24,7 +24,7 @@ canvas{display:block;width:100%;aspect-ratio:800/450;border-radius:10px;box-shad
 #btnPause:hover,#btnPause:active{background:rgba(255,215,0,.25)}
 #btnQuit{position:absolute;top:8px;left:8px;min-width:68px;height:44px;padding:0 12px;border:none;border-radius:9px;background:rgba(0,0,0,0.42);border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.7);font-size:12px;font-family:'Trebuchet MS',Avenir,Arial,sans-serif;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:20;white-space:nowrap;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transition:background .12s,color .12s;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
 #btnQuit:hover,#btnQuit:active{background:rgba(255,60,60,0.32);color:#fff;border-color:rgba(255,100,100,0.4);}
-.versions-link{position:absolute;top:8px;left:50%;z-index:25;min-height:44px;padding:0 11px;border:1px solid rgba(255,215,0,.42);border-radius:999px;background:rgba(10,2,36,.76);color:#FFE58A;font:700 12px/1 'Trebuchet MS',Avenir,Arial,sans-serif;text-decoration:none;display:flex;align-items:center;justify-content:center;white-space:nowrap;transform:translateX(-50%);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.versions-link{position:relative;z-index:25;width:max-content;max-width:100%;margin:4px auto 0;min-height:44px;padding:0 11px;border:1px solid rgba(255,215,0,.42);border-radius:999px;background:rgba(10,2,36,.76);color:#FFE58A;font:700 12px/1 'Trebuchet MS',Avenir,Arial,sans-serif;text-decoration:none;display:flex;align-items:center;justify-content:center;white-space:nowrap;backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .versions-link:hover,.versions-link:active{background:rgba(255,215,0,.22);color:#fff}
 #ctrl{position:absolute;inset:0;pointer-events:none;display:none}
 #controlsHelp{padding:8px 12px;min-height:34px;color:#fff;background:rgba(14,5,42,.9);border:1px solid rgba(255,215,0,.35);border-radius:8px;text-align:center;font:700 12px/1.4 'Trebuchet MS',Avenir,Arial,sans-serif}
@@ -37,6 +37,7 @@ canvas{display:block;width:100%;aspect-ratio:800/450;border-radius:10px;box-shad
   #controlsHelp .help-desktop{display:none}
   #controlsHelp .help-touch{display:inline}
 }
+@media (hover:none) and (orientation:landscape) and (max-width:799px),(pointer:coarse) and (orientation:landscape) and (max-width:799px){#wrap.has-versions-link{width:min(800px,100dvw,calc((100dvh - 188px) * 16 / 9))}#wrap.has-versions-link #controlsHelp{padding:4px 6px;min-height:0;font-size:10px}}
 @media (hover:none) and (orientation:portrait),(pointer:coarse) and (orientation:portrait){#orientationTip{display:block}}
 #move{display:flex;gap:10px;align-items:flex-end;pointer-events:auto;}
 #acts{display:flex;gap:10px;align-items:flex-end;pointer-events:auto;}
@@ -69,7 +70,6 @@ canvas{display:block;width:100%;aspect-ratio:800/450;border-radius:10px;box-shad
 <body>
 <div id="wrap">
   <canvas id="c"></canvas>
-  <a class="versions-link" data-versions-link href="../?release=20260919-ux2" aria-label="All versions of Trapeze Stars">← All versions</a>
   <button id="btnFs" title="Fullscreen" aria-label="Fullscreen">⛶</button>
   <button id="btnPause" aria-label="Pause game" title="Pause game">⏸</button>
   <button id="btnQuit" aria-label="Menu">← Menu</button>
@@ -84,6 +84,7 @@ canvas{display:block;width:100%;aspect-ratio:800/450;border-radius:10px;box-shad
     </div>
   </div>
   <div id="controlsHelp" role="note"><span class="help-desktop">Move: ← → or A / D · Jump / release: Space · Grab / flip: F · Pause: Esc</span><span class="help-touch">Move: ◀ ▶ · Jump / release: ⚡ or tap stage · Grab / flip: GRAB · Pause: ⏸</span></div>
+  <a class="versions-link" data-versions-link href="../?release=20260919-ux2" aria-label="All versions of Trapeze Stars">← All versions</a>
   <div id="orientationTip" role="note">Rotate your phone for a bigger stage.</div>
 </div>
 <button id="installBtn" aria-label="Add to Home Screen">＋ Add to Home Screen</button>
@@ -1920,6 +1921,7 @@ function syncGameButtons(){
   // A menu path is always available, while live play keeps the narrow stage unobstructed.
   const versionsDisplay=gs==='playing'&&!paused?'none':'flex';
   if(versionsLink&&versionsLink.style.display!==versionsDisplay)versionsLink.style.display=versionsDisplay;
+  document.getElementById('wrap').classList.toggle('has-versions-link',versionsDisplay==='flex');
   btnPause.style.display=['playing','levelcomplete','ceremony','finale'].includes(gs)?'flex':'none';
   btnPause.textContent=paused?'▶':'⏸';
   btnPause.setAttribute('aria-label',paused?'Resume game':'Pause game');
@@ -1947,7 +1949,7 @@ requestAnimationFrame(loop);
 if('serviceWorker' in navigator){
   // Bump this public version whenever the self-contained 2D app changes.
   // The cache name is scoped by this query string inside sw.js.
-  const PWA_VERSION='20260919-ux2';
+  const PWA_VERSION='20261104-audit';
   window.addEventListener('load',()=>{navigator.serviceWorker.register(`sw.js?v=${PWA_VERSION}`).catch(()=>{});});
 }
 let deferredPrompt=null;

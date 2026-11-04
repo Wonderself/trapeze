@@ -64,8 +64,6 @@ jobs:
           npm run test:controls
           npm run test:sw
       - name: Capture Canvas menu, play, pause and end states
-        # New diagnostic fixtures; review the preserved report/images separately.
-        continue-on-error: true
         run: node tools/visual_states.mjs _site game3d/test/out/visual-states
       - name: Check full Three.js game flow
         run: node game3d/test/smoke3d.mjs

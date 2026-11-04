@@ -26,6 +26,28 @@ try {
   const browser = await launchChromium({
     args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--autoplay-policy=no-user-gesture-required']
   });
+  // Exercise malformed saved records against the actual built bundle in an isolated profile.
+  const savedContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await savedContext.addInitScript(() => {
+    localStorage.setItem('ts3d_medals', 'null');
+    localStorage.setItem('ts3d_board', JSON.stringify([null, { i: 'BROKEN' },
+      { i: '<img src=x onerror=alert(1)>', s: 100 }]));
+  });
+  const savedPage = await savedContext.newPage();
+  const savedErrors = [];
+  savedPage.on('pageerror', error => savedErrors.push(error.message));
+  await savedPage.goto('http://localhost:8130/index.html?lowfx', { waitUntil: 'load' });
+  await savedPage.waitForFunction(() => !!window.__game, null, { timeout: 15000 });
+  results.v_saved = await savedPage.evaluate(() => {
+    window.__game.skipIntro(); window.__game.setRender(false);
+    return { menu: !document.getElementById('menu').classList.contains('hidden'),
+      medals: window.__game.records().medals, rows: document.querySelectorAll('#menuBoard .bRow').length,
+      injectedElements: document.querySelectorAll('#menuBoard img, #menuBoard script').length };
+  });
+  results.v_saved.errors = savedErrors;
+  await savedPage.screenshot({ path: `${OUT}/3d-audit-saved-records.png` });
+  await savedContext.close();
+
   const page = await browser.newPage({ viewport: { width: 960, height: 560 } });
   page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text() + ' [' + ((m.location() && m.location().url) || '') + ']'); });
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
@@ -110,10 +132,22 @@ try {
       const check = () => {
         const started = window.__game.state().mode === 'playing';
         if (started || performance.now() > deadline) {
+          // Menu activation starts the run; hold a gamepad-owned grip before unplugging.
+          window.__game.down('gamepad');
+          const holdingBeforeUnplug = window.__game.state().holding;
           window.__pad.buttons[0].pressed = false;
           navigator.getGamepads = real;
           window.dispatchEvent(new Event('gamepaddisconnected')); // unplug
-          setTimeout(() => res({ active, badge, started, inactiveAfter: window.__game.gp().active }), 150);
+          const unplugDeadline = performance.now() + 3000;
+          const disconnected = () => {
+            const state = window.__game.state();
+            if (state.mode === 'paused' || performance.now() > unplugDeadline) {
+              res({ active, badge, started, inactiveAfter: window.__game.gp().active,
+                holdingBeforeUnplug, modeAfter: state.mode, holdingAfter: state.holding,
+                stateAfter: state.state, livesAfter: state.lives });
+            } else requestAnimationFrame(disconnected);
+          };
+          requestAnimationFrame(disconnected);
         } else requestAnimationFrame(check);
       };
       requestAnimationFrame(check);
@@ -527,7 +561,10 @@ try {
   else if (!(results.j_audio && results.j_audio.ready)) code = 16;  // WebAudio context created
   // ---- 3D-5 gates ----
   else if (!(results.k_gamepad && results.k_gamepad.active && results.k_gamepad.badge
-             && results.k_gamepad.started && !results.k_gamepad.inactiveAfter)) code = 17;  // gamepad hot-plug + A mapping
+             && results.k_gamepad.started && !results.k_gamepad.inactiveAfter
+             && results.k_gamepad.holdingBeforeUnplug && results.k_gamepad.modeAfter === 'paused'
+             && !results.k_gamepad.holdingAfter && results.k_gamepad.stateAfter === 'swing'
+             && results.k_gamepad.livesAfter === 3)) code = 17;  // gamepad hot-plug + A mapping
   else if (!(results.k_entryOpen && results.k_entryOpen.open
              && results.k_entryValue === LONG_NAME.slice(0, 20) && results.k_entryValue.length === 20
              && results.e_end.boardShown && results.e_end.boardLen >= 1
@@ -579,6 +616,9 @@ try {
   else if (!(results.t_fail && results.t_fail.configured && results.t_fail.tab === 'local'
              && results.t_fail.rows === null && results.t_fail.localRows >= 1
              && results.t_fail.tabSel === 'LOCAL')) code = 30;  // network failure: silent LOCAL fallback
+  else if (!(results.v_saved && results.v_saved.menu && results.v_saved.rows === 1
+             && results.v_saved.injectedElements === 0 && results.v_saved.errors.length === 0
+             && JSON.stringify(results.v_saved.medals) === '[0,0,0,0]')) code = 41;
   else if (realErrors.length) code = 2;
   await browser.close();
 } catch (e) {

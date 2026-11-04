@@ -2,7 +2,7 @@
 
 Dernière mise à jour : **2026-11-04**.
 
-Le candidat issu de l’audit multi-agents n’est pas encore publié ; état et preuves dans [AUDIT-2026-11-04.md](AUDIT-2026-11-04.md).
+L’audit multi-agents local est terminé et les correctifs sont prêts à publier ; état et preuves dans [AUDIT-2026-11-04.md](AUDIT-2026-11-04.md).
 
 ## Reprise du 31 octobre 2026
 

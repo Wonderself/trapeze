@@ -14,6 +14,7 @@ async function open(viewport, touch = false) {
   const page = await context.newPage();
   page.on('pageerror', error => errors.push(error.message));
   await page.goto(`${server.origin}/2d/`, { waitUntil: 'load' });
+  await page.waitForFunction(() => document.getElementById('wrap').classList.contains('has-versions-link'));
   return { context, page };
 }
 
@@ -64,7 +65,7 @@ try {
   assert.equal(Number.isFinite(comboX), true, 'fifth hoop combo text must have a finite position');
   await desktop.context.close();
 
-  for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 844, height: 390 }]) {
+  for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 568, height: 320 }, { width: 844, height: 390 }]) {
     const mobile = await open(viewport, true);
     const bounds = await mobile.page.evaluate(() => {
       const canvas = document.querySelector('#c').getBoundingClientRect();
@@ -72,7 +73,8 @@ try {
       const help = document.querySelector('#controlsHelp').getBoundingClientRect();
       const left = document.querySelector('#move').getBoundingClientRect();
       const right = document.querySelector('#acts').getBoundingClientRect();
-      return { canvasLeft: canvas.left, canvasRight: canvas.right, canvasWidth: canvas.width, canvasBottom: canvas.bottom, controlTop: controls.top, controlsBottom: controls.bottom, leftRight: left.right, rightLeft: right.left, helpBottom: help.bottom, height: innerHeight };
+      const link = document.querySelector('[data-versions-link]').getBoundingClientRect();
+      return { linkTop: link.top, linkBottom: link.bottom, linkHeight: link.height, leftLeft: left.left, rightRight: right.right, width: innerWidth, canvasLeft: canvas.left, canvasRight: canvas.right, canvasWidth: canvas.width, canvasBottom: canvas.bottom, controlTop: controls.top, controlsBottom: controls.bottom, leftRight: left.right, rightLeft: right.left, helpBottom: help.bottom, height: innerHeight };
     });
     if (viewport.width >= 800 && viewport.width > viewport.height) {
       assert.ok(bounds.canvasWidth >= 500, `landscape stage too small at ${viewport.width}x${viewport.height}`);
@@ -81,6 +83,8 @@ try {
       assert.ok(bounds.controlTop >= bounds.canvasBottom - 1, `mobile controls cover the stage at ${viewport.width}x${viewport.height}`);
     }
     assert.ok(bounds.helpBottom <= bounds.height + 1, `mobile controls/help overflow at ${viewport.width}x${viewport.height}`);
+    assert.ok(bounds.linkTop >= bounds.canvasBottom && bounds.linkBottom <= bounds.height + 1 && bounds.linkHeight >= 44, `return link obscures/clips the stage at ${viewport.width}x${viewport.height}`);
+    assert.ok(bounds.leftLeft >= -1 && bounds.rightRight <= bounds.width + 1, 'touch controls must remain inside the viewport');
     assert.equal(await mobile.page.locator('#orientationTip').isVisible(), viewport.height > viewport.width);
     await mobile.page.evaluate(() => skipIntro());
     await mobile.page.locator('#bJ').tap();
@@ -93,13 +97,15 @@ try {
     if (screenshots) await mobile.page.screenshot({ path: path.join(screenshots, `mobile-${viewport.width}x${viewport.height}-playing.png`) });
     await mobile.page.locator('#btnPause').tap();
     assert.equal(await mobile.page.evaluate(() => paused), true);
+    await mobile.page.waitForFunction(() => document.getElementById('wrap').classList.contains('has-versions-link'));
+    assert.equal(await mobile.page.evaluate(() => { const r = document.querySelector('[data-versions-link]').getBoundingClientRect(); return r.height >= 44 && r.bottom <= innerHeight + 1; }), true, 'paused return link remains reachable');
     await mobile.page.locator('#btnPause').tap();
     assert.equal(await mobile.page.evaluate(() => paused), false);
     await mobile.context.close();
   }
 
   assert.deepEqual(errors, []);
-  console.log('2D controls: desktop click, no-input, pause/resume, combo, and 3 mobile layouts PASS');
+  console.log('2D controls: desktop click, no-input, pause/resume, combo, and 4 mobile layouts PASS');
 } finally {
   await browser.close();
   await server.close();

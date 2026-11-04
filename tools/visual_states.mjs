@@ -21,7 +21,7 @@ const games = [
   {
     name: 'deluxe', route: '/trapeze-stars-v2.html',
     start: 'startRun()', pause: "if (gs==='play') togglePause()",
-    end: "gs='gameover';render()",
+    end: "gs='gameover';endTimer=90;render()",
   },
   {
     name: 'circus2d', route: '/2d/',
@@ -30,7 +30,7 @@ const games = [
   },
   {
     name: 'city', route: '/trapeze-city-v3.html',
-    start: 'window.__v3.start();window.__v3.goRig(0);window.__v3.sim(100);window.__v3.still()',
+    start: 'window.__v3.start();window.__v3.goRig(0);window.__v3.sim(500);window.__v3.still()',
     pause: 'if (!window.__v3.state.paused) window.__v3.pause();window.__v3.still()',
     end: 'if (window.__v3.state.paused) window.__v3.pause();window.__v3.finale();window.__v3.action();window.__v3.still()',
   },

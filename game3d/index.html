@@ -130,7 +130,7 @@
 
   /* ---- leaderboard panel (3D-5) ---- */
   .board{background:rgba(10,4,26,.62);border:1px solid rgba(255,207,63,.32);border-radius:14px;padding:10px 12px;backdrop-filter:blur(6px)}
-  #menuBoard{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:clamp(148px,42vw,208px);z-index:4;max-height:74vh;overflow:hidden}
+  #menuBoard{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:clamp(148px,42vw,208px);z-index:4;max-height:74vh;overflow-x:hidden;overflow-y:auto;touch-action:pan-y;overscroll-behavior:contain}
   .bTitle{font-size:13px;font-weight:700;color:var(--gold);letter-spacing:2px;text-align:center;margin-bottom:6px}
   .bRow{display:flex;align-items:center;gap:6px;padding:2px 3px;border-radius:6px;line-height:1.55}
   .bRow.hl{background:rgba(255,207,63,.22);box-shadow:0 0 0 1px rgba(255,207,63,.45)}
@@ -180,6 +180,8 @@
     #title{font-size:32px;line-height:.9}
     #subtitle{margin-top:4px;font-size:12px}
     #dedication{margin-top:3px;font-size:9px;letter-spacing:2px}
+    #best{margin-top:4px;padding:3px 10px;font-size:11px;letter-spacing:.5px}
+    #best .medals{margin-top:0;font-size:10px}
     .pickRow{gap:clamp(44px,12vw,80px);margin-bottom:4px}
     .pick{min-width:92px;padding:4px 6px;border-radius:12px}
     .pick .nm{font-size:14px}
@@ -191,12 +193,15 @@
     #menuHint{font-size:12px;line-height:1.25;padding:5px 8px}
   }
   @media (max-width:480px) and (orientation:portrait){
-    #menuBoard{left:50%;right:auto;top:clamp(150px,22vh,185px);transform:translateX(-50%);width:min(208px,calc(100vw - 32px));max-height:90px;overflow:auto;z-index:11}
+    #menuBoard{position:static;left:auto;right:auto;top:auto;transform:none;margin-top:10px;flex-shrink:0;width:min(208px,calc(100vw - 32px));max-height:90px;overflow:auto;touch-action:pan-y;overscroll-behavior:contain;z-index:11}
     #menuBoard.board{padding:6px 8px}
     #menuBoard .bTitle{font-size:11px;margin-bottom:3px}
     #menuBoard .bTabs{margin-bottom:3px}
     #menuBoard .bRow{line-height:1.3}
     #menu .menuBottom{padding-bottom:54px}
+  }
+  @media (max-width:480px) and (orientation:portrait) and (max-height:600px){
+    #menuBoard{max-height:72px}
   }
   @media (orientation:landscape) and (max-width:600px){
     .pickRow{gap:12px}
@@ -228,6 +233,7 @@
     <div id="subtitle">Starring&nbsp; MARC &amp; CLAIRE</div>
     <div id="dedication">★ young champions ★</div>
     <div id="best" class="hidden"></div>
+    <div id="menuBoard" class="board"></div>
   </div>
   <div class="menuBottom">
     <div class="pickRow">
@@ -243,7 +249,6 @@
       <span><b>Gamepad:</b> hold A; Start pauses. First miss per world is saved by the net.</span>
     </div>
   </div>
-  <div id="menuBoard" class="board"></div>
 </div>
 
 <div id="pause" class="screen hidden" role="dialog" aria-modal="true" aria-labelledby="pauseTitle">

@@ -70,6 +70,9 @@ try {
       if (location.pathname.includes('/3d/')) {
         const board = Array.from({ length: 10 }, (_, index) => ({ i: `PLAYER ${index + 1}`, s: 10_000 - index * 500, m: 2, l: 0 }));
         localStorage.setItem('ts3d_board', JSON.stringify(board));
+        localStorage.setItem('ts3d_high', '100000');
+        localStorage.setItem('ts3d_combo', '99');
+        localStorage.setItem('ts3d_medals', '[4,4,4,4]');
       }
     });
     for (const route of routes) {
@@ -235,6 +238,7 @@ try {
             visible: getComputedStyle(link).display !== 'none' && rect.width > 0 && rect.height > 0,
             hitTarget: document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)?.closest('[data-versions-link]') === link,
             overlappingButtons: visibleButtons.filter(button => intersects(rect, button.getBoundingClientRect())).map(button => button.id || button.textContent.trim()),
+            overlapsCircusStage: location.pathname.endsWith('/2d/') && intersects(rect, document.querySelector('canvas').getBoundingClientRect()),
           };
         });
         if (!returnLink) pageFailures.push('missing All versions link');
@@ -249,6 +253,7 @@ try {
           if (right - left < requiredTarget || bottom - top < requiredTarget) pageFailures.push(`All versions target below ${requiredTarget}px: ${returnLink.rect.join(',')}`);
           if (left < -1 || top < -1 || right > width + 1 || bottom > height + 1) pageFailures.push(`All versions link clipped: ${returnLink.rect.join(',')}`);
           if (returnLink.overlappingButtons.length) pageFailures.push(`All versions overlaps controls: ${returnLink.overlappingButtons.join(', ')}`);
+          if (returnLink.overlapsCircusStage) pageFailures.push('Circus All versions link overlaps the stage title/dedication area');
         }
       }
 
@@ -280,9 +285,15 @@ try {
         const menuLayout = await page.evaluate(() => {
           const rect = element => { const r = element.getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; };
           const intersects = (a, b) => a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1];
-          const board = rect(document.getElementById('menuBoard'));
+          const boardElement = document.getElementById('menuBoard');
+          const board = rect(boardElement);
+          const boardScrolling = { needed: boardElement.scrollHeight > boardElement.clientHeight + 1,
+            overflowY: getComputedStyle(boardElement).overflowY };
           const controls = [...document.querySelectorAll('#menu .pick, #playBtn, #dailyBtn')]
             .map(element => ({ id: element.id || element.dataset.char, rect: rect(element) }));
+          const dedication = [...document.querySelectorAll('#title, #subtitle, #dedication, #best')]
+            .filter(element => getComputedStyle(element).display !== 'none')
+            .map(element => ({ id: element.id, rect: rect(element) }));
           const hint = rect(document.getElementById('menuHint'));
           const fixedButtons = [...document.querySelectorAll('#muteBtn, #fxBtn, #introBtn')]
             .map(element => ({ id: element.id, rect: rect(element) }));
@@ -290,7 +301,9 @@ try {
             menuBottom: rect(document.querySelector('.menuBottom')),
             controls,
             board,
+            boardScrolling,
             boardOverlaps: controls.filter(control => intersects(board, control.rect)).map(control => control.id),
+            boardOverlapsDedication: dedication.filter(text => intersects(board, text.rect)).map(text => text.id),
             fixedOverlapsHint: fixedButtons.filter(control => intersects(hint, control.rect)).map(control => control.id),
           };
         });
@@ -298,6 +311,8 @@ try {
         if (menuLayout.menuBottom[3] > height + 1) pageFailures.push(`3D menu content clipped at ${menuLayout.menuBottom[3]}px`);
         if (outside.length) pageFailures.push(`3D menu controls clipped: ${JSON.stringify(outside)}`);
         if (menuLayout.boardOverlaps.length) pageFailures.push(`3D leaderboard overlaps controls: ${menuLayout.boardOverlaps.join(', ')}`);
+        if (menuLayout.boardOverlapsDedication.length) pageFailures.push(`3D leaderboard overlaps dedication/records: ${menuLayout.boardOverlapsDedication.join(', ')}`);
+        if (menuLayout.boardScrolling.needed && !['auto', 'scroll'].includes(menuLayout.boardScrolling.overflowY)) pageFailures.push('3D leaderboard clips saved scores without allowing scrolling');
         if (menuLayout.fixedOverlapsHint.length) pageFailures.push(`3D fixed controls overlap help: ${menuLayout.fixedOverlapsHint.join(', ')}`);
       }
 
