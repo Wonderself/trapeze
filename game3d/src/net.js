@@ -44,7 +44,9 @@ async function req(path, opts = {}, retries = 0) {
       signal: ctrl.signal,
     });
     if (!r.ok) throw new Error('http ' + r.status);
-    return r;
+    // Keep the timeout active until a GET body is fully consumed too. A server
+    // that sends headers but stalls JSON must still fall back to LOCAL.
+    return opts.method === 'POST' ? r : await r.json();
   } catch (e) {
     if (retries > 0) return req(path, opts, retries - 1);
     throw e;
@@ -65,8 +67,7 @@ const cleanScore = (v) => Math.max(0, Math.min(SCORE_MAX, Math.round(+v || 0)));
 export async function fetchWorldTop(n = 10) {
   if (!netConfigured()) return null;
   try {
-    const r = await req('?select=initials,score,world,lap&order=score.desc&limit=' + n, {}, 1);
-    const rows = await r.json();
+    const rows = await req('?select=initials,score,world,lap&order=score.desc&limit=' + n, {}, 1);
     if (!Array.isArray(rows)) return null;
     // sanitize server rows before they reach innerHTML
     return rows.slice(0, n).map((e) => ({

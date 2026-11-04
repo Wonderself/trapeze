@@ -8,7 +8,8 @@
     "test:site": "node tools/site_smoke.mjs _site",
     "test:controls": "node tools/demo_v1_v2.mjs _site && node tools/classic_layout_smoke.mjs _site && node tools/city_controls_smoke.mjs _site && node tools/2d_controls_smoke.mjs _site",
     "test:sw": "node tools/sw_redeploy_test.mjs _site",
-    "verify:deploy": "npm run test:storage && npm run build && npm run test:site && npm run test:controls && npm run test:sw",
-    "test:storage": "node game3d/test/storage3d.mjs"
+    "verify:deploy": "npm run test:logic && npm run build && npm run test:site && npm run test:controls && npm run test:sw",
+    "test:storage": "node game3d/test/storage3d.mjs",
+    "test:logic": "npm run test:storage && node game3d/test/transitions3d.mjs && node game3d/test/network3d.mjs"
   }
 }

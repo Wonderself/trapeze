@@ -32,8 +32,8 @@ jobs:
           cache-dependency-path: |
             game3d/package-lock.json
             tools/package-lock.json
-      - name: Check saved 3D records and menu resilience
-        run: npm run test:storage
+      - name: Check 3D records, controls, daily challenge and network resilience
+        run: npm run test:logic
       - name: Install dependencies
         run: |
           npm ci --prefix game3d
@@ -60,11 +60,23 @@ jobs:
           node tools/reach_v3.js
       - name: Check pages, responsive layout and service-worker upgrades
         run: |
-          npm run test:site
+          node tools/site_smoke.mjs _site --screenshots game3d/test/out/pages
           npm run test:controls
           npm run test:sw
+      - name: Capture Canvas menu, play, pause and end states
+        # New diagnostic fixtures; review the preserved report/images separately.
+        continue-on-error: true
+        run: node tools/visual_states.mjs _site game3d/test/out/visual-states
       - name: Check full Three.js game flow
         run: node game3d/test/smoke3d.mjs
+      - name: Preserve screenshots for independent visual review
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: trapeze-visual-audit
+          path: game3d/test/out/
+          retention-days: 14
+          if-no-files-found: warn
       - name: Configure GitHub Pages
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v6

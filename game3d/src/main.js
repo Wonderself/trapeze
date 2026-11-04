@@ -55,18 +55,20 @@ setMuted(REC.mute);
 
 /* ── daily challenge (3D-7): one shared rail per UTC day, best-of-day persisted ── */
 const dailySeed = () => { const d = new Date(); return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); };
-function loadDaily() {
+function loadDaily(day = dailySeed()) {
   try {
     const o = JSON.parse(localStorage.getItem('ts3d_daily') || 'null');
-    return o && o.d === dailySeed() && Number.isFinite(o.s) && o.s >= 0
+    return o && o.d === day && Number.isFinite(o.s) && o.s >= 0
       ? { d: o.d, s: savedCount(o.s) } : null;
   }
   catch (e) { return null; }
 }
-function saveDaily(score) {
+function saveDaily(score, day = dailySeed()) {
+  // A run started yesterday must never become today's record after midnight.
+  if (day !== dailySeed()) return;
   try {
     const cur = loadDaily();
-    if (!cur || score > cur.s) localStorage.setItem('ts3d_daily', JSON.stringify({ d: dailySeed(), s: score }));
+    if (!cur || score > cur.s) localStorage.setItem('ts3d_daily', JSON.stringify({ d: day, s: score }));
   } catch (e) {}
 }
 
@@ -281,8 +283,8 @@ for (let w = 0; w < NWORLDS; w++) {
 
 /* ══════════════ DAILY LAYOUT (3D-7) — same X rail, heights & drifts re-rolled from the UTC date ══════════════ */
 const basePy = barDefs.map((d) => ({ py: d.py, mv: d.mv, mvSpd: d.mvSpd, mvPh: d.mvPh }));
-function applyLayout(daily) {
-  let s = daily ? (dailySeed() * 2654435761) % 0x7fffffff : 0;
+function applyLayout(daily, seed = dailySeed()) {
+  let s = daily ? (seed * 2654435761) % 0x7fffffff : 0;
   const drnd = () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
   for (let i = 0; i < NBARS; i++) {
     const d = barDefs[i], first = i % BARS_PER_WORLD === 0, b = bars[i];
@@ -476,7 +478,7 @@ const G = {
   flyFrom: new THREE.Vector3(), flyTo: new THREE.Vector3(), flyT: 0, flyDur: 0.72, arcH: 2.4, flyNext: -1, flyMode: 'catch',
   vel: new THREE.Vector3(),
   timeScale: 1, slowmo: 0, fovKick: 0, shake: 0,
-  attract: false, daily: false,
+  attract: false, daily: false, dailyRunSeed: null,
 };
 const IDLE_PAUSE_AFTER = 20;
 // A second finger or an unrelated button must never release the grip held by
@@ -625,7 +627,7 @@ function renderBoard(el, highlightIdx) {
       const mine = lastNetSubmit && e.i === lastNetSubmit.i && e.s === lastNetSubmit.s;
       html += '<div class="bRow' + (mine ? ' hl' : '') + '">' +
         '<span class="bRk">' + (i + 1) + '</span>' +
-        '<span class="bIn">' + e.i + '</span>' +
+        '<span class="bIn">' + sanitizeName(e.i) + '</span>' +
         '<span class="bMe">' + (e.l > 0 ? '🔁' : WORLD_ICON[e.w]) + '</span>' +
         '<span class="bSc">' + e.s.toLocaleString('en') + '</span></div>';
     }
@@ -636,7 +638,7 @@ function renderBoard(el, highlightIdx) {
     const medal = e.m > 0 ? MEDAL_ICON[e.m] : '';
     html += '<div class="bRow' + (i === highlightIdx ? ' hl' : '') + '">' +
       '<span class="bRk">' + (i + 1) + '</span>' +
-      '<span class="bIn">' + e.i + '</span>' +
+      '<span class="bIn">' + sanitizeName(e.i) + '</span>' +
       '<span class="bMe">' + medal + '</span>' +
       '<span class="bSc">' + e.s.toLocaleString('en') + '</span></div>';
   }
@@ -821,7 +823,8 @@ addEventListener('keydown', (e) => {
 function startGame(daily) {
   initAudio();
   G.daily = !!daily;
-  applyLayout(G.daily);                          // daily: shared date-seeded rail — otherwise the base one
+  G.dailyRunSeed = G.daily ? dailySeed() : null;
+  applyLayout(G.daily, G.dailyRunSeed);                          // daily: shared date-seeded rail — otherwise the base one
   G.mode = 'playing'; G.state = 'swing'; G.active = 0;
   G.score = 0; lastScore = -1; G.combo = 0; G.comboT = 0; G.lives = 3;
   G.spin = 0; G.pumpAmp = 1.0; clearHeldInputs();
@@ -879,7 +882,11 @@ function endGame() {
   saveRec();
   // daily challenge: its own best-of-day record; different rail so it stays off the main board
   let newDaily = false;
-  if (G.daily) { const cur = loadDaily(); newDaily = !cur || G.score > cur.s; saveDaily(G.score); }
+  if (G.daily) {
+    const cur = loadDaily(G.dailyRunSeed);
+    newDaily = G.dailyRunSeed === dailySeed() && (!cur || G.score > cur.s);
+    saveDaily(G.score, G.dailyRunSeed);
+  }
   const rank = G.daily ? -1 : boardRank(G.score);
   // grand finale: fireworks + ovation on a completed tour, a #1 score or a new daily best
   if (G.lap > 0 || (rank === 0 && G.score > 0) || newDaily) fireworksShow(reduceFlashes() ? 2 : 4);
@@ -888,7 +895,7 @@ function endGame() {
 }
 function showOver() {
   ui.big.textContent = G.lap > 0 ? '🎉 What a run!' : 'Nice flying!';
-  ui.bigsub.textContent = (G.daily ? '📅 DAILY · ' : '') + 'Score ' + G.score.toLocaleString('en') + ' · Best ' + (G.daily ? (loadDaily() || { s: G.score }).s : REC.high).toLocaleString('en');
+  ui.bigsub.textContent = (G.daily ? '📅 DAILY · ' : '') + 'Score ' + G.score.toLocaleString('en') + ' · Best ' + (G.daily ? (loadDaily(G.dailyRunSeed) || { s: G.score }).s : REC.high).toLocaleString('en');
   ui.newBest.classList.toggle('hidden', !_newHigh);
   ui.overStats.innerHTML =
     '<div><b>' + G.starsGot + '</b>⭐ stars</div>' +
@@ -996,7 +1003,15 @@ function pollGamepad() {
   let pad = null;
   for (const p of pads) { if (p) { pad = p; break; } }
   if (!!pad !== gpActive) { gpActive = !!pad; updateGpBadge(); }
-  if (!pad) { gpPrevA = false; return; }
+  if (!pad) {
+    // Losing the last grip device pauses safely instead of holding forever or
+    // releasing the bar. Other held devices retain ownership of their input.
+    if (heldInputs.delete('gamepad')) {
+      G.holding = heldInputs.size > 0;
+      if (!G.holding) { G.armed = false; pauseGame('controller'); }
+    }
+    gpPrevA = false; return;
+  }
   const a = !!(pad.buttons[0] && pad.buttons[0].pressed);   // face button A
   if (a !== gpPrevA) { gpA(a); gpPrevA = a; }
   const edge = (i) => { const now = !!(pad.buttons[i] && pad.buttons[i].pressed); const was = gpPrev[i]; gpPrev[i] = now; return now && !was; };
@@ -1450,7 +1465,7 @@ window.__game = {
   },
   // daily challenge (3D-7): seed + the first bars of the current rail (determinism check)
   daily: () => ({
-    active: G.daily, seed: dailySeed(), best: (loadDaily() || { s: 0 }).s,
+    active: G.daily, seed: G.daily ? G.dailyRunSeed : dailySeed(), best: (loadDaily(G.daily ? G.dailyRunSeed : dailySeed()) || { s: 0 }).s,
     bars: barDefs.slice(0, 3).map((d) => [+d.x.toFixed(3), +d.py.toFixed(3)]),
   }),
   startDaily: () => startGame(true),

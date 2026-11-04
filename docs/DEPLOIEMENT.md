@@ -1,6 +1,8 @@
 # Déploiement — GitHub Pages et miroir Coolify
 
-Dernière mise à jour : **2026-10-31**.
+Dernière mise à jour : **2026-11-04**.
+
+Le candidat issu de l’audit multi-agents n’est pas encore publié ; état et preuves dans [AUDIT-2026-11-04.md](AUDIT-2026-11-04.md).
 
 ## Reprise du 31 octobre 2026
 
@@ -37,7 +39,7 @@ de la couverture de cette validation.
   `.github/workflows/deploy-pages.yml` construit, vérifie et publie le site.
 - **Hébergement canonique : GitHub Pages.** URL publique :
   <https://wonderself.github.io/trapeze/>.
-- **Miroir Coolify : `PASS_PRODUCTION_MIRROR`.** La ressource historique est
+- **Miroir Coolify : disponibilité historique `PASS_PRODUCTION_MIRROR`, mise à jour des correctifs non attestée.** La ressource historique est
   conservée sur <https://trapeze.188.245.182.200.sslip.io/> ; elle ne remplace
   pas l'origine canonique GitHub Pages.
 - **Branche de livraison : `main`.** Une pull request vers `main` exécute les
@@ -281,7 +283,7 @@ branche et la production ne divergent pas.
 
 ## Miroir Coolify
 
-Statut : **`PASS_PRODUCTION_MIRROR`**. La ressource historique a été remise en
+Statut historique : **`PASS_PRODUCTION_MIRROR`**, pas une preuve de synchronisation des nouvelles releases. La ressource historique a été remise en
 ligne sans recréation ni changement de dépôt, de branche, de type de build ou
 de port. Le déploiement `ihtq9ln70a4mlsnf0r1emkz0` a importé le commit
 `7efd482f264a1a1c898fc6bea17606df20879ec9`, construit le site statique avec

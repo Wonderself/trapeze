@@ -13,7 +13,8 @@ const section = (start, end) => {
 const readers = section('/* ── persistence', 'let REC = loadRec();') +
   section('const dailySeed =', 'function saveDaily(') +
   section('function loadBoard()', 'let BOARD = loadBoard();');
-const rendering = section('function refreshBest()', 'function refreshMute()') +
+const rendering = section('const NAME_MAX = 20;', '/* ── world leaderboard state') +
+  section('function refreshBest()', 'function refreshMute()') +
   section('function renderBoard(', 'function refreshBoard()') +
   section('function refreshDaily()', 'function enterMenu()');
 const element = () => ({ innerHTML: '', textContent: '', classList: { add() {}, remove() {} }, querySelectorAll: () => [] });
@@ -26,7 +27,7 @@ function read(data = {}, blocked = false) {
   });
   vm.runInContext(readers + '\nlet REC = loadRec(); let BOARD = loadBoard();\n' + rendering, context);
   vm.runInContext('refreshBest(); renderBoard(ui.best, -1); refreshDaily();', context);
-  return JSON.parse(vm.runInContext('JSON.stringify({ rec: REC, board: BOARD, daily: loadDaily() })', context));
+  return JSON.parse(vm.runInContext('JSON.stringify({ rec: REC, board: BOARD, daily: loadDaily(), html: ui.best.innerHTML })', context));
 }
 const seed = vm.runInNewContext('const d = new Date(); d.getUTCFullYear()*10000+(d.getUTCMonth()+1)*100+d.getUTCDate()');
 let passed = 0;
@@ -61,6 +62,12 @@ check('nonfinite or negative numeric records use safe defaults', () => {
 });
 check('daily record without a usable score cannot crash the menu', () => {
   for (const s of [undefined, null, 'oops', -1]) assert.equal(read({ ts3d_daily: JSON.stringify({ d: seed, s }) }).daily, null);
+});
+check('saved names are rendered as bounded plain text', () => {
+  const result = read({ ts3d_board: JSON.stringify([{i: '<img src=x onerror=alert(1)>', s: 10}, {i: 'A'.repeat(500), s: 5}]) });
+  assert.ok(!result.html.includes('<img'));
+  assert.ok(!result.html.includes('A'.repeat(21)));
+  assert.ok(result.html.includes('A'.repeat(20)));
 });
 check('expired daily records are ignored', () => assert.equal(read({ ts3d_daily: '{"d":20000101,"s":500}' }).daily, null));
 check('invalid JSON and unavailable storage remain playable', () => {
