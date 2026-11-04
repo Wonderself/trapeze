@@ -156,5 +156,21 @@
     "physical_devices": "NOT_RUN",
     "canonical_release": "PASS_EXACT_7_ROUTES_4_ASSETS_CUSTOM_404",
     "mirror": "PREVIOUS_SNAPSHOT_EXACT_7_ROUTES_4_ASSETS_404"
+  },
+  "delivery_readiness_2026_11_04": {
+    "checked_at_utc": "2026-11-04T22:42:38.471Z",
+    "canonical_exact": true,
+    "mirror_old_exact": true,
+    "mirror_new_exact": false,
+    "coolify_admin_api_status": 401,
+    "configured_admin_access": false,
+    "package_directory": "/workspace/scratch/trapeze-delivery-20261104",
+    "release_archive": "trapeze-e6bfb273-public.zip",
+    "release_zip_sha256": "71b31d8c4ef80b193b9aee03158d7942e20b122418458439975608e6f021e4e8",
+    "rollback_archive": "rollback-mirror-34a4aec-public.zip",
+    "rollback_zip_sha256": "d3add4b28a3e8fe48f7c41466573dcf7734ef633365cb7d469fb8b4d7377fffa",
+    "public_files_per_archive": 28,
+    "archive_independent_review": "PASS_CRC_ALL_FILE_HASHES_GIT_BYTE_PROVENANCE_WHITELIST",
+    "production_mutations": false
   }
 }

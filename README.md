@@ -28,9 +28,14 @@ Le site canonique et partageable depuis un autre appareil est **<https://wonders
 publication n'a lieu qu'après le passage du workflow de vérification sur
 `main`.
 
-Le miroir Coolify existant est également en production sur
-**<https://trapeze.188.245.182.200.sslip.io/>**. Il sert le même dépôt et le
-même snapshot `3d/`; GitHub Pages reste l'origine canonique des métadonnées et
+La version auditée du **4 novembre 2026** est publiée sur GitHub Pages au
+runtime `e6bfb273` ([audit et preuves](docs/AUDIT-2026-11-04.md)).
+
+Le miroir Coolify répond sur **<https://trapeze.188.245.182.200.sslip.io/>**,
+mais conserve encore le runtime `34a4aec`. Son redéploiement manuel reste
+bloqué par l’absence d’authentification administrative dans cette session
+(API `401`). Il ne faut donc pas le présenter comme synchronisé avec la
+version auditée. GitHub Pages reste l’origine canonique des métadonnées et
 du sitemap.
 
 Le dépôt reste compatible avec **Coolify Static Site**. Le miroir historique

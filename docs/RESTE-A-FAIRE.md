@@ -1,5 +1,14 @@
 # Reste à faire
 
+> **État actuel — 4 novembre 2026, vérifié à 22:42 UTC.** Le développement
+> et l’audit multi-agents sont livrés sur GitHub Pages (`e6bfb273`, run
+> `41811161635` SUCCESS). Le seul reste de livraison du miroir est son
+> redéploiement après authentification Coolify : il sert encore `34a4aec`
+> et son API renvoie `401`. Archives publiques de livraison et de retour
+> arrière préparées et vérifiées ; voir [DEPLOIEMENT.md](DEPLOIEMENT.md).
+> Les blocs datés de septembre ci-dessous sont des preuves historiques,
+> pas l’état de synchronisation actuel du miroir.
+
 > **État au 2026-09-14.** La production GitHub Pages est
 > **`PASS_PRODUCTION`** : le workflow `main` construit un artefact isolé
 > `_site/`, vérifie les sept routes dans quatre viewports (28 passages), les
@@ -25,6 +34,7 @@ personnalisée et les consoles navigateur accueil/2D/3D ont été vérifiés.
 
 | Sujet | Statut | Décision ou preuve encore nécessaire |
 |---|---|---|
+| Synchroniser le miroir Coolify | `BLOCKED_AUTH` | Authentifier la ressource existante `ns4sg8w44wow0wkowg0co4kk`, redéployer `main` contenant le runtime `e6bfb273`, puis comparer les sept routes, quatre assets et la 404. Aucune recréation de ressource nécessaire. |
 | Classement mondial 3D avec Supabase | `DEFERRED_USER` | Choix produit d'Emmanuel, création du projet, valeurs publiques et validation RLS/réseau. Le top 10 local reste le comportement livré. |
 | Réunir Classic et Circus Alzahir | `DEFERRED_USER` | Choisir si cette dette de contenu mérite un chantier dédié ; porter les systèmes un par un, jamais par fusion automatique. |
 | QA iPhone/iPad et Android physiques | `BLOCKED_ACCESS` | La recette [`QA-APPAREILS-REELS.md`](QA-APPAREILS-REELS.md) est prête, mais aucun appareil ni service distant authentifié n'est disponible. |

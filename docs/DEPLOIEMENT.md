@@ -365,3 +365,55 @@ pas :
 
 Cette QA matérielle reste un contrôle humain post-publication, à consigner sans
 transformer une simulation en preuve appareil réel.
+
+## Livraison statique prête et retour arrière — 4 novembre 2026
+
+La vérification indépendante de **22:42 UTC** confirme : GitHub Pages égale
+au runtime `e6bfb273`, miroir égal à son ancien runtime `34a4aec`, API de
+l’application Coolify `401`. Le miroir diffère de la livraison attendue sur
+`/2d/`, `/3d/` et le nouveau bundle 3D. Aucun accès Coolify, SSH ou Hetzner
+n’est configuré dans la session. Aucun changement de production n’a été fait
+pendant cette préparation.
+
+Un paquet de session est disponible sous
+`/workspace/scratch/trapeze-delivery-20261104/` (non versionné) :
+
+| Fichier | Contenu |
+|---|---|
+| `trapeze-e6bfb273-public.zip` | Les 28 fichiers publics du runtime audité, 1 834 586 octets. |
+| `rollback-mirror-34a4aec-public.zip` | Les 28 fichiers publics correspondant exactement à la version actuelle du miroir, 1 834 087 octets. |
+| `release-manifest.json` | Provenance des deux commits, tailles et SHA-256 de chaque fichier et de chaque ZIP. |
+| `SHA256SUMS` | Vérification rapide des deux archives. |
+| `public-manifest-release.json`, `public-manifest-rollback.json` | Manifestes utilisables par le vérificateur public existant. |
+| `verification.json` | Résultats live bornés, sans relance de tests lourds : canonique actuel PASS, ancien miroir PASS, nouveau miroir non déployé, API 401. |
+
+Hash de l’archive de livraison :
+`71b31d8c4ef80b193b9aee03158d7942e20b122418458439975608e6f021e4e8`.
+
+Hash de l’archive de retour arrière :
+`d3add4b28a3e8fe48f7c41466573dcf7734ef633365cb7d469fb8b4d7377fffa`.
+
+Deux vérifications indépendantes ont confirmé les CRC, les chemins et tous les
+hashes : les octets décompressés sont identiques aux fichiers publics suivis
+dans les commits annoncés. Aucun code interne, documentation, dossier Git ni
+secret n’est inclus dans les ZIP. Les manifestes et guides sont conservés à
+l’extérieur du contenu à publier. Le rollback ne couvre ni l’infrastructure,
+ni la configuration Coolify, ni les volumes, ni les données du Mac.
+
+Dès qu’un accès administratif authentifié est disponible, utiliser la ressource
+existante et son bouton **Deploy (without cache)** sur `main`, sans appliquer
+d’éventuels changements de configuration non compris. Les commits documentaires
+après `e6bfb273` ne changent pas le runtime ; relever le SHA effectivement
+déployé et comparer ses fichiers publics au manifeste de livraison. Une fois
+le déploiement confirmé, le contrôle existant se lance depuis le dépôt :
+
+```bash
+GITHUB_SHA=e6bfb2739a5636cfc99b35245efebab9d6f2bd26 node --use-env-proxy tools/public_smoke.mjs https://trapeze.188.245.182.200.sslip.io/ _site
+```
+
+La commande ci-dessus correspond à Node 24 dans cette session avec son proxy
+configuré ; sur un environnement sans proxy, retirer `--use-env-proxy`.
+Attendu : PASS avec sept routes, quatre assets critiques et 404 exacte. Le
+paquet est une sauvegarde statique prête ; sa préparation ne vaut pas preuve
+de publication sur le miroir. Aucun nouveau chantier de gameplay, backend ou
+fonctionnalité n’est requis pour cette synchronisation.
