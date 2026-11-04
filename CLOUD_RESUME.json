@@ -1,32 +1,32 @@
 {
   "project": "Trapeze",
-  "role": "multi_agent_audit_verified_local_pending_publication",
+  "role": "audited_canonical_release_verified_mirror_pending_auth",
   "next": [
-    "Publish and verify the audited source through the existing GitHub workflow.",
-    "Authenticate the existing Coolify application before redeploying and comparing the mirror."
+    "Authenticate existing Coolify application ns4sg8w44wow0wkowg0co4kk, redeploy audited source e6bfb2739a5636cfc99b35245efebab9d6f2bd26, and compare exact mirror bytes."
   ],
   "blockers": [
     "Authenticated Coolify administration is not configured; API returns HTTP 401."
   ],
   "branch": "main",
-  "source_head": "70fb24f7cd7f2886e44d9e41778da7ebc135bb1d",
-  "prepared_at_utc": "2026-10-31T14:36:00Z",
+  "source_head": "e6bfb2739a5636cfc99b35245efebab9d6f2bd26",
+  "prepared_at_utc": "2026-11-04T10:10:00Z",
   "cloud_control_task": "BUILD_BROWSER_GAMEPLAY_PWA_VISUAL_AUDIT_PASS",
   "secret_handling": "No local env/database/cookies/credentials imported. Historical token/private-address references sanitized in affected snapshot trees; original local backups preserved. Existing remote Git history was not rewritten.",
   "no_deployment_claim": false,
   "checks_this_session": {
-    "storage_menu": "PASS_10_CASES",
-    "verify_deploy": "PASS",
+    "logic_checks": "PASS_11_STORAGE_3_TRANSITIONS_REAL_NETWORK_TIMEOUT",
     "responsive_views": 28,
-    "controls": "PASS",
-    "pwa_online_offline": "PASS",
+    "canvas_state_captures": 48,
+    "threejs_captures": 13,
     "threejs_smoke_exit": 0,
-    "threejs_endless_score": 51150,
+    "threejs_endless_score": 54575,
     "threejs_best_combo": 47,
-    "targeted_3d_build_checks": "PASS_MALFORMED_SAVES_AND_SYNTHETIC_FULL_END_SCREEN",
+    "controls": "PASS_INCLUDING_4_CIRCUS_TOUCH_LAYOUTS",
+    "pwa_online_offline": "PASS_FINAL_2D_AND_3D_VERSIONS",
     "physical_devices": "NOT_RUN",
     "canonical_release": "PASS_EXACT_7_ROUTES_4_ASSETS_CUSTOM_404",
-    "mirror": "PREVIOUS_SNAPSHOT_EXACT_7_ROUTES_4_ASSETS_404"
+    "mirror": "OLD_34a4aec_EXACT_CONTENT; AUTH_REQUIRED_FOR_UPDATE",
+    "public_browser": "PASS_6_VIEWS_DESKTOP_MOBILE_TLS_STRICT_ZERO_ERRORS"
   },
   "completion_criteria": [
     "Seven public routes and shared assets match reviewed SHA on both hosts.",
@@ -35,14 +35,16 @@
   "delivery_notes": "docs/DEPLOIEMENT.md",
   "cloud_environment_id": "ccarenv_b64_Y2NhcmVudl8zNDdhNWJhMTBmYzQ4MTkxYWYyZDVjNjlkNmRhYTEzMA",
   "github_validation": {
-    "run_id": 41210281933,
-    "url": "https://github.com/Wonderself/trapeze/actions/runs/41210281933",
-    "sha": "70fb24f7cd7f2886e44d9e41778da7ebc135bb1d",
+    "run_id": 41811161635,
+    "url": "https://github.com/Wonderself/trapeze/actions/runs/41811161635",
+    "sha": "e6bfb2739a5636cfc99b35245efebab9d6f2bd26",
     "branch": "main",
     "conclusion": "SUCCESS",
     "verify": "SUCCESS",
     "deploy": "SUCCESS",
-    "storage3d": "PASS",
+    "run_attempt": 2,
+    "retry_reason": "Transient GitHub Pages 502; reran failed deployment only.",
+    "screenshots_artifact_id": 13312582848,
     "public_verification": "PASS_FROM_GITHUB_RUNNER_AND_INDEPENDENT_PROXY_CHECK"
   },
   "resume_2026_10_31": {
@@ -118,14 +120,41 @@
     "build": "PASS_index-DCSCf9IS.js",
     "new_screenshots": "28 pages + 48 Canvas states + 13 Three.js captures, plus targeted before/after and touch evidence",
     "browser_candidate": "PASS_28_VIEWS_FULL_RECORDS_AND_FULL_3D",
-    "new_remote_commit_or_ci": "PENDING",
-    "new_deployment": "PENDING",
-    "last_verified_public_source": "70fb24f7cd7f2886e44d9e41778da7ebc135bb1d",
+    "new_remote_commit_or_ci": "SUCCESS_RUN_41811161635",
+    "new_deployment": "GITHUB_PAGES_PASS; COOLIFY_NOT_DEPLOYED_AUTH_REQUIRED",
+    "last_verified_public_source": "e6bfb2739a5636cfc99b35245efebab9d6f2bd26",
     "confirmed_logic_fixes": 4,
     "confirmed_ui_fixes": 4,
     "threejs_score": 54575,
     "threejs_max_combo": 47,
     "native_touch_scroll": "PASS_PLAYER10_320_390_844",
-    "circus_mobile_formats": 4
+    "circus_mobile_formats": 4,
+    "public_browser_screenshots": 6,
+    "public_browser_report": "game3d/test/out/audit-20261104/public/report.json"
+  },
+  "historical_github_validation_2026_10_31": {
+    "run_id": 41210281933,
+    "url": "https://github.com/Wonderself/trapeze/actions/runs/41210281933",
+    "sha": "70fb24f7cd7f2886e44d9e41778da7ebc135bb1d",
+    "branch": "main",
+    "conclusion": "SUCCESS",
+    "verify": "SUCCESS",
+    "deploy": "SUCCESS",
+    "storage3d": "PASS",
+    "public_verification": "PASS_FROM_GITHUB_RUNNER_AND_INDEPENDENT_PROXY_CHECK"
+  },
+  "historical_checks_2026_10_31": {
+    "storage_menu": "PASS_10_CASES",
+    "verify_deploy": "PASS",
+    "responsive_views": 28,
+    "controls": "PASS",
+    "pwa_online_offline": "PASS",
+    "threejs_smoke_exit": 0,
+    "threejs_endless_score": 51150,
+    "threejs_best_combo": 47,
+    "targeted_3d_build_checks": "PASS_MALFORMED_SAVES_AND_SYNTHETIC_FULL_END_SCREEN",
+    "physical_devices": "NOT_RUN",
+    "canonical_release": "PASS_EXACT_7_ROUTES_4_ASSETS_CUSTOM_404",
+    "mirror": "PREVIOUS_SNAPSHOT_EXACT_7_ROUTES_4_ASSETS_404"
   }
 }

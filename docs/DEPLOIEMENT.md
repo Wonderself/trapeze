@@ -2,7 +2,7 @@
 
 Dernière mise à jour : **2026-11-04**.
 
-L’audit multi-agents local est terminé et les correctifs sont prêts à publier ; état et preuves dans [AUDIT-2026-11-04.md](AUDIT-2026-11-04.md).
+L’audit multi-agents est publié sur GitHub Pages au SHA `e6bfb2739a5636cfc99b35245efebab9d6f2bd26` (run [41811161635](https://github.com/Wonderself/trapeze/actions/runs/41811161635) SUCCESS, tentative 2 après un 502 transitoire). Le miroir reste à mettre à jour avec authentification Coolify ; état et preuves dans [AUDIT-2026-11-04.md](AUDIT-2026-11-04.md).
 
 ## Reprise du 31 octobre 2026
 
